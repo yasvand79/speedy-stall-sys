@@ -4,28 +4,31 @@ import {
   ShoppingCart,
   UtensilsCrossed,
   Receipt,
-  Package,
   Users,
   BarChart3,
   Settings,
   ChefHat,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart },
-  { name: 'Kitchen', href: '/kitchen', icon: ChefHat },
-  { name: 'Menu', href: '/menu', icon: UtensilsCrossed },
-  { name: 'Billing', href: '/billing', icon: Receipt },
-  { name: 'Inventory', href: '/inventory', icon: Package },
-  { name: 'Staff', href: '/staff', icon: Users },
-  { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings },
-];
+import { useAuth } from '@/contexts/AuthContext';
 
 export function Sidebar() {
   const location = useLocation();
+  const { isDeveloper, isAdmin, profile, role } = useAuth();
+
+  const navigation = [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['developer', 'admin', 'billing'] },
+    { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['developer', 'admin', 'billing'] },
+    { name: 'Billing', href: '/billing', icon: Receipt, roles: ['developer', 'admin', 'billing'] },
+    { name: 'Menu', href: '/menu', icon: UtensilsCrossed, roles: ['developer', 'admin'] },
+    { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['developer', 'admin'] },
+    { name: 'Staff', href: '/staff', icon: Users, roles: ['developer'] },
+    { name: 'Settings', href: '/settings', icon: Settings, roles: ['developer'] },
+  ];
+
+  const filteredNavigation = navigation.filter(item => 
+    role && item.roles.includes(role)
+  );
 
   return (
     <aside className="sidebar-nav fixed left-0 top-0 z-40 h-screen w-64 flex flex-col">
@@ -36,13 +39,13 @@ export function Sidebar() {
         </div>
         <div>
           <h1 className="font-display text-lg font-bold text-sidebar-foreground">FoodShop</h1>
-          <p className="text-xs text-sidebar-foreground/60">Management System</p>
+          <p className="text-xs text-sidebar-foreground/60">Sales System</p>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-        {navigation.map((item) => {
+        {filteredNavigation.map((item) => {
           const isActive = location.pathname === item.href;
           return (
             <NavLink
@@ -71,11 +74,15 @@ export function Sidebar() {
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center">
-            <span className="text-sm font-medium text-sidebar-foreground">AK</span>
+            <span className="text-sm font-medium text-sidebar-foreground">
+              {profile?.full_name?.substring(0, 2).toUpperCase() || 'U'}
+            </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">Amit Kumar</p>
-            <p className="text-xs text-sidebar-foreground/60">Admin</p>
+            <p className="text-sm font-medium text-sidebar-foreground truncate">
+              {profile?.full_name || 'User'}
+            </p>
+            <p className="text-xs text-sidebar-foreground/60 capitalize">{role || 'Staff'}</p>
           </div>
         </div>
       </div>

@@ -22,9 +22,9 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  isDeveloper: boolean;
   isAdmin: boolean;
-  isCashier: boolean;
-  isKitchen: boolean;
+  isBilling: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -136,9 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signUp,
     signOut,
+    isDeveloper: role === 'developer',
     isAdmin: role === 'admin',
-    isCashier: role === 'cashier',
-    isKitchen: role === 'kitchen',
+    isBilling: role === 'billing',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

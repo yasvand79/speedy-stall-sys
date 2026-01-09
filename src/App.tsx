@@ -9,11 +9,9 @@ import Dashboard from "./pages/Dashboard";
 import Orders from "./pages/Orders";
 import Menu from "./pages/Menu";
 import Billing from "./pages/Billing";
-import Inventory from "./pages/Inventory";
 import Staff from "./pages/Staff";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
-import Kitchen from "./pages/Kitchen";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -30,13 +28,11 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-            <Route path="/menu" element={<ProtectedRoute><Menu /></ProtectedRoute>} />
-            <Route path="/billing" element={<ProtectedRoute allowedRoles={['admin', 'cashier']}><Billing /></ProtectedRoute>} />
-            <Route path="/inventory" element={<ProtectedRoute allowedRoles={['admin']}><Inventory /></ProtectedRoute>} />
-            <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin']}><Staff /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
-            <Route path="/kitchen" element={<ProtectedRoute allowedRoles={['admin', 'kitchen']}><Kitchen /></ProtectedRoute>} />
+            <Route path="/menu" element={<ProtectedRoute allowedRoles={['developer', 'admin']}><Menu /></ProtectedRoute>} />
+            <Route path="/billing" element={<ProtectedRoute allowedRoles={['developer', 'admin', 'billing']}><Billing /></ProtectedRoute>} />
+            <Route path="/staff" element={<ProtectedRoute allowedRoles={['developer']}><Staff /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute allowedRoles={['developer', 'admin']}><Reports /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute allowedRoles={['developer']}><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

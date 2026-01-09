@@ -5,13 +5,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChefHat, Mail, Lock, User } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChefHat, Mail, Lock, User, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Database } from '@/integrations/supabase/types';
+
+type AppRole = Database['public']['Enums']['app_role'];
 
 const emailSchema = z.string().email('Invalid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
+
+const roleLabels: Record<AppRole, string> = {
+  developer: 'Developer',
+  admin: 'Admin',
+  billing: 'Billing Staff',
+};
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -23,6 +33,7 @@ export default function Auth() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
+  const [signupRole, setSignupRole] = useState<AppRole>('billing');
 
   useEffect(() => {
     if (!loading && user) {
@@ -77,7 +88,7 @@ export default function Auth() {
     }
 
     setIsSubmitting(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupName);
+    const { error } = await signUp(signupEmail, signupPassword, signupName, signupRole);
     
     if (error) {
       if (error.message.includes('already registered')) {
@@ -204,6 +215,22 @@ export default function Auth() {
                     />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-role">Role</Label>
+                  <div className="relative">
+                    <Shield className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none" />
+                    <Select value={signupRole} onValueChange={(value: AppRole) => setSignupRole(value)}>
+                      <SelectTrigger className="pl-10">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="billing">{roleLabels.billing}</SelectItem>
+                        <SelectItem value="admin">{roleLabels.admin}</SelectItem>
+                        <SelectItem value="developer">{roleLabels.developer}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? 'Creating account...' : 'Create Account'}
                 </Button>
@@ -212,8 +239,7 @@ export default function Auth() {
           </Tabs>
           
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            New staff members are assigned the Cashier role by default.<br />
-            Contact an admin to change your role.
+            Select your role based on your job function.
           </p>
         </CardContent>
       </Card>

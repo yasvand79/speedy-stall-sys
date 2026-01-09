@@ -22,7 +22,7 @@ export default function Orders() {
   const { data: orders, isLoading } = useOrders();
   const { data: allPayments } = usePayments();
   const updateStatus = useUpdateOrderStatus();
-  const { isAdmin, isCashier, isKitchen } = useAuth();
+  const { isDeveloper, isAdmin, isBilling } = useAuth();
 
   const handleStatusChange = (orderId: string, newStatus: 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled') => {
     updateStatus.mutate({ orderId, status: newStatus });
@@ -99,7 +99,7 @@ export default function Orders() {
               {activeOrders.length} active orders
             </p>
           </div>
-          {(isAdmin || isCashier) && <NewOrderDialog />}
+          {(isDeveloper || isAdmin || isBilling) && <NewOrderDialog />}
         </div>
 
         {/* Search */}
@@ -188,7 +188,7 @@ export default function Orders() {
                           {/* Status progression */}
                           {order.status !== 'completed' && order.status !== 'cancelled' && (
                             <>
-                              {(isKitchen || isAdmin) && order.status === 'placed' && (
+                              {(isDeveloper || isAdmin) && order.status === 'placed' && (
                                 <Button 
                                   size="sm" 
                                   variant="outline"
@@ -199,7 +199,7 @@ export default function Orders() {
                                   Start
                                 </Button>
                               )}
-                              {(isKitchen || isAdmin) && order.status === 'preparing' && (
+                              {(isDeveloper || isAdmin) && order.status === 'preparing' && (
                                 <Button 
                                   size="sm" 
                                   variant="outline"
@@ -211,7 +211,7 @@ export default function Orders() {
                                   Ready
                                 </Button>
                               )}
-                              {(isCashier || isAdmin) && order.status === 'ready' && order.payment_status === 'completed' && (
+                              {(isDeveloper || isAdmin || isBilling) && order.status === 'ready' && order.payment_status === 'completed' && (
                                 <Button 
                                   size="sm"
                                   onClick={() => handleStatusChange(order.id, 'completed')}
@@ -225,7 +225,7 @@ export default function Orders() {
                           )}
 
                           {/* Payment button for cashier */}
-                          {(isCashier || isAdmin) && order.status !== 'cancelled' && order.payment_status !== 'completed' && (
+                          {(isDeveloper || isAdmin || isBilling) && order.status !== 'cancelled' && order.payment_status !== 'completed' && (
                             <Button 
                               size="sm" 
                               variant="default"

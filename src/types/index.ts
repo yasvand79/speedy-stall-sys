@@ -5,7 +5,7 @@ export type OrderStatus = 'placed' | 'preparing' | 'ready' | 'completed' | 'canc
 export type PaymentMethod = 'cash' | 'upi' | 'card';
 export type PaymentStatus = 'pending' | 'partial' | 'completed';
 export type MenuCategory = 'veg' | 'non-veg' | 'beverages' | 'combos';
-export type UserRole = 'admin' | 'cashier' | 'kitchen';
+export type UserRole = 'developer' | 'admin' | 'billing';
 
 export interface MenuItem {
   id: string;

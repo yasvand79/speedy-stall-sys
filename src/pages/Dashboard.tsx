@@ -3,14 +3,12 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useOrders } from '@/hooks/useOrders';
-import { useLowStockItems } from '@/hooks/useInventory';
 import { useDailySales, useTopSellingItems } from '@/hooks/useReports';
-import { IndianRupee, ShoppingCart, TrendingUp, Clock, AlertTriangle } from 'lucide-react';
+import { IndianRupee, ShoppingCart, TrendingUp, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function Dashboard() {
   const { data: orders, isLoading: ordersLoading } = useOrders();
-  const { data: lowStockItems } = useLowStockItems();
   const { data: dailySales, isLoading: salesLoading } = useDailySales();
   const { data: topItems } = useTopSellingItems(7);
 
@@ -142,29 +140,30 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Low Stock Alert */}
-            <Card className={lowStockItems && lowStockItems.length > 0 ? 'border-warning' : ''}>
+            {/* Quick Actions */}
+            <Card>
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className={`h-4 w-4 ${lowStockItems && lowStockItems.length > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
-                  <CardTitle className="font-display text-base">Low Stock Alerts</CardTitle>
-                </div>
+                <CardTitle className="font-display text-base">Quick Stats</CardTitle>
               </CardHeader>
-              <CardContent>
-                {!lowStockItems || lowStockItems.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">All items well stocked</p>
-                ) : (
-                  <div className="space-y-3">
-                    {lowStockItems.slice(0, 5).map((item) => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <span className="text-sm">{item.name}</span>
-                        <Badge variant="destructive" className="text-xs">
-                          {Number(item.quantity).toFixed(1)} {item.unit}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Pending Payments</span>
+                  <Badge variant="secondary">
+                    {orders?.filter(o => o.payment_status === 'pending').length || 0}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Ready for Pickup</span>
+                  <Badge variant="secondary">
+                    {orders?.filter(o => o.status === 'ready').length || 0}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Being Prepared</span>
+                  <Badge variant="secondary">
+                    {orders?.filter(o => o.status === 'preparing').length || 0}
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
           </div>

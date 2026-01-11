@@ -11,6 +11,8 @@ interface Profile {
   full_name: string;
   phone: string | null;
   is_active: boolean;
+  branch_id: string | null;
+  status: string | null;
 }
 
 interface AuthContextType {
@@ -23,6 +25,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, role?: AppRole) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isDeveloper: boolean;
+  isCentralAdmin: boolean;
+  isBranchAdmin: boolean;
   isAdmin: boolean;
   isBilling: boolean;
 }
@@ -138,7 +142,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUp,
     signOut,
     isDeveloper: role === 'developer',
-    isAdmin: role === 'admin',
+    isCentralAdmin: role === 'central_admin',
+    isBranchAdmin: role === 'branch_admin',
+    isAdmin: role === 'admin' || role === 'branch_admin' || role === 'central_admin',
     isBilling: role === 'billing',
   };
 

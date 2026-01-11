@@ -19,6 +19,8 @@ const passwordSchema = z.string().min(6, 'Password must be at least 6 characters
 
 const roleLabels: Record<AppRole, string> = {
   developer: 'Developer',
+  central_admin: 'Central Admin',
+  branch_admin: 'Branch Admin',
   admin: 'Admin',
   billing: 'Billing Staff',
 };
@@ -225,6 +227,8 @@ export default function Auth() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="billing">{roleLabels.billing}</SelectItem>
+                        <SelectItem value="branch_admin">{roleLabels.branch_admin}</SelectItem>
+                        <SelectItem value="central_admin">{roleLabels.central_admin}</SelectItem>
                         <SelectItem value="admin">{roleLabels.admin}</SelectItem>
                         <SelectItem value="developer">{roleLabels.developer}</SelectItem>
                       </SelectContent>

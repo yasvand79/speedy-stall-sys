@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -8,13 +8,16 @@ import {
   BarChart3,
   Settings,
   ChefHat,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 
 export function Sidebar() {
   const location = useLocation();
-  const { isDeveloper, isAdmin, profile, role } = useAuth();
+  const navigate = useNavigate();
+  const { isDeveloper, isAdmin, profile, role, signOut } = useAuth();
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['developer', 'admin', 'billing'] },
@@ -29,6 +32,11 @@ export function Sidebar() {
   const filteredNavigation = navigation.filter(item => 
     role && item.roles.includes(role)
   );
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   return (
     <aside className="sidebar-nav fixed left-0 top-0 z-40 h-screen w-64 flex flex-col">
@@ -47,6 +55,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         {filteredNavigation.map((item) => {
           const isActive = location.pathname === item.href;
+          const IconComponent = item.icon;
           return (
             <NavLink
               key={item.name}
@@ -58,7 +67,7 @@ export function Sidebar() {
                   : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
               )}
             >
-              <item.icon
+              <IconComponent
                 className={cn(
                   'h-5 w-5 shrink-0 transition-colors',
                   isActive ? 'text-sidebar-primary-foreground' : 'text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70'
@@ -71,7 +80,7 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-sidebar-border p-4">
+      <div className="border-t border-sidebar-border p-4 space-y-3">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center">
             <span className="text-sm font-medium text-sidebar-foreground">
@@ -85,6 +94,15 @@ export function Sidebar() {
             <p className="text-xs text-sidebar-foreground/60 capitalize">{role || 'Staff'}</p>
           </div>
         </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
       </div>
     </aside>
   );

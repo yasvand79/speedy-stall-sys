@@ -12,6 +12,7 @@ import Billing from "./pages/Billing";
 import Staff from "./pages/Staff";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import Branches from "./pages/Branches";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -28,10 +29,11 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-            <Route path="/menu" element={<ProtectedRoute allowedRoles={['developer', 'admin']}><Menu /></ProtectedRoute>} />
-            <Route path="/billing" element={<ProtectedRoute allowedRoles={['developer', 'admin', 'billing']}><Billing /></ProtectedRoute>} />
-            <Route path="/staff" element={<ProtectedRoute allowedRoles={['developer']}><Staff /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute allowedRoles={['developer', 'admin']}><Reports /></ProtectedRoute>} />
+            <Route path="/menu" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin', 'admin']}><Menu /></ProtectedRoute>} />
+            <Route path="/billing" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin', 'admin', 'billing']}><Billing /></ProtectedRoute>} />
+            <Route path="/branches" element={<ProtectedRoute allowedRoles={['developer']}><Branches /></ProtectedRoute>} />
+            <Route path="/staff" element={<ProtectedRoute allowedRoles={['developer', 'central_admin']}><Staff /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><Reports /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['developer']}><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

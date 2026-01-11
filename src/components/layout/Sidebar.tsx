@@ -17,15 +17,16 @@ import { Button } from '@/components/ui/button';
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isDeveloper, isAdmin, profile, role, signOut } = useAuth();
+  const { isDeveloper, isCentralAdmin, isBranchAdmin, isAdmin, profile, role, signOut } = useAuth();
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['developer', 'admin', 'billing'] },
-    { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['developer', 'admin', 'billing'] },
-    { name: 'Billing', href: '/billing', icon: Receipt, roles: ['developer', 'admin', 'billing'] },
-    { name: 'Menu', href: '/menu', icon: UtensilsCrossed, roles: ['developer', 'admin'] },
-    { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['developer', 'admin'] },
-    { name: 'Staff', href: '/staff', icon: Users, roles: ['developer'] },
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['developer', 'central_admin', 'branch_admin', 'admin', 'billing'] },
+    { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['developer', 'central_admin', 'branch_admin', 'admin', 'billing'] },
+    { name: 'Billing', href: '/billing', icon: Receipt, roles: ['developer', 'central_admin', 'branch_admin', 'admin', 'billing'] },
+    { name: 'Menu', href: '/menu', icon: UtensilsCrossed, roles: ['developer', 'central_admin', 'branch_admin', 'admin'] },
+    { name: 'Branches', href: '/branches', icon: LayoutDashboard, roles: ['developer'] },
+    { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['developer', 'central_admin', 'branch_admin'] },
+    { name: 'Staff', href: '/staff', icon: Users, roles: ['developer', 'central_admin'] },
     { name: 'Settings', href: '/settings', icon: Settings, roles: ['developer'] },
   ];
 

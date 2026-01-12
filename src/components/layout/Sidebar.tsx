@@ -9,6 +9,8 @@ import {
   Settings,
   ChefHat,
   LogOut,
+  Building2,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,7 +26,8 @@ export function Sidebar() {
     { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['developer', 'central_admin', 'branch_admin', 'admin', 'billing'] },
     { name: 'Billing', href: '/billing', icon: Receipt, roles: ['developer', 'central_admin', 'branch_admin', 'admin', 'billing'] },
     { name: 'Menu', href: '/menu', icon: UtensilsCrossed, roles: ['developer', 'central_admin', 'branch_admin', 'admin'] },
-    { name: 'Branches', href: '/branches', icon: LayoutDashboard, roles: ['developer'] },
+    { name: 'Branches', href: '/branches', icon: Building2, roles: ['developer'] },
+    { name: 'Staff Performance', href: '/staff-performance', icon: TrendingUp, roles: ['developer', 'central_admin', 'branch_admin', 'admin'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['developer', 'central_admin', 'branch_admin'] },
     { name: 'Staff', href: '/staff', icon: Users, roles: ['developer', 'central_admin'] },
     { name: 'Settings', href: '/settings', icon: Settings, roles: ['developer'] },

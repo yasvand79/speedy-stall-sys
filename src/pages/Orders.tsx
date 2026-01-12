@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NewOrderDialog } from '@/components/orders/NewOrderDialog';
 import { PaymentDialog } from '@/components/billing/PaymentDialog';
 import { useOrders, useUpdateOrderStatus, OrderWithItems } from '@/hooks/useOrders';
 import { usePayments } from '@/hooks/usePayments';
+import { useBranches } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle } from 'lucide-react';
+import { Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle, Building2, User, Users, UtensilsCrossed } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -18,11 +20,52 @@ export default function Orders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [branchFilter, setBranchFilter] = useState<string>('all');
 
   const { data: orders, isLoading } = useOrders();
   const { data: allPayments } = usePayments();
+  const { branches } = useBranches();
   const updateStatus = useUpdateOrderStatus();
-  const { isDeveloper, isAdmin, isBilling } = useAuth();
+  const { isDeveloper, isAdmin, isBilling, isCentralAdmin } = useAuth();
+
+  // Calculate staff performance stats
+  const staffStats = useMemo(() => {
+    if (!orders) return [];
+    
+    const statsMap = new Map<string, {
+      staffName: string;
+      branchName: string;
+      branchId: string | null;
+      totalOrders: number;
+      totalItems: number;
+      totalSales: number;
+    }>();
+
+    orders.forEach(order => {
+      const staffName = order.staff_name || 'Unknown';
+      const branchName = (order as any).branches?.name || 'Unknown Branch';
+      const branchId = order.branch_id;
+      const key = `${staffName}-${branchId}`;
+
+      if (!statsMap.has(key)) {
+        statsMap.set(key, {
+          staffName,
+          branchName,
+          branchId,
+          totalOrders: 0,
+          totalItems: 0,
+          totalSales: 0,
+        });
+      }
+
+      const stats = statsMap.get(key)!;
+      stats.totalOrders += 1;
+      stats.totalItems += order.order_items.reduce((sum, item) => sum + item.quantity, 0);
+      stats.totalSales += Number(order.total);
+    });
+
+    return Array.from(statsMap.values()).sort((a, b) => b.totalOrders - a.totalOrders);
+  }, [orders]);
 
   const handleStatusChange = (orderId: string, newStatus: 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled') => {
     updateStatus.mutate({ orderId, status: newStatus });
@@ -47,12 +90,18 @@ export default function Orders() {
     if (status !== 'all') {
       filtered = filtered.filter(order => order.status === status);
     }
+
+    // Branch filter
+    if (branchFilter !== 'all') {
+      filtered = filtered.filter(order => order.branch_id === branchFilter);
+    }
     
     if (searchQuery) {
       filtered = filtered.filter(
         order =>
           order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase())
+          order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          order.staff_name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     
@@ -77,6 +126,7 @@ export default function Orders() {
   };
 
   const activeOrders = orders?.filter(o => !['completed', 'cancelled'].includes(o.status)) || [];
+  const canSeeBranchFilter = isDeveloper || isCentralAdmin;
 
   if (isLoading) {
     return (
@@ -102,15 +152,67 @@ export default function Orders() {
           {(isDeveloper || isAdmin || isBilling) && <NewOrderDialog />}
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search orders..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        {/* Staff Performance Summary */}
+        {(isDeveloper || isCentralAdmin || isAdmin) && staffStats.length > 0 && (
+          <Card className="bg-muted/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Staff Order Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {staffStats.slice(0, 8).map((stat, index) => (
+                  <div key={index} className="flex items-center gap-3 p-2 bg-background rounded-lg border">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{stat.staffName}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        {stat.branchName}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm">{stat.totalOrders}</p>
+                      <p className="text-xs text-muted-foreground">{stat.totalItems} items</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search orders, staff..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          {canSeeBranchFilter && (
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger className="w-[200px]">
+                <Building2 className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="All Branches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Branches</SelectItem>
+                {branches?.filter(b => b.is_active).map(branch => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* Tabs */}
@@ -141,7 +243,7 @@ export default function Orders() {
                   const remaining = Number(order.total) - paidAmount;
                   
                   return (
-                    <Card key={order.id} className={`border-l-4 border-l-${order.status === 'placed' ? 'orange' : order.status === 'preparing' ? 'blue' : order.status === 'ready' ? 'green' : 'gray'}-500`}>
+                    <Card key={order.id} className="border-l-4" style={{ borderLeftColor: order.status === 'placed' ? '#f97316' : order.status === 'preparing' ? '#3b82f6' : order.status === 'ready' ? '#22c55e' : '#6b7280' }}>
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg font-display">{order.order_number}</CardTitle>
@@ -151,9 +253,24 @@ export default function Orders() {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(order.created_at!), { addSuffix: true })}
                           <span className="mx-1">•</span>
                           <span>{order.type === 'dine-in' ? `Table ${order.table_number}` : 'Takeaway'}</span>
+                        </div>
+                        {/* Branch & Staff Info */}
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          {(order as any).branches?.name && (
+                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                              <Building2 className="h-3 w-3" />
+                              {(order as any).branches.name}
+                            </Badge>
+                          )}
+                          {order.staff_name && (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {order.staff_name}
+                            </Badge>
+                          )}
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">

@@ -26,6 +26,12 @@ export function useOrders(statusFilter?: OrderStatus | OrderStatus[]) {
           order_items (
             *,
             menu_items (*)
+          ),
+          branches (
+            id,
+            name,
+            location,
+            code
           )
         `)
         .order('created_at', { ascending: false });
@@ -40,7 +46,7 @@ export function useOrders(statusFilter?: OrderStatus | OrderStatus[]) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as OrderWithItems[];
+      return data as (OrderWithItems & { branches: { id: string; name: string; location: string; code: string } | null })[];
     },
   });
 }

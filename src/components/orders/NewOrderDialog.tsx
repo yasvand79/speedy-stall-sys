@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMenuItems } from '@/hooks/useMenuItems';
 import { useCreateOrder } from '@/hooks/useOrders';
+import { useBranches } from '@/hooks/useBranches';
+import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
-import { Plus, Minus, ShoppingCart, X, UtensilsCrossed, Package } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, X, UtensilsCrossed, Package, Building2, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 type MenuItem = Database['public']['Tables']['menu_items']['Row'];
@@ -34,9 +37,21 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
   const [customerPhone, setCustomerPhone] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [notes, setNotes] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
 
   const { data: menuItems, isLoading } = useMenuItems();
+  const { branches, activeBranches } = useBranches();
+  const { profile, isDeveloper, isCentralAdmin } = useAuth();
   const createOrder = useCreateOrder();
+
+  // Auto-select branch for non-developer/central-admin users
+  useEffect(() => {
+    if (profile?.branch_id && !isDeveloper && !isCentralAdmin) {
+      setSelectedBranchId(profile.branch_id);
+    }
+  }, [profile, isDeveloper, isCentralAdmin]);
+
+  const canSelectBranch = isDeveloper || isCentralAdmin;
 
   const availableItems = menuItems?.filter(item => item.is_available) || [];
 
@@ -76,10 +91,17 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
       return;
     }
 
+    if (!selectedBranchId) {
+      toast.error('Please select a branch');
+      return;
+    }
+
     if (orderType === 'dine-in' && !tableNumber) {
       toast.error('Please enter table number for dine-in orders');
       return;
     }
+
+    const selectedBranch = branches?.find(b => b.id === selectedBranchId);
 
     await createOrder.mutateAsync({
       type: orderType,
@@ -87,6 +109,8 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
       customer_name: customerName || undefined,
       customer_phone: customerPhone || undefined,
       notes: notes || undefined,
+      branch_id: selectedBranchId,
+      staff_name: profile?.full_name || 'Unknown Staff',
       items: cart.map(item => ({
         menu_item_id: item.menuItem.id,
         quantity: item.quantity,
@@ -101,6 +125,7 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
     setCustomerName('');
     setCustomerPhone('');
     setNotes('');
+    if (canSelectBranch) setSelectedBranchId('');
     setOpen(false);
   };
 
@@ -122,6 +147,50 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
         <div className="flex gap-4 flex-1 min-h-0">
           {/* Left: Menu Items */}
           <div className="flex-1 min-h-0 flex flex-col">
+            {/* Branch Selection */}
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg border">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="branch" className="flex items-center gap-1 mb-1.5">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Branch *
+                  </Label>
+                  {canSelectBranch ? (
+                    <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeBranches.map(branch => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name} - {branch.location}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={branches?.find(b => b.id === selectedBranchId)?.name || 'Your Branch'}
+                      disabled
+                      className="bg-background"
+                    />
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="staff" className="flex items-center gap-1 mb-1.5">
+                    <User className="h-3.5 w-3.5" />
+                    Staff Name
+                  </Label>
+                  <Input
+                    id="staff"
+                    value={profile?.full_name || 'Unknown Staff'}
+                    disabled
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+            </div>
+
             <Tabs value={orderType} onValueChange={(v) => setOrderType(v as OrderType)}>
               <TabsList className="w-full mb-4">
                 <TabsTrigger value="dine-in" className="flex-1">

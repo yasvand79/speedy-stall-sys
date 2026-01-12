@@ -55,8 +55,13 @@ export function useCreateOrder() {
       customer_name?: string;
       customer_phone?: string;
       notes?: string;
+      branch_id: string;
+      staff_name: string;
       items: { menu_item_id: string; quantity: number; price: number; notes?: string }[];
     }) => {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
       // Calculate totals
       const subtotal = orderData.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const gst = subtotal * 0.05; // 5% GST
@@ -72,6 +77,9 @@ export function useCreateOrder() {
           customer_name: orderData.customer_name,
           customer_phone: orderData.customer_phone,
           notes: orderData.notes,
+          branch_id: orderData.branch_id,
+          staff_name: orderData.staff_name,
+          created_by: user?.id,
           subtotal,
           gst,
           total,

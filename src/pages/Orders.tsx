@@ -12,15 +12,17 @@ import { useOrders, useUpdateOrderStatus, OrderWithItems } from '@/hooks/useOrde
 import { usePayments } from '@/hooks/usePayments';
 import { useBranches } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle, Building2, User, Users, UtensilsCrossed } from 'lucide-react';
+import { Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle, Building2, User, Users, UtensilsCrossed, Printer } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Orders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [branchFilter, setBranchFilter] = useState<string>('all');
+  const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
 
   const { data: orders, isLoading } = useOrders();
   const { data: allPayments } = usePayments();
@@ -74,6 +76,36 @@ export default function Orders() {
   const handleProcessPayment = (order: OrderWithItems) => {
     setSelectedOrder(order);
     setPaymentOpen(true);
+  };
+
+  const handlePrintInvoice = async (orderId: string) => {
+    setPrintingOrderId(orderId);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-invoice', {
+        body: { orderId }
+      });
+
+      if (error) throw error;
+
+      if (data?.html) {
+        // Open print window with the HTML
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(data.html);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => {
+            printWindow.print();
+          }, 250);
+        }
+        toast.success('Invoice generated successfully');
+      }
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      toast.error('Failed to generate invoice');
+    } finally {
+      setPrintingOrderId(null);
+    }
   };
 
   const getOrderPayments = (orderId: string) => {
@@ -363,6 +395,19 @@ export default function Orders() {
                             >
                               <XCircle className="mr-1 h-4 w-4" />
                               Cancel
+                            </Button>
+                          )}
+
+                          {/* Print Invoice button */}
+                          {order.status !== 'cancelled' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handlePrintInvoice(order.id)}
+                              disabled={printingOrderId === order.id}
+                            >
+                              <Printer className="mr-1 h-4 w-4" />
+                              {printingOrderId === order.id ? 'Printing...' : 'Invoice'}
                             </Button>
                           )}
                         </div>

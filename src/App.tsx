@@ -13,6 +13,7 @@ import Staff from "./pages/Staff";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Branches from "./pages/Branches";
+import StaffPerformance from "./pages/StaffPerformance";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/billing" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin', 'admin', 'billing']}><Billing /></ProtectedRoute>} />
             <Route path="/branches" element={<ProtectedRoute allowedRoles={['developer']}><Branches /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute allowedRoles={['developer', 'central_admin']}><Staff /></ProtectedRoute>} />
+            <Route path="/staff-performance" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin', 'admin']}><StaffPerformance /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><Reports /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['developer']}><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

@@ -13,7 +13,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useStaff, StaffMember } from '@/hooks/useStaff';
-import { Search, Mail, Phone, Shield, UserCog, Receipt, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useBranches } from '@/hooks/useBranches';
+import { Search, Mail, Phone, Shield, UserCog, Receipt, Loader2, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -28,8 +30,17 @@ const roleConfig: Record<AppRole, { label: string; icon: React.ElementType; colo
 };
 
 export default function Staff() {
-  const { staff, isLoading, updateRole, updateStatus, isUpdating } = useStaff();
+  const { profile, role, isDeveloper, isCentralAdmin, isBranchAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Branch admins only see their branch's staff
+  const branchFilterId = isBranchAdmin ? profile?.branch_id : undefined;
+  
+  const { staff, isLoading, updateRole, updateStatus, isUpdating } = useStaff({ branchId: branchFilterId });
+  const { branches } = useBranches();
+
+  // Only developers and central admins can change roles
+  const canManageRoles = isDeveloper || isCentralAdmin;
 
   const filteredStaff = staff.filter(member =>
     member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -37,6 +48,12 @@ export default function Staff() {
   );
 
   const activeStaff = staff.filter(s => s.isActive).length;
+
+  const getBranchName = (branchId: string | null) => {
+    if (!branchId) return 'No Branch';
+    const branch = branches.find(b => b.id === branchId);
+    return branch?.name || 'Unknown';
+  };
 
   const handleRoleChange = (member: StaffMember, newRole: AppRole) => {
     updateRole({ userId: member.userId, newRole });
@@ -65,6 +82,11 @@ export default function Staff() {
             <h1 className="font-display text-2xl font-bold text-foreground">Staff Management</h1>
             <p className="text-muted-foreground">
               {activeStaff} active staff members • {staff.length} total
+              {isBranchAdmin && profile?.branch_id && (
+                <span className="ml-2 text-primary">
+                  • {getBranchName(profile.branch_id)}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -128,29 +150,40 @@ export default function Staff() {
                         <span>{member.phone}</span>
                       </div>
                     )}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Building2 className="h-4 w-4" />
+                      <span>{getBranchName(member.branchId)}</span>
+                    </div>
                   </div>
 
                   {/* Role Selection */}
                   <div className="mt-4 pt-4 border-t border-border space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Role</span>
-                      <Select
-                        value={member.role}
-                        onValueChange={(value: AppRole) => handleRoleChange(member, value)}
-                        disabled={isUpdating}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="billing">Billing</SelectItem>
-                          <SelectItem value="branch_admin">Branch Admin</SelectItem>
-                          <SelectItem value="central_admin">Central Admin</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="developer">Developer</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {canManageRoles ? (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Role</span>
+                        <Select
+                          value={member.role}
+                          onValueChange={(value: AppRole) => handleRoleChange(member, value)}
+                          disabled={isUpdating}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="billing">Billing</SelectItem>
+                            <SelectItem value="branch_admin">Branch Admin</SelectItem>
+                            <SelectItem value="central_admin">Central Admin</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="developer">Developer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Role</span>
+                        <span className="text-sm font-medium">{roleConfig[member.role].label}</span>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-muted-foreground">

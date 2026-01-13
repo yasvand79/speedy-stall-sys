@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem } from '@/hooks/useMenuItems';
+import { useBranchMenuPrices } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
-import { Plus, Search, Pencil, Trash2, Clock } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Clock, DollarSign, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type MenuCategory = Database['public']['Enums']['menu_category'];
@@ -21,13 +22,27 @@ type MenuCategory = Database['public']['Enums']['menu_category'];
 export default function Menu() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingPrice, setEditingPrice] = useState<{ itemId: string; itemName: string; currentPrice: number } | null>(null);
+  const [newBranchPrice, setNewBranchPrice] = useState('');
 
   const { data: menuItems, isLoading } = useMenuItems();
   const createItem = useCreateMenuItem();
   const updateItem = useUpdateMenuItem();
   const deleteItem = useDeleteMenuItem();
-  const { isAdmin } = useAuth();
+  const { profile, isDeveloper, isCentralAdmin, isBranchAdmin, isAdmin } = useAuth();
+
+  // Get branch prices if user is branch admin
+  const { prices: branchPrices, upsertPrice, isUpdating: isPriceUpdating } = useBranchMenuPrices(
+    isBranchAdmin ? profile?.branch_id || undefined : undefined
+  );
+
+  // Developers and Central Admins can add/edit/delete base menu items
+  const canManageBaseMenu = isDeveloper || isCentralAdmin;
+  
+  // Branch admins can only edit prices for their branch
+  const canEditBranchPrices = isBranchAdmin && profile?.branch_id;
 
   // Form state
   const [formData, setFormData] = useState({
@@ -38,6 +53,13 @@ export default function Menu() {
     preparation_time: '15',
     ingredients: '',
   });
+
+  // Get branch-specific price for an item
+  const getBranchPrice = (itemId: string, basePrice: number): number => {
+    if (!isBranchAdmin || !branchPrices) return basePrice;
+    const branchPrice = branchPrices.find(p => p.menu_item_id === itemId);
+    return branchPrice ? Number(branchPrice.price) : basePrice;
+  };
 
   const resetForm = () => {
     setFormData({
@@ -62,6 +84,40 @@ export default function Menu() {
       ingredients: (item.ingredients || []).join(', '),
     });
     setEditDialogOpen(true);
+  };
+
+  const handleEditBranchPrice = (item: any) => {
+    const currentPrice = getBranchPrice(item.id, Number(item.price));
+    setEditingPrice({
+      itemId: item.id,
+      itemName: item.name,
+      currentPrice: currentPrice,
+    });
+    setNewBranchPrice(String(currentPrice));
+    setPriceDialogOpen(true);
+  };
+
+  const handleSaveBranchPrice = async () => {
+    if (!editingPrice || !profile?.branch_id || !newBranchPrice) {
+      toast.error('Invalid price or branch');
+      return;
+    }
+
+    const priceValue = parseFloat(newBranchPrice);
+    if (isNaN(priceValue) || priceValue < 0) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+
+    upsertPrice({
+      branch_id: profile.branch_id,
+      menu_item_id: editingPrice.itemId,
+      price: priceValue,
+    });
+
+    setPriceDialogOpen(false);
+    setEditingPrice(null);
+    setNewBranchPrice('');
   };
 
   const handleSubmit = async () => {
@@ -145,9 +201,15 @@ export default function Menu() {
             <h1 className="font-display text-2xl font-bold text-foreground">Menu Management</h1>
             <p className="text-muted-foreground">
               {menuItems?.length || 0} items • {menuItems?.filter(i => i.is_available).length || 0} available
+              {isBranchAdmin && (
+                <span className="ml-2 text-primary flex items-center gap-1 inline-flex">
+                  <Building2 className="h-3 w-3" />
+                  Branch prices enabled
+                </span>
+              )}
             </p>
           </div>
-          {isAdmin && (
+          {canManageBaseMenu && (
             <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button onClick={() => resetForm()}>
@@ -226,6 +288,41 @@ export default function Menu() {
           )}
         </div>
 
+        {/* Branch Price Dialog */}
+        <Dialog open={priceDialogOpen} onOpenChange={(open) => { setPriceDialogOpen(open); if (!open) { setEditingPrice(null); setNewBranchPrice(''); } }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Set Branch Price
+                </div>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Set a custom price for <strong>{editingPrice?.itemName}</strong> at your branch.
+              </p>
+              <div>
+                <Label>Price (₹)</Label>
+                <Input
+                  type="number"
+                  value={newBranchPrice}
+                  onChange={(e) => setNewBranchPrice(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <Button 
+                onClick={handleSaveBranchPrice} 
+                className="w-full" 
+                disabled={isPriceUpdating}
+              >
+                Save Branch Price
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -252,64 +349,96 @@ export default function Menu() {
           {categories.map((cat) => (
             <TabsContent key={cat.value} value={cat.value}>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {filterItems(cat.value).map((item) => (
-                  <Card key={item.id} className={!item.is_available ? 'opacity-60' : ''}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className={
-                              item.category === 'veg'
-                                ? 'h-5 w-5 p-0 border-green-500 bg-green-50'
-                                : item.category === 'non-veg'
-                                ? 'h-5 w-5 p-0 border-red-500 bg-red-50'
-                                : 'hidden'
-                            }
-                          >
-                            <span className={`h-2 w-2 rounded-full ${item.category === 'veg' ? 'bg-green-500' : 'bg-red-500'}`} />
-                          </Badge>
-                          <CardTitle className="text-base">{item.name}</CardTitle>
-                        </div>
-                        <p className="font-display text-lg font-bold text-primary">₹{Number(item.price).toFixed(0)}</p>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {item.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
-                      )}
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {item.preparation_time} min
-                        </div>
-                        <Badge variant="secondary" className="text-xs capitalize">
-                          {item.category}
-                        </Badge>
-                      </div>
-                      
-                      {isAdmin && (
-                        <div className="flex items-center justify-between pt-2 border-t">
+                {filterItems(cat.value).map((item) => {
+                  const displayPrice = getBranchPrice(item.id, Number(item.price));
+                  const hasBranchPrice = isBranchAdmin && branchPrices?.some(p => p.menu_item_id === item.id);
+                  
+                  return (
+                    <Card key={item.id} className={!item.is_available ? 'opacity-60' : ''}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
-                            <Switch
-                              checked={item.is_available ?? true}
-                              onCheckedChange={() => handleToggleAvailability(item.id, item.is_available ?? true)}
-                            />
-                            <span className="text-sm">{item.is_available ? 'Available' : 'Unavailable'}</span>
+                            <Badge
+                              variant="outline"
+                              className={
+                                item.category === 'veg'
+                                  ? 'h-5 w-5 p-0 border-green-500 bg-green-50'
+                                  : item.category === 'non-veg'
+                                  ? 'h-5 w-5 p-0 border-red-500 bg-red-50'
+                                  : 'hidden'
+                              }
+                            >
+                              <span className={`h-2 w-2 rounded-full ${item.category === 'veg' ? 'bg-green-500' : 'bg-red-500'}`} />
+                            </Badge>
+                            <CardTitle className="text-base">{item.name}</CardTitle>
                           </div>
-                          <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id, item.name)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                          <div className="text-right">
+                            <p className="font-display text-lg font-bold text-primary">₹{displayPrice.toFixed(0)}</p>
+                            {hasBranchPrice && (
+                              <p className="text-xs text-muted-foreground line-through">₹{Number(item.price).toFixed(0)}</p>
+                            )}
                           </div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {item.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+                        )}
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {item.preparation_time} min
+                          </div>
+                          <Badge variant="secondary" className="text-xs capitalize">
+                            {item.category}
+                          </Badge>
+                          {hasBranchPrice && (
+                            <Badge variant="outline" className="text-xs">
+                              <Building2 className="h-3 w-3 mr-1" />
+                              Branch Price
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Admin controls - only for developers/central admins */}
+                        {canManageBaseMenu && (
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={item.is_available ?? true}
+                                onCheckedChange={() => handleToggleAvailability(item.id, item.is_available ?? true)}
+                              />
+                              <span className="text-sm">{item.is_available ? 'Available' : 'Unavailable'}</span>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id, item.name)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Branch admin controls - only price editing */}
+                        {canEditBranchPrices && (
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <span className="text-sm text-muted-foreground">Branch pricing</span>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleEditBranchPrice(item)}
+                            >
+                              <DollarSign className="h-3 w-3 mr-1" />
+                              Set Price
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
               {filterItems(cat.value).length === 0 && (
                 <div className="text-center py-12">

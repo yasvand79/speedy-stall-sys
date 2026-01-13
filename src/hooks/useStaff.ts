@@ -14,19 +14,31 @@ export interface StaffMember {
   role: AppRole;
   isActive: boolean;
   createdAt: string;
+  branchId: string | null;
 }
 
-export function useStaff() {
+interface UseStaffOptions {
+  branchId?: string | null;
+}
+
+export function useStaff(options?: UseStaffOptions) {
   const queryClient = useQueryClient();
 
   const { data: staff = [], isLoading, error } = useQuery({
-    queryKey: ['staff'],
+    queryKey: ['staff', options?.branchId],
     queryFn: async () => {
       // Fetch profiles with their roles
-      const { data: profiles, error: profilesError } = await supabase
+      let profilesQuery = supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // Filter by branch if branchId is provided
+      if (options?.branchId) {
+        profilesQuery = profilesQuery.eq('branch_id', options.branchId);
+      }
+
+      const { data: profiles, error: profilesError } = await profilesQuery;
 
       if (profilesError) throw profilesError;
 
@@ -36,10 +48,6 @@ export function useStaff() {
         .select('*');
 
       if (rolesError) throw rolesError;
-
-      // Get user emails from auth (we'll need to fetch from profiles or use a different approach)
-      // Since we can't access auth.users directly, we'll show the user_id as identifier
-      // In a real app, you'd store email in profiles table
 
       // Map profiles with their roles
       const staffMembers: StaffMember[] = profiles.map(profile => {
@@ -53,6 +61,7 @@ export function useStaff() {
           role: userRole?.role || 'billing',
           isActive: profile.is_active ?? true,
           createdAt: profile.created_at || new Date().toISOString(),
+          branchId: profile.branch_id,
         };
       });
 

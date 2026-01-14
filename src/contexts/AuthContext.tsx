@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isDeveloper: role === 'developer',
     isCentralAdmin: role === 'central_admin',
     isBranchAdmin: role === 'branch_admin',
-    isAdmin: role === 'admin' || role === 'branch_admin' || role === 'central_admin',
+    isAdmin: role === 'branch_admin' || role === 'central_admin' || role === 'developer',
     isBilling: role === 'billing',
   };
 

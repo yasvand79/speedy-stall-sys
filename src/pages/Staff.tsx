@@ -25,7 +25,6 @@ const roleConfig: Record<AppRole, { label: string; icon: React.ElementType; colo
   developer: { label: 'Developer', icon: Shield, color: 'bg-primary text-primary-foreground' },
   central_admin: { label: 'Central Admin', icon: Shield, color: 'bg-destructive text-destructive-foreground' },
   branch_admin: { label: 'Branch Admin', icon: UserCog, color: 'bg-warning text-warning-foreground' },
-  admin: { label: 'Admin', icon: UserCog, color: 'bg-warning text-warning-foreground' },
   billing: { label: 'Billing', icon: Receipt, color: 'bg-info text-info-foreground' },
 };
 
@@ -173,7 +172,6 @@ export default function Staff() {
                             <SelectItem value="billing">Billing</SelectItem>
                             <SelectItem value="branch_admin">Branch Admin</SelectItem>
                             <SelectItem value="central_admin">Central Admin</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="developer">Developer</SelectItem>
                           </SelectContent>
                         </Select>

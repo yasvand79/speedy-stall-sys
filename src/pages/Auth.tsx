@@ -24,7 +24,6 @@ const roleLabels: Record<AppRole, string> = {
   developer: 'Developer (Super Admin)',
   central_admin: 'Central Admin',
   branch_admin: 'Branch Admin',
-  admin: 'Admin',
   billing: 'Billing / Cashier',
 };
 
@@ -32,7 +31,6 @@ const roleDescriptions: Record<AppRole, string> = {
   developer: 'Full access to everything - manages all branches and staff',
   central_admin: 'Manages all branches, staff, menus, and reports',
   branch_admin: 'Full control over assigned branch only',
-  admin: 'Administrative access',
   billing: 'Can add orders, process payments, and download invoices',
 };
 
@@ -284,7 +282,6 @@ export default function Auth() {
                       <SelectContent>
                         <SelectItem value="billing">{roleLabels.billing}</SelectItem>
                         <SelectItem value="branch_admin">{roleLabels.branch_admin}</SelectItem>
-                        <SelectItem value="admin">{roleLabels.admin}</SelectItem>
                         <SelectItem value="central_admin">{roleLabels.central_admin}</SelectItem>
                         <SelectItem value="developer">{roleLabels.developer}</SelectItem>
                       </SelectContent>

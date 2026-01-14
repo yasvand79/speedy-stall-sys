@@ -31,7 +31,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/menu" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><Menu /></ProtectedRoute>} />
-            <Route path="/billing" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin', 'admin', 'billing']}><Billing /></ProtectedRoute>} />
+            <Route path="/billing" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin', 'billing']}><Billing /></ProtectedRoute>} />
             <Route path="/branches" element={<ProtectedRoute allowedRoles={['developer', 'central_admin']}><Branches /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><Staff /></ProtectedRoute>} />
             <Route path="/staff-performance" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><StaffPerformance /></ProtectedRoute>} />

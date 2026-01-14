@@ -233,7 +233,7 @@ export const mockStaff: StaffMember[] = [
     id: '2',
     name: 'Priya Singh',
     email: 'priya@foodshop.com',
-    role: 'admin',
+    role: 'branch_admin',
     phone: '9876543211',
     isActive: true,
     createdAt: new Date('2024-01-01'),

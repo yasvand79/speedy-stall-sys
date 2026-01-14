@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      approval_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          remarks: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          remarks?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          remarks?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       branch_menu_prices: {
         Row: {
           branch_id: string
@@ -169,6 +196,53 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invite_codes: {
+        Row: {
+          branch_id: string | null
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number
+          role_assigned: Database["public"]["Enums"]["app_role"]
+          used_count: number
+        }
+        Insert: {
+          branch_id?: string | null
+          code: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          role_assigned: Database["public"]["Enums"]["app_role"]
+          used_count?: number
+        }
+        Update: {
+          branch_id?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          role_assigned?: Database["public"]["Enums"]["app_role"]
+          used_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invite_codes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
             referencedColumns: ["id"]
           },
         ]
@@ -374,10 +448,13 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           branch_id: string | null
           created_at: string | null
           full_name: string
           id: string
+          invite_code_used: string | null
           is_active: boolean | null
           phone: string | null
           status: string | null
@@ -385,10 +462,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id?: string | null
           created_at?: string | null
           full_name: string
           id?: string
+          invite_code_used?: string | null
           is_active?: boolean | null
           phone?: string | null
           status?: string | null
@@ -396,10 +476,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id?: string | null
           created_at?: string | null
           full_name?: string
           id?: string
+          invite_code_used?: string | null
           is_active?: boolean | null
           phone?: string | null
           status?: string | null
@@ -578,6 +661,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_user: {
+        Args: { remarks_text?: string; target_user_id: string }
+        Returns: boolean
+      }
+      generate_invite_code: { Args: never; Returns: string }
       generate_order_number: { Args: never; Returns: string }
       get_user_branch: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
@@ -595,6 +683,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      reject_user: {
+        Args: { remarks_text?: string; target_user_id: string }
+        Returns: boolean
+      }
+      use_invite_code: { Args: { invite_code: string }; Returns: boolean }
+      validate_invite_code: { Args: { invite_code: string }; Returns: Json }
     }
     Enums: {
       app_role: "developer" | "central_admin" | "branch_admin" | "billing"

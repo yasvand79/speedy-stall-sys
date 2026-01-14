@@ -5,15 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChefHat, Mail, Lock, User, Shield, Building2, AlertCircle } from 'lucide-react';
+import { ChefHat, Mail, Lock, User, Ticket, AlertCircle, Clock, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { Database } from '@/integrations/supabase/types';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { validateInviteCode } from '@/hooks/useInviteCodes';
+import { Badge } from '@/components/ui/badge';
+import { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -27,61 +26,54 @@ const roleLabels: Record<AppRole, string> = {
   billing: 'Billing / Cashier',
 };
 
-const roleDescriptions: Record<AppRole, string> = {
-  developer: 'Full access to everything - manages all branches and staff',
-  central_admin: 'Manages all branches, staff, menus, and reports',
-  branch_admin: 'Full control over assigned branch only',
-  billing: 'Can add orders, process payments, and download invoices',
-};
-
-// Roles that require branch assignment
-const branchRequiredRoles: AppRole[] = ['branch_admin', 'billing'];
-
-// Roles that should be approved (not self-selectable in open signup)
-const restrictedRoles: AppRole[] = ['developer', 'central_admin'];
-
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, loading, signIn, signUp } = useAuth();
+  const { user, loading, signIn, signUp, profile } = useAuth();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  
+  // Signup fields
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
-  const [signupRole, setSignupRole] = useState<AppRole>('billing');
-  const [signupBranchId, setSignupBranchId] = useState<string>('');
-
-  // Fetch active branches for branch selection
-  const { data: branches = [] } = useQuery({
-    queryKey: ['branches-public'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('branches')
-        .select('id, name, location, code')
-        .eq('is_active', true)
-        .order('name');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const requiresBranch = branchRequiredRoles.includes(signupRole);
-  const isRestrictedRole = restrictedRoles.includes(signupRole);
+  const [inviteCode, setInviteCode] = useState('');
+  
+  // Invite code validation state
+  const [isValidating, setIsValidating] = useState(false);
+  const [codeValidation, setCodeValidation] = useState<{
+    valid: boolean;
+    role?: AppRole;
+    branch_id?: string;
+    error?: string;
+  } | null>(null);
 
   useEffect(() => {
-    if (!loading && user) {
-      navigate('/');
+    if (!loading && user && profile) {
+      // Check if user is approved
+      if (profile.status === 'approved') {
+        navigate('/');
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, profile]);
 
-  // Reset branch selection when role changes to one that doesn't require it
+  // Validate invite code when it changes
   useEffect(() => {
-    if (!requiresBranch) {
-      setSignupBranchId('');
-    }
-  }, [requiresBranch]);
+    const validateCode = async () => {
+      if (inviteCode.length >= 8) {
+        setIsValidating(true);
+        const result = await validateInviteCode(inviteCode);
+        setCodeValidation(result);
+        setIsValidating(false);
+      } else {
+        setCodeValidation(null);
+      }
+    };
+
+    const timeout = setTimeout(validateCode, 500);
+    return () => clearTimeout(timeout);
+  }, [inviteCode]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +89,7 @@ export default function Auth() {
     }
 
     setIsSubmitting(true);
-    const { error } = await signIn(loginEmail, loginPassword);
+    const { error, status } = await signIn(loginEmail, loginPassword);
     
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
@@ -105,6 +97,10 @@ export default function Auth() {
       } else {
         toast.error(error.message);
       }
+    } else if (status === 'pending') {
+      toast.info('Your account is pending approval. Please wait for an admin to approve your registration.');
+    } else if (status === 'rejected') {
+      toast.error('Your registration was rejected. Please contact an administrator.');
     } else {
       toast.success('Welcome back!');
       navigate('/');
@@ -115,19 +111,12 @@ export default function Auth() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate form
     try {
       emailSchema.parse(signupEmail);
       passwordSchema.parse(signupPassword);
       if (!signupName.trim()) {
         toast.error('Please enter your full name');
-        return;
-      }
-      if (requiresBranch && !signupBranchId) {
-        toast.error('Please select your branch');
-        return;
-      }
-      if (requiresBranch && branches.length === 0) {
-        toast.error('No branches available. Please contact an administrator.');
         return;
       }
     } catch (err) {
@@ -137,13 +126,25 @@ export default function Auth() {
       }
     }
 
+    // Validate invite code
+    if (!inviteCode.trim()) {
+      toast.error('Please enter your invite code');
+      return;
+    }
+
+    if (!codeValidation?.valid) {
+      toast.error(codeValidation?.error || 'Invalid invite code');
+      return;
+    }
+
     setIsSubmitting(true);
     const { error } = await signUp(
       signupEmail, 
       signupPassword, 
       signupName, 
-      signupRole,
-      requiresBranch ? signupBranchId : undefined
+      codeValidation.role!,
+      codeValidation.branch_id,
+      inviteCode
     );
     
     if (error) {
@@ -153,8 +154,15 @@ export default function Auth() {
         toast.error(error.message);
       }
     } else {
-      toast.success('Account created! You can now login.');
-      navigate('/');
+      toast.success('Registration successful! Waiting for admin approval.', {
+        duration: 5000,
+      });
+      // Clear form
+      setSignupEmail('');
+      setSignupPassword('');
+      setSignupName('');
+      setInviteCode('');
+      setCodeValidation(null);
     }
     setIsSubmitting(false);
   };
@@ -163,6 +171,48 @@ export default function Auth() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // Show pending status if user is logged in but pending
+  if (user && profile && profile.status !== 'approved') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-amber-500">
+              <Clock className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <CardTitle className="font-display text-2xl">
+                {profile.status === 'pending' ? 'Approval Pending' : 'Registration Rejected'}
+              </CardTitle>
+              <CardDescription>
+                {profile.status === 'pending'
+                  ? 'Your registration is waiting for admin approval.'
+                  : 'Your registration was rejected. Please contact an administrator.'}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-muted-foreground mb-4">
+              {profile.status === 'pending'
+                ? 'You will be able to login once an admin approves your account.'
+                : 'If you believe this was a mistake, please reach out to your organization admin.'}
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                const { signOut } = useAuth();
+                await signOut();
+                window.location.reload();
+              }}
+            >
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -176,7 +226,7 @@ export default function Auth() {
           </div>
           <div>
             <CardTitle className="font-display text-2xl">FoodShop Manager</CardTitle>
-            <CardDescription>Sign in to manage your food shop</CardDescription>
+            <CardDescription>Staff portal - Invite code required for registration</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -226,6 +276,46 @@ export default function Auth() {
             
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
+                {/* Invite Code - First and Required */}
+                <div className="space-y-2">
+                  <Label htmlFor="invite-code">Invite Code *</Label>
+                  <div className="relative">
+                    <Ticket className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="invite-code"
+                      type="text"
+                      placeholder="Enter your invite code"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                      className="pl-10 font-mono uppercase"
+                      required
+                    />
+                  </div>
+                  {isValidating && (
+                    <p className="text-xs text-muted-foreground">Validating code...</p>
+                  )}
+                  {codeValidation && (
+                    codeValidation.valid ? (
+                      <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <AlertDescription className="text-green-700 dark:text-green-400 flex items-center gap-2">
+                          Valid code! Role: 
+                          <Badge variant="outline" className="ml-1">
+                            {roleLabels[codeValidation.role!]}
+                          </Badge>
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          {codeValidation.error || 'Invalid or expired invite code'}
+                        </AlertDescription>
+                      </Alert>
+                    )
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full Name</Label>
                   <div className="relative">
@@ -241,6 +331,7 @@ export default function Auth() {
                     />
                   </div>
                 </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <div className="relative">
@@ -256,6 +347,7 @@ export default function Auth() {
                     />
                   </div>
                 </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
                   <div className="relative">
@@ -271,80 +363,20 @@ export default function Auth() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-role">Role</Label>
-                  <div className="relative">
-                    <Shield className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none" />
-                    <Select value={signupRole} onValueChange={(value: AppRole) => setSignupRole(value)}>
-                      <SelectTrigger className="pl-10">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="billing">{roleLabels.billing}</SelectItem>
-                        <SelectItem value="branch_admin">{roleLabels.branch_admin}</SelectItem>
-                        <SelectItem value="central_admin">{roleLabels.central_admin}</SelectItem>
-                        <SelectItem value="developer">{roleLabels.developer}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{roleDescriptions[signupRole]}</p>
-                </div>
-
-                {/* Branch Selection - shown for branch-restricted roles */}
-                {requiresBranch && (
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-branch">Branch *</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none" />
-                      <Select value={signupBranchId} onValueChange={setSignupBranchId}>
-                        <SelectTrigger className="pl-10">
-                          <SelectValue placeholder="Select your branch" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {branches.map((branch) => (
-                            <SelectItem key={branch.id} value={branch.id}>
-                              {branch.name} - {branch.location}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {branches.length === 0 && (
-                      <Alert variant="destructive" className="mt-2">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>
-                          No branches available. Contact a Developer or Central Admin to create branches first.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                )}
-
-                {/* Warning for restricted roles */}
-                {isRestrictedRole && (
-                  <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900">
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                    <AlertDescription className="text-amber-700 dark:text-amber-400">
-                      {signupRole === 'developer' 
-                        ? 'Developer role has full system access. This should only be assigned to system administrators.'
-                        : 'Central Admin role has access to all branches. This should only be assigned to senior management.'}
-                    </AlertDescription>
-                  </Alert>
-                )}
 
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={isSubmitting || (requiresBranch && branches.length === 0)}
+                  disabled={isSubmitting || !codeValidation?.valid}
                 >
-                  {isSubmitting ? 'Creating account...' : 'Create Account'}
+                  {isSubmitting ? 'Creating account...' : 'Register with Invite Code'}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
           
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            Select your role and branch based on your job function.
+            This is a staff-only portal. Contact your administrator for an invite code.
           </p>
         </CardContent>
       </Card>

@@ -13,6 +13,9 @@ interface Profile {
   is_active: boolean;
   branch_id: string | null;
   status: string | null;
+  invite_code_used: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
 }
 
 interface AuthContextType {
@@ -21,14 +24,15 @@ interface AuthContextType {
   profile: Profile | null;
   role: AppRole | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string, role?: AppRole, branchId?: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; status?: string }>;
+  signUp: (email: string, password: string, fullName: string, role?: AppRole, branchId?: string, inviteCode?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isDeveloper: boolean;
   isCentralAdmin: boolean;
   isBranchAdmin: boolean;
   isAdmin: boolean;
   isBilling: boolean;
+  isApproved: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,14 +106,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    return { error: error as Error | null };
+
+    if (error) {
+      return { error: error as Error };
+    }
+
+    // Check user approval status
+    if (data.user) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+
+      const status = profileData?.status;
+
+      // If not approved, sign out and return status
+      if (status !== 'approved') {
+        await supabase.auth.signOut();
+        return { error: null, status };
+      }
+    }
+
+    return { error: null, status: 'approved' };
   };
 
-  const signUp = async (email: string, password: string, fullName: string, role: AppRole = 'billing', branchId?: string) => {
+  const signUp = async (
+    email: string, 
+    password: string, 
+    fullName: string, 
+    role: AppRole = 'billing', 
+    branchId?: string,
+    inviteCode?: string
+  ) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -121,9 +154,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           full_name: fullName,
           role: role,
           branch_id: branchId || null,
+          invite_code: inviteCode || null,
         },
       },
     });
+    
+    // Sign out immediately after signup since approval is required
+    if (!error) {
+      await supabase.auth.signOut();
+    }
+    
     return { error: error as Error | null };
   };
 
@@ -132,6 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setRole(null);
   };
+
+  const isApproved = profile?.status === 'approved';
 
   const value = {
     user,
@@ -147,6 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isBranchAdmin: role === 'branch_admin',
     isAdmin: role === 'branch_admin' || role === 'central_admin' || role === 'developer',
     isBilling: role === 'billing',
+    isApproved,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

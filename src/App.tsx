@@ -14,6 +14,8 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Branches from "./pages/Branches";
 import StaffPerformance from "./pages/StaffPerformance";
+import InviteCodes from "./pages/InviteCodes";
+import UserApprovals from "./pages/UserApprovals";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/staff" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><Staff /></ProtectedRoute>} />
             <Route path="/staff-performance" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><StaffPerformance /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><Reports /></ProtectedRoute>} />
+            <Route path="/invite-codes" element={<ProtectedRoute allowedRoles={['developer', 'central_admin']}><InviteCodes /></ProtectedRoute>} />
+            <Route path="/user-approvals" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><UserApprovals /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['developer']}><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

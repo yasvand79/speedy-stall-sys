@@ -11,6 +11,8 @@ import {
   LogOut,
   Building2,
   TrendingUp,
+  Ticket,
+  UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,13 +24,15 @@ export function Sidebar() {
   const { isDeveloper, isCentralAdmin, isBranchAdmin, isAdmin, profile, role, signOut } = useAuth();
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['developer', 'central_admin', 'branch_admin', 'admin', 'billing'] },
-    { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['developer', 'central_admin', 'branch_admin', 'admin', 'billing'] },
-    { name: 'Billing', href: '/billing', icon: Receipt, roles: ['developer', 'central_admin', 'branch_admin', 'admin', 'billing'] },
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['developer', 'central_admin', 'branch_admin', 'billing'] },
+    { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['developer', 'central_admin', 'branch_admin', 'billing'] },
+    { name: 'Billing', href: '/billing', icon: Receipt, roles: ['developer', 'central_admin', 'branch_admin', 'billing'] },
     { name: 'Menu', href: '/menu', icon: UtensilsCrossed, roles: ['developer', 'central_admin', 'branch_admin'] },
     { name: 'Branches', href: '/branches', icon: Building2, roles: ['developer', 'central_admin'] },
     { name: 'Staff', href: '/staff', icon: Users, roles: ['developer', 'central_admin', 'branch_admin'] },
     { name: 'Staff Performance', href: '/staff-performance', icon: TrendingUp, roles: ['developer', 'central_admin', 'branch_admin'] },
+    { name: 'Invite Codes', href: '/invite-codes', icon: Ticket, roles: ['developer', 'central_admin'] },
+    { name: 'User Approvals', href: '/user-approvals', icon: UserCheck, roles: ['developer', 'central_admin', 'branch_admin'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['developer', 'central_admin', 'branch_admin'] },
     { name: 'Settings', href: '/settings', icon: Settings, roles: ['developer'] },
   ];

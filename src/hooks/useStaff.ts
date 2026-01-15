@@ -15,6 +15,7 @@ export interface StaffMember {
   isActive: boolean;
   createdAt: string;
   branchId: string | null;
+  status: string | null;
 }
 
 interface UseStaffOptions {
@@ -27,10 +28,11 @@ export function useStaff(options?: UseStaffOptions) {
   const { data: staff = [], isLoading, error } = useQuery({
     queryKey: ['staff', options?.branchId],
     queryFn: async () => {
-      // Fetch profiles with their roles
+      // Fetch profiles with their roles - only approved users
       let profilesQuery = supabase
         .from('profiles')
         .select('*')
+        .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
       // Filter by branch if branchId is provided
@@ -62,6 +64,7 @@ export function useStaff(options?: UseStaffOptions) {
           isActive: profile.is_active ?? true,
           createdAt: profile.created_at || new Date().toISOString(),
           branchId: profile.branch_id,
+          status: profile.status,
         };
       });
 
@@ -107,12 +110,53 @@ export function useStaff(options?: UseStaffOptions) {
     },
   });
 
+  const updateBranchMutation = useMutation({
+    mutationFn: async ({ userId, branchId }: { userId: string; branchId: string | null }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ branch_id: branchId })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      toast.success('Branch assignment updated');
+    },
+    onError: (error) => {
+      console.error('Error updating branch:', error);
+      toast.error('Failed to update branch assignment');
+    },
+  });
+
+  const removeStaffMutation = useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      // Soft delete - deactivate the user
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: false, status: 'rejected' })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      toast.success('Staff member removed');
+    },
+    onError: (error) => {
+      console.error('Error removing staff:', error);
+      toast.error('Failed to remove staff member');
+    },
+  });
+
   return {
     staff,
     isLoading,
     error,
     updateRole: updateRoleMutation.mutate,
     updateStatus: updateStatusMutation.mutate,
-    isUpdating: updateRoleMutation.isPending || updateStatusMutation.isPending,
+    updateBranch: updateBranchMutation.mutate,
+    removeStaff: removeStaffMutation.mutate,
+    isUpdating: updateRoleMutation.isPending || updateStatusMutation.isPending || updateBranchMutation.isPending || removeStaffMutation.isPending,
   };
 }

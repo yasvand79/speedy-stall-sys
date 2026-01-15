@@ -12,12 +12,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
 import { useStaff, StaffMember } from '@/hooks/useStaff';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranches } from '@/hooks/useBranches';
-import { Search, Mail, Phone, Shield, UserCog, Receipt, Loader2, Building2 } from 'lucide-react';
+import { useInviteCodes } from '@/hooks/useInviteCodes';
+import { Search, Mail, Phone, Shield, UserCog, Receipt, Loader2, Building2, UserPlus, UserMinus, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Database } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -31,15 +53,23 @@ const roleConfig: Record<AppRole, { label: string; icon: React.ElementType; colo
 export default function Staff() {
   const { profile, role, isDeveloper, isCentralAdmin, isBranchAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [staffToRemove, setStaffToRemove] = useState<StaffMember | null>(null);
+  
+  // Add staff form state
+  const [newStaffRole, setNewStaffRole] = useState<AppRole>('billing');
+  const [newStaffBranch, setNewStaffBranch] = useState<string>('');
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
 
   // Branch admins only see their branch's staff
   const branchFilterId = isBranchAdmin ? profile?.branch_id : undefined;
   
-  const { staff, isLoading, updateRole, updateStatus, isUpdating } = useStaff({ branchId: branchFilterId });
+  const { staff, isLoading, updateRole, updateStatus, updateBranch, removeStaff, isUpdating } = useStaff({ branchId: branchFilterId });
   const { branches } = useBranches();
+  const { createCode, isCreating } = useInviteCodes();
 
-  // Only developers and central admins can change roles
-  const canManageRoles = isDeveloper || isCentralAdmin;
+  // Only developers and central admins can manage staff
+  const canManageStaff = isDeveloper || isCentralAdmin;
 
   const filteredStaff = staff.filter(member =>
     member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -58,8 +88,46 @@ export default function Staff() {
     updateRole({ userId: member.userId, newRole });
   };
 
+  const handleBranchChange = (member: StaffMember, branchId: string) => {
+    updateBranch({ userId: member.userId, branchId: branchId === 'none' ? null : branchId });
+  };
+
   const handleStatusToggle = (member: StaffMember) => {
     updateStatus({ userId: member.userId, isActive: !member.isActive });
+  };
+
+  const handleRemoveStaff = () => {
+    if (staffToRemove) {
+      removeStaff({ userId: staffToRemove.userId });
+      setStaffToRemove(null);
+    }
+  };
+
+  const handleGenerateInviteCode = async () => {
+    try {
+      const code = await createCode({
+        role: newStaffRole,
+        branchId: newStaffBranch || undefined,
+        maxUses: 1,
+      });
+      setGeneratedCode(code);
+    } catch (error) {
+      // Error handled in hook
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (generatedCode) {
+      navigator.clipboard.writeText(generatedCode);
+      toast.success('Invite code copied to clipboard');
+    }
+  };
+
+  const resetAddDialog = () => {
+    setNewStaffRole('billing');
+    setNewStaffBranch('');
+    setGeneratedCode(null);
+    setShowAddDialog(false);
   };
 
   if (isLoading) {
@@ -88,6 +156,93 @@ export default function Staff() {
               )}
             </p>
           </div>
+          {canManageStaff && (
+            <Dialog open={showAddDialog} onOpenChange={(open) => {
+              if (!open) resetAddDialog();
+              else setShowAddDialog(true);
+            }}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Add Staff
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Staff Member</DialogTitle>
+                  <DialogDescription>
+                    Generate an invite code for a new staff member. They'll use this code to register and will be auto-approved.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                {!generatedCode ? (
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Role</Label>
+                      <Select value={newStaffRole} onValueChange={(v: AppRole) => setNewStaffRole(v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="billing">Billing Staff</SelectItem>
+                          <SelectItem value="branch_admin">Branch Admin</SelectItem>
+                          <SelectItem value="central_admin">Central Admin</SelectItem>
+                          {isDeveloper && <SelectItem value="developer">Developer</SelectItem>}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {(newStaffRole === 'billing' || newStaffRole === 'branch_admin') && (
+                      <div className="space-y-2">
+                        <Label>Branch Assignment</Label>
+                        <Select value={newStaffBranch} onValueChange={setNewStaffBranch}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select branch (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No Branch</SelectItem>
+                            {branches.map(branch => (
+                              <SelectItem key={branch.id} value={branch.id}>
+                                {branch.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center space-y-4">
+                    <div className="p-4 bg-muted rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-2">Invite Code</p>
+                      <div className="flex items-center justify-center gap-2">
+                        <code className="text-2xl font-mono font-bold tracking-wider">{generatedCode}</code>
+                        <Button variant="ghost" size="icon" onClick={handleCopyCode}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Share this code with the new staff member. They'll be auto-approved upon registration.
+                    </p>
+                  </div>
+                )}
+                
+                <DialogFooter>
+                  {!generatedCode ? (
+                    <>
+                      <Button variant="outline" onClick={resetAddDialog}>Cancel</Button>
+                      <Button onClick={handleGenerateInviteCode} disabled={isCreating}>
+                        {isCreating ? 'Generating...' : 'Generate Invite Code'}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button onClick={resetAddDialog}>Done</Button>
+                  )}
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Search */}
@@ -104,8 +259,8 @@ export default function Staff() {
         {/* Staff Grid */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredStaff.map((member) => {
-            const role = roleConfig[member.role];
-            const RoleIcon = role.icon;
+            const roleInfo = roleConfig[member.role];
+            const RoleIcon = roleInfo.icon;
             const initials = member.fullName
               .split(' ')
               .map(n => n[0])
@@ -131,9 +286,9 @@ export default function Staff() {
                           <Badge variant="secondary" className="text-xs">Inactive</Badge>
                         )}
                       </div>
-                      <Badge className={`mt-1 ${role.color}`}>
+                      <Badge className={`mt-1 ${roleInfo.color}`}>
                         <RoleIcon className="mr-1 h-3 w-3" />
-                        {role.label}
+                        {roleInfo.label}
                       </Badge>
                     </div>
                   </div>
@@ -155,46 +310,87 @@ export default function Staff() {
                     </div>
                   </div>
 
-                  {/* Role Selection */}
+                  {/* Management Controls */}
                   <div className="mt-4 pt-4 border-t border-border space-y-3">
-                    {canManageRoles ? (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Role</span>
-                        <Select
-                          value={member.role}
-                          onValueChange={(value: AppRole) => handleRoleChange(member, value)}
-                          disabled={isUpdating}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="billing">Billing</SelectItem>
-                            <SelectItem value="branch_admin">Branch Admin</SelectItem>
-                            <SelectItem value="central_admin">Central Admin</SelectItem>
-                            <SelectItem value="developer">Developer</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    {canManageStaff ? (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Role</span>
+                          <Select
+                            value={member.role}
+                            onValueChange={(value: AppRole) => handleRoleChange(member, value)}
+                            disabled={isUpdating}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="billing">Billing</SelectItem>
+                              <SelectItem value="branch_admin">Branch Admin</SelectItem>
+                              <SelectItem value="central_admin">Central Admin</SelectItem>
+                              {isDeveloper && <SelectItem value="developer">Developer</SelectItem>}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Branch</span>
+                          <Select
+                            value={member.branchId || 'none'}
+                            onValueChange={(value) => handleBranchChange(member, value)}
+                            disabled={isUpdating}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No Branch</SelectItem>
+                              {branches.map(branch => (
+                                <SelectItem key={branch.id} value={branch.id}>
+                                  {branch.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
                     ) : (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Role</span>
-                        <span className="text-sm font-medium">{roleConfig[member.role].label}</span>
-                      </div>
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Role</span>
+                          <span className="text-sm font-medium">{roleConfig[member.role].label}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Branch</span>
+                          <span className="text-sm font-medium">{getBranchName(member.branchId)}</span>
+                        </div>
+                      </>
                     )}
 
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-muted-foreground">
                         Joined {format(new Date(member.createdAt), 'MMM yyyy')}
                       </p>
-                      <Button
-                        variant={member.isActive ? "outline" : "default"}
-                        size="sm"
-                        onClick={() => handleStatusToggle(member)}
-                        disabled={isUpdating}
-                      >
-                        {member.isActive ? 'Deactivate' : 'Activate'}
-                      </Button>
+                      {canManageStaff && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant={member.isActive ? "outline" : "default"}
+                            size="sm"
+                            onClick={() => handleStatusToggle(member)}
+                            disabled={isUpdating}
+                          >
+                            {member.isActive ? 'Deactivate' : 'Activate'}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setStaffToRemove(member)}
+                            disabled={isUpdating}
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -210,6 +406,24 @@ export default function Staff() {
             </p>
           </div>
         )}
+
+        {/* Remove Staff Confirmation */}
+        <AlertDialog open={!!staffToRemove} onOpenChange={() => setStaffToRemove(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove Staff Member</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to remove {staffToRemove?.fullName}? This will deactivate their account and they will no longer be able to access the system.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleRemoveStaff} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChefHat, Mail, Lock, User, Ticket, AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { ChefHat, Mail, Lock, User, Ticket, AlertCircle, Clock, CheckCircle, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -66,6 +66,9 @@ export default function Auth() {
         const result = await validateInviteCode(inviteCode);
         setCodeValidation(result);
         setIsValidating(false);
+      } else if (inviteCode.length === 0) {
+        // No invite code - allowed for billing only
+        setCodeValidation(null);
       } else {
         setCodeValidation(null);
       }
@@ -126,25 +129,31 @@ export default function Auth() {
       }
     }
 
-    // Validate invite code
-    if (!inviteCode.trim()) {
-      toast.error('Please enter your invite code');
-      return;
-    }
-
-    if (!codeValidation?.valid) {
-      toast.error(codeValidation?.error || 'Invalid invite code');
-      return;
+    // Determine registration type
+    const hasInviteCode = inviteCode.trim().length > 0;
+    
+    // If invite code provided, validate it
+    if (hasInviteCode) {
+      if (!codeValidation?.valid) {
+        toast.error(codeValidation?.error || 'Invalid invite code');
+        return;
+      }
     }
 
     setIsSubmitting(true);
-    const { error } = await signUp(
+    
+    // If no invite code, register as billing with pending status
+    // If invite code valid, use the role from the code (auto-approved)
+    const role = hasInviteCode && codeValidation?.valid ? codeValidation.role! : 'billing';
+    const branchId = hasInviteCode && codeValidation?.valid ? codeValidation.branch_id : undefined;
+    
+    const { error, autoApproved } = await signUp(
       signupEmail, 
       signupPassword, 
       signupName, 
-      codeValidation.role!,
-      codeValidation.branch_id,
-      inviteCode
+      role,
+      branchId,
+      hasInviteCode ? inviteCode : undefined
     );
     
     if (error) {
@@ -154,9 +163,15 @@ export default function Auth() {
         toast.error(error.message);
       }
     } else {
-      toast.success('Registration successful! Waiting for admin approval.', {
-        duration: 5000,
-      });
+      if (autoApproved) {
+        toast.success('Registration successful! You can now log in.', {
+          duration: 5000,
+        });
+      } else {
+        toast.success('Registration successful! Waiting for admin approval.', {
+          duration: 5000,
+        });
+      }
       // Clear form
       setSignupEmail('');
       setSignupPassword('');
@@ -226,7 +241,7 @@ export default function Auth() {
           </div>
           <div>
             <CardTitle className="font-display text-2xl">FoodShop Manager</CardTitle>
-            <CardDescription>Staff portal - Invite code required for registration</CardDescription>
+            <CardDescription>Staff portal - Internal access only</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -276,33 +291,43 @@ export default function Auth() {
             
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
-                {/* Invite Code - First and Required */}
+                {/* Invite Code - Optional */}
                 <div className="space-y-2">
-                  <Label htmlFor="invite-code">Invite Code *</Label>
+                  <Label htmlFor="invite-code">Invite Code (optional)</Label>
                   <div className="relative">
                     <Ticket className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       id="invite-code"
                       type="text"
-                      placeholder="Enter your invite code"
+                      placeholder="Enter invite code if you have one"
                       value={inviteCode}
                       onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                       className="pl-10 font-mono uppercase"
-                      required
                     />
                   </div>
                   {isValidating && (
                     <p className="text-xs text-muted-foreground">Validating code...</p>
                   )}
+                  {inviteCode.length === 0 && (
+                    <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
+                      <Info className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm">
+                        Without an invite code, you'll register as Billing Staff and require admin approval.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   {codeValidation && (
                     codeValidation.valid ? (
                       <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900">
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                        <AlertDescription className="text-green-700 dark:text-green-400 flex items-center gap-2">
-                          Valid code! Role: 
-                          <Badge variant="outline" className="ml-1">
-                            {roleLabels[codeValidation.role!]}
-                          </Badge>
+                        <AlertDescription className="text-green-700 dark:text-green-400 flex flex-col gap-1">
+                          <span className="flex items-center gap-2">
+                            Valid code! Role: 
+                            <Badge variant="outline" className="ml-1">
+                              {roleLabels[codeValidation.role!]}
+                            </Badge>
+                          </span>
+                          <span className="text-xs">You'll be approved immediately upon registration.</span>
                         </AlertDescription>
                       </Alert>
                     ) : (
@@ -367,16 +392,16 @@ export default function Auth() {
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={isSubmitting || !codeValidation?.valid}
+                  disabled={isSubmitting || (inviteCode.length > 0 && inviteCode.length < 8)}
                 >
-                  {isSubmitting ? 'Creating account...' : 'Register with Invite Code'}
+                  {isSubmitting ? 'Creating account...' : inviteCode.length > 0 ? 'Register with Invite Code' : 'Register as Billing Staff'}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
           
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            This is a staff-only portal. Contact your administrator for an invite code.
+            This is a staff-only portal. Contact your administrator for access.
           </p>
         </CardContent>
       </Card>

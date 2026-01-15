@@ -25,7 +25,7 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; status?: string }>;
-  signUp: (email: string, password: string, fullName: string, role?: AppRole, branchId?: string, inviteCode?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, role?: AppRole, branchId?: string, inviteCode?: string) => Promise<{ error: Error | null; autoApproved?: boolean }>;
   signOut: () => Promise<void>;
   isDeveloper: boolean;
   isCentralAdmin: boolean;
@@ -145,6 +145,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ) => {
     const redirectUrl = `${window.location.origin}/`;
     
+    // Determine if this will be auto-approved
+    // Users with invite codes or developer role are auto-approved
+    const willBeAutoApproved = !!inviteCode || role === 'developer';
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -159,12 +163,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
     
-    // Sign out immediately after signup since approval is required
+    // Always sign out after signup - user needs to log in explicitly
     if (!error) {
       await supabase.auth.signOut();
     }
     
-    return { error: error as Error | null };
+    return { error: error as Error | null, autoApproved: willBeAutoApproved };
   };
 
   const signOut = async () => {

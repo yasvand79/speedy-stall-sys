@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,9 +6,104 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Store, Bell, Receipt, Printer, Database, Shield } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Store, Bell, Receipt, Printer, Database, Shield, Loader2 } from 'lucide-react';
+import { useShopSettings } from '@/hooks/useShopSettings';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export default function Settings() {
+  const { settings, isLoading, updateSettings, updateSetting, isSaving } = useShopSettings();
+  const { role } = useAuth();
+  
+  const canEdit = role === 'developer' || role === 'central_admin';
+
+  // Local state for form fields
+  const [shopDetails, setShopDetails] = useState({
+    shop_name: '',
+    phone: '',
+    address: '',
+    gst_number: '',
+    fssai_license: '',
+  });
+
+  const [billingSettings, setBillingSettings] = useState({
+    gst_rate: 5,
+  });
+
+  // Sync local state with fetched settings
+  useEffect(() => {
+    if (settings) {
+      setShopDetails({
+        shop_name: settings.shop_name || '',
+        phone: settings.phone || '',
+        address: settings.address || '',
+        gst_number: settings.gst_number || '',
+        fssai_license: settings.fssai_license || '',
+      });
+      setBillingSettings({
+        gst_rate: settings.gst_rate || 5,
+      });
+    }
+  }, [settings]);
+
+  const handleSaveShopDetails = () => {
+    if (!canEdit) {
+      toast.error('You do not have permission to edit settings');
+      return;
+    }
+    updateSettings(shopDetails);
+  };
+
+  const handleSaveBillingSettings = () => {
+    if (!canEdit) {
+      toast.error('You do not have permission to edit settings');
+      return;
+    }
+    updateSettings({ gst_rate: billingSettings.gst_rate });
+  };
+
+  const handleToggle = (key: 'auto_generate_invoice' | 'include_gst_in_price' | 'low_stock_alerts' | 'new_order_sound' | 'daily_summary_email' | 'auto_backup', value: boolean) => {
+    if (!canEdit) {
+      toast.error('You do not have permission to edit settings');
+      return;
+    }
+    updateSetting(key, value);
+  };
+
+  const handleExportData = () => {
+    toast.info('Data export functionality coming soon');
+  };
+
+  const handleImportData = () => {
+    toast.info('Data import functionality coming soon');
+  };
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="space-y-6 max-w-4xl">
+          <div>
+            <Skeleton className="h-8 w-32 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-64" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="space-y-6 max-w-4xl">
@@ -15,6 +111,11 @@ export default function Settings() {
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Settings</h1>
           <p className="text-muted-foreground">Manage your shop configuration</p>
+          {!canEdit && (
+            <p className="text-sm text-amber-600 mt-1">
+              You have read-only access. Only Developer and Central Admin can modify settings.
+            </p>
+          )}
         </div>
 
         {/* Shop Details */}
@@ -30,26 +131,66 @@ export default function Settings() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="shopName">Shop Name</Label>
-                <Input id="shopName" defaultValue="FoodShop Restaurant" />
+                <Input 
+                  id="shopName" 
+                  value={shopDetails.shop_name}
+                  onChange={(e) => setShopDetails(prev => ({ ...prev, shop_name: e.target.value }))}
+                  disabled={!canEdit}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" defaultValue="+91 98765 43210" />
+                <Input 
+                  id="phone" 
+                  value={shopDetails.phone}
+                  onChange={(e) => setShopDetails(prev => ({ ...prev, phone: e.target.value }))}
+                  disabled={!canEdit}
+                  placeholder="+91 98765 43210"
+                />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="address">Address</Label>
-                <Input id="address" defaultValue="123 Main Street, City, State 400001" />
+                <Input 
+                  id="address" 
+                  value={shopDetails.address}
+                  onChange={(e) => setShopDetails(prev => ({ ...prev, address: e.target.value }))}
+                  disabled={!canEdit}
+                  placeholder="123 Main Street, City, State 400001"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="gst">GST Number</Label>
-                <Input id="gst" defaultValue="27AABCU9603R1ZM" />
+                <Input 
+                  id="gst" 
+                  value={shopDetails.gst_number}
+                  onChange={(e) => setShopDetails(prev => ({ ...prev, gst_number: e.target.value }))}
+                  disabled={!canEdit}
+                  placeholder="27AABCU9603R1ZM"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="fssai">FSSAI License</Label>
-                <Input id="fssai" defaultValue="12345678901234" />
+                <Input 
+                  id="fssai" 
+                  value={shopDetails.fssai_license}
+                  onChange={(e) => setShopDetails(prev => ({ ...prev, fssai_license: e.target.value }))}
+                  disabled={!canEdit}
+                  placeholder="12345678901234"
+                />
               </div>
             </div>
-            <Button>Save Changes</Button>
+            {canEdit && (
+              <Button onClick={handleSaveShopDetails} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -66,27 +207,55 @@ export default function Settings() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="gstRate">GST Rate (%)</Label>
-                <Input id="gstRate" type="number" defaultValue="5" />
+                <Input 
+                  id="gstRate" 
+                  type="number" 
+                  value={billingSettings.gst_rate}
+                  onChange={(e) => setBillingSettings(prev => ({ ...prev, gst_rate: parseFloat(e.target.value) || 0 }))}
+                  disabled={!canEdit}
+                  min={0}
+                  max={100}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency">Currency</Label>
                 <Input id="currency" defaultValue="INR (₹)" disabled />
               </div>
             </div>
+            {canEdit && (
+              <Button onClick={handleSaveBillingSettings} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save GST Rate'
+                )}
+              </Button>
+            )}
             <Separator />
             <div className="flex items-center justify-between">
               <div>
                 <Label>Auto-generate Invoice Number</Label>
                 <p className="text-sm text-muted-foreground">Automatically generate sequential invoice numbers</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={settings?.auto_generate_invoice ?? true}
+                onCheckedChange={(checked) => handleToggle('auto_generate_invoice', checked)}
+                disabled={!canEdit || isSaving}
+              />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <Label>Include GST in Item Price</Label>
                 <p className="text-sm text-muted-foreground">Show item prices inclusive of GST</p>
               </div>
-              <Switch />
+              <Switch 
+                checked={settings?.include_gst_in_price ?? false}
+                onCheckedChange={(checked) => handleToggle('include_gst_in_price', checked)}
+                disabled={!canEdit || isSaving}
+              />
             </div>
           </CardContent>
         </Card>
@@ -106,21 +275,33 @@ export default function Settings() {
                 <Label>Low Stock Alerts</Label>
                 <p className="text-sm text-muted-foreground">Get notified when items are running low</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={settings?.low_stock_alerts ?? true}
+                onCheckedChange={(checked) => handleToggle('low_stock_alerts', checked)}
+                disabled={!canEdit || isSaving}
+              />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <Label>New Order Sound</Label>
                 <p className="text-sm text-muted-foreground">Play sound when new order is placed</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={settings?.new_order_sound ?? true}
+                onCheckedChange={(checked) => handleToggle('new_order_sound', checked)}
+                disabled={!canEdit || isSaving}
+              />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <Label>Daily Summary Email</Label>
                 <p className="text-sm text-muted-foreground">Receive daily sales summary via email</p>
               </div>
-              <Switch />
+              <Switch 
+                checked={settings?.daily_summary_email ?? false}
+                onCheckedChange={(checked) => handleToggle('daily_summary_email', checked)}
+                disabled={!canEdit || isSaving}
+              />
             </div>
           </CardContent>
         </Card>
@@ -138,16 +319,18 @@ export default function Settings() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Receipt Printer</Label>
-                <Input defaultValue="EPSON TM-T88V" disabled />
+                <Input value={settings?.receipt_printer || 'Not configured'} disabled />
                 <p className="text-xs text-muted-foreground">Thermal printer for customer receipts</p>
               </div>
               <div className="space-y-2">
                 <Label>Kitchen Printer</Label>
-                <Input defaultValue="Not configured" disabled />
+                <Input value={settings?.kitchen_printer || 'Not configured'} disabled />
                 <p className="text-xs text-muted-foreground">Printer for kitchen order tickets</p>
               </div>
             </div>
-            <Button variant="outline">Configure Printers</Button>
+            <Button variant="outline" onClick={() => toast.info('Printer configuration coming soon')}>
+              Configure Printers
+            </Button>
           </CardContent>
         </Card>
 
@@ -166,15 +349,19 @@ export default function Settings() {
                 <Label>Auto Backup</Label>
                 <p className="text-sm text-muted-foreground">Daily automatic cloud backup at 2 AM</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={settings?.auto_backup ?? true}
+                onCheckedChange={(checked) => handleToggle('auto_backup', checked)}
+                disabled={!canEdit || isSaving}
+              />
             </div>
             <Separator />
             <div className="flex gap-3">
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleExportData}>
                 <Database className="mr-2 h-4 w-4" />
                 Export Data
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleImportData}>
                 <Database className="mr-2 h-4 w-4" />
                 Import Data
               </Button>

@@ -594,6 +594,66 @@ export type Database = {
           },
         ]
       }
+      shop_settings: {
+        Row: {
+          address: string | null
+          auto_backup: boolean
+          auto_generate_invoice: boolean
+          created_at: string
+          daily_summary_email: boolean
+          fssai_license: string | null
+          gst_number: string | null
+          gst_rate: number
+          id: string
+          include_gst_in_price: boolean
+          kitchen_printer: string | null
+          low_stock_alerts: boolean
+          new_order_sound: boolean
+          phone: string | null
+          receipt_printer: string | null
+          shop_name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          auto_backup?: boolean
+          auto_generate_invoice?: boolean
+          created_at?: string
+          daily_summary_email?: boolean
+          fssai_license?: string | null
+          gst_number?: string | null
+          gst_rate?: number
+          id?: string
+          include_gst_in_price?: boolean
+          kitchen_printer?: string | null
+          low_stock_alerts?: boolean
+          new_order_sound?: boolean
+          phone?: string | null
+          receipt_printer?: string | null
+          shop_name?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          auto_backup?: boolean
+          auto_generate_invoice?: boolean
+          created_at?: string
+          daily_summary_email?: boolean
+          fssai_license?: string | null
+          gst_number?: string | null
+          gst_rate?: number
+          id?: string
+          include_gst_in_price?: boolean
+          kitchen_printer?: string | null
+          low_stock_alerts?: boolean
+          new_order_sound?: boolean
+          phone?: string | null
+          receipt_printer?: string | null
+          shop_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staff_performance: {
         Row: {
           average_bill_value: number

@@ -6,10 +6,8 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCreatePayment } from '@/hooks/usePayments';
 import { useUpdateOrderStatus } from '@/hooks/useOrders';
-import { useRazorpay } from '@/hooks/useRazorpay';
-import { useQueryClient } from '@tanstack/react-query';
 import { Database } from '@/integrations/supabase/types';
-import { Banknote, Smartphone, CreditCard, Printer, IndianRupee } from 'lucide-react';
+import { Banknote, Smartphone, CreditCard, Printer } from 'lucide-react';
 
 type PaymentMethod = Database['public']['Enums']['payment_method'];
 
@@ -23,48 +21,23 @@ interface PaymentDialogProps {
 }
 
 export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total, paidAmount }: PaymentDialogProps) {
-  const [method, setMethod] = useState<PaymentMethod | 'razorpay'>('cash');
+  const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState((total - paidAmount).toFixed(2));
   const [transactionId, setTransactionId] = useState('');
 
   const createPayment = useCreatePayment();
   const updateOrderStatus = useUpdateOrderStatus();
-  const { initiatePayment, isLoading: razorpayLoading } = useRazorpay();
-  const queryClient = useQueryClient();
 
   const remaining = total - paidAmount;
   const paymentAmount = parseFloat(amount) || 0;
 
-  const handleRazorpayPayment = () => {
-    initiatePayment({
-      orderId,
-      orderNumber,
-      amount: paymentAmount,
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['payments'] });
-        queryClient.invalidateQueries({ queryKey: ['orders'] });
-        onOpenChange(false);
-      },
-      onFailure: (error) => {
-        console.error('Razorpay payment failed:', error);
-      },
-    });
-  };
-
   const handleSubmit = async () => {
     if (paymentAmount <= 0) return;
 
-    // Use Razorpay for UPI/Card online payments
-    if (method === 'razorpay') {
-      handleRazorpayPayment();
-      return;
-    }
-
-    // Cash or manual UPI/Card payment
     await createPayment.mutateAsync({
       order_id: orderId,
       amount: paymentAmount,
-      method: method as PaymentMethod,
+      method,
       transaction_id: transactionId || undefined,
     });
 
@@ -145,7 +118,7 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
           {/* Payment Method */}
           <div className="space-y-3">
             <Label>Payment Method</Label>
-            <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod | 'razorpay')} className="grid grid-cols-2 gap-3">
+            <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="grid grid-cols-3 gap-4">
               <div>
                 <RadioGroupItem value="cash" id="cash" className="peer sr-only" />
                 <Label
@@ -157,34 +130,23 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
                 </Label>
               </div>
               <div>
-                <RadioGroupItem value="razorpay" id="razorpay" className="peer sr-only" />
-                <Label
-                  htmlFor="razorpay"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
-                >
-                  <IndianRupee className="mb-2 h-6 w-6" />
-                  <span className="text-sm font-medium">Razorpay</span>
-                  <span className="text-[10px] text-muted-foreground">UPI/Card/NetBanking</span>
-                </Label>
-              </div>
-              <div>
                 <RadioGroupItem value="upi" id="upi" className="peer sr-only" />
                 <Label
                   htmlFor="upi"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
+                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
                 >
-                  <Smartphone className="mb-1 h-5 w-5" />
-                  <span className="text-xs font-medium">Manual UPI</span>
+                  <Smartphone className="mb-2 h-6 w-6" />
+                  <span className="text-sm font-medium">UPI</span>
                 </Label>
               </div>
               <div>
                 <RadioGroupItem value="card" id="card" className="peer sr-only" />
                 <Label
                   htmlFor="card"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
+                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
                 >
-                  <CreditCard className="mb-1 h-5 w-5" />
-                  <span className="text-xs font-medium">Manual Card</span>
+                  <CreditCard className="mb-2 h-6 w-6" />
+                  <span className="text-sm font-medium">Card</span>
                 </Label>
               </div>
             </RadioGroup>
@@ -202,8 +164,8 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
             />
           </div>
 
-          {/* Transaction ID (for manual UPI/Card only) */}
-          {(method === 'upi' || method === 'card') && (
+          {/* Transaction ID (for UPI/Card) */}
+          {method !== 'cash' && (
             <div className="space-y-2">
               <Label htmlFor="txn">Transaction ID</Label>
               <Input
@@ -224,13 +186,9 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
             <Button 
               onClick={handleSubmit} 
               className="flex-1"
-              disabled={createPayment.isPending || razorpayLoading || paymentAmount <= 0}
+              disabled={createPayment.isPending || paymentAmount <= 0}
             >
-              {createPayment.isPending || razorpayLoading 
-                ? 'Processing...' 
-                : method === 'razorpay' 
-                  ? 'Pay with Razorpay' 
-                  : 'Complete Payment'}
+              {createPayment.isPending ? 'Processing...' : 'Complete Payment'}
             </Button>
           </div>
         </div>

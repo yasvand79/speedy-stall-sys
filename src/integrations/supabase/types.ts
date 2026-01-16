@@ -613,6 +613,7 @@ export type Database = {
           receipt_printer: string | null
           shop_name: string
           updated_at: string
+          upi_id: string | null
         }
         Insert: {
           address?: string | null
@@ -632,6 +633,7 @@ export type Database = {
           receipt_printer?: string | null
           shop_name?: string
           updated_at?: string
+          upi_id?: string | null
         }
         Update: {
           address?: string | null
@@ -651,6 +653,7 @@ export type Database = {
           receipt_printer?: string | null
           shop_name?: string
           updated_at?: string
+          upi_id?: string | null
         }
         Relationships: []
       }

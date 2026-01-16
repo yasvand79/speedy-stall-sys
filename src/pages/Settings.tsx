@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Store, Bell, Receipt, Printer, Database, Shield, Loader2 } from 'lucide-react';
+import { Store, Bell, Receipt, Printer, Database, Shield, Loader2, Smartphone } from 'lucide-react';
 import { useShopSettings } from '@/hooks/useShopSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ export default function Settings() {
     address: '',
     gst_number: '',
     fssai_license: '',
+    upi_id: '',
   });
 
   const [billingSettings, setBillingSettings] = useState({
@@ -40,6 +41,7 @@ export default function Settings() {
         address: settings.address || '',
         gst_number: settings.gst_number || '',
         fssai_license: settings.fssai_license || '',
+        upi_id: (settings as any).upi_id || '',
       });
       setBillingSettings({
         gst_rate: settings.gst_rate || 5,
@@ -188,6 +190,44 @@ export default function Settings() {
                   </>
                 ) : (
                   'Save Changes'
+                )}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* UPI Payment Settings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-primary" />
+              <CardTitle className="font-display">UPI Payment</CardTitle>
+            </div>
+            <CardDescription>Configure UPI payment settings for QR code generation</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="upiId">UPI ID</Label>
+              <Input 
+                id="upiId" 
+                value={shopDetails.upi_id}
+                onChange={(e) => setShopDetails(prev => ({ ...prev, upi_id: e.target.value }))}
+                disabled={!canEdit}
+                placeholder="shopname@upi or 9876543210@ybl"
+              />
+              <p className="text-xs text-muted-foreground">
+                This UPI ID will be used to generate QR codes for customer payments
+              </p>
+            </div>
+            {canEdit && (
+              <Button onClick={handleSaveShopDetails} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save UPI ID'
                 )}
               </Button>
             )}

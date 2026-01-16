@@ -6,8 +6,10 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCreatePayment } from '@/hooks/usePayments';
 import { useUpdateOrderStatus } from '@/hooks/useOrders';
+import { useShopSettings } from '@/hooks/useShopSettings';
 import { Database } from '@/integrations/supabase/types';
-import { Banknote, Smartphone, CreditCard, Printer } from 'lucide-react';
+import { Banknote, Smartphone, CreditCard, Printer, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 type PaymentMethod = Database['public']['Enums']['payment_method'];
 
@@ -27,9 +29,27 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
 
   const createPayment = useCreatePayment();
   const updateOrderStatus = useUpdateOrderStatus();
+  const { settings } = useShopSettings();
 
   const remaining = total - paidAmount;
   const paymentAmount = parseFloat(amount) || 0;
+  
+  // Get UPI ID from settings
+  const upiId = (settings as any)?.upi_id || '';
+  const shopName = settings?.shop_name || 'FoodShop';
+
+  // Generate UPI payment URL for QR code
+  const generateUpiUrl = () => {
+    if (!upiId) return '';
+    const params = new URLSearchParams({
+      pa: upiId,
+      pn: shopName,
+      am: paymentAmount.toFixed(2),
+      cu: 'INR',
+      tn: `Order ${orderNumber}`,
+    });
+    return `upi://pay?${params.toString()}`;
+  };
 
   const handleSubmit = async () => {
     if (paymentAmount <= 0) return;
@@ -50,7 +70,16 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
   };
 
   const handlePrintBill = () => {
-    // Create printable bill content
+    // Create printable bill content with QR code
+    const upiUrl = generateUpiUrl();
+    const qrSection = upiId && method === 'upi' ? `
+      <div style="text-align: center; margin: 15px 0;">
+        <p style="font-size: 11px; margin-bottom: 5px;">Scan to pay with UPI</p>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}" alt="UPI QR Code" style="width: 120px; height: 120px;" />
+        <p style="font-size: 10px; color: #666; margin-top: 5px;">${upiId}</p>
+      </div>
+    ` : '';
+
     const billContent = `
       <html>
         <head>
@@ -66,7 +95,7 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
           </style>
         </head>
         <body>
-          <h2>FoodShop</h2>
+          <h2>${shopName}</h2>
           <p class="shop-name">Food Shop Management System</p>
           <div class="line"></div>
           <div class="row"><span>Order #</span><span>${orderNumber}</span></div>
@@ -75,6 +104,7 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
           <div class="row total"><span>Total</span><span>₹${total.toFixed(2)}</span></div>
           <div class="row"><span>Paid</span><span>₹${(paidAmount + paymentAmount).toFixed(2)}</span></div>
           <div class="row"><span>Method</span><span>${method.toUpperCase()}</span></div>
+          ${qrSection}
           <div class="line"></div>
           <p class="footer">Thank you for dining with us!</p>
         </body>
@@ -151,6 +181,38 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
               </div>
             </RadioGroup>
           </div>
+
+          {/* UPI QR Code */}
+          {method === 'upi' && upiId && paymentAmount > 0 && (
+            <div className="flex flex-col items-center p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <QrCode className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Scan to Pay</span>
+              </div>
+              <div className="bg-white p-3 rounded-lg shadow-sm">
+                <QRCodeSVG 
+                  value={generateUpiUrl()} 
+                  size={160}
+                  level="H"
+                  includeMargin
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Scan with any UPI app to pay ₹{paymentAmount.toFixed(2)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                UPI ID: {upiId}
+              </p>
+            </div>
+          )}
+
+          {/* UPI not configured warning */}
+          {method === 'upi' && !upiId && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <p className="font-medium">UPI ID not configured</p>
+              <p className="text-xs mt-1">Go to Settings → UPI Payment to add your UPI ID for QR code generation.</p>
+            </div>
+          )}
 
           {/* Amount */}
           <div className="space-y-2">

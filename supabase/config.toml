@@ -2,3 +2,12 @@ project_id = "nacnqwcbifavzfeulyjp"
 
 [functions.generate-invoice]
 verify_jwt = false
+
+[functions.create-dodo-checkout]
+verify_jwt = false
+
+[functions.dodo-webhook]
+verify_jwt = false
+
+[functions.check-dodo-payment]
+verify_jwt = false

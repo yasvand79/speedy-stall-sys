@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCreatePayment } from '@/hooks/usePayments';
 import { useUpdateOrderStatus } from '@/hooks/useOrders';
 import { useShopSettings } from '@/hooks/useShopSettings';
+import { useDodoPay } from '@/hooks/useDodoPay';
 import { Database } from '@/integrations/supabase/types';
-import { Banknote, Smartphone, CreditCard, Printer, QrCode, CheckCircle } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { Banknote, Smartphone, CreditCard, Printer, Loader2, CheckCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 type PaymentMethod = Database['public']['Enums']['payment_method'];
@@ -22,54 +22,89 @@ interface PaymentDialogProps {
   orderNumber: string;
   total: number;
   paidAmount: number;
+  customerName?: string;
+  customerPhone?: string;
 }
 
-export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total, paidAmount }: PaymentDialogProps) {
+export function PaymentDialog({ 
+  open, 
+  onOpenChange, 
+  orderId, 
+  orderNumber, 
+  total, 
+  paidAmount,
+  customerName,
+  customerPhone,
+}: PaymentDialogProps) {
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState((total - paidAmount).toFixed(2));
-  const [showQrPayment, setShowQrPayment] = useState(false);
+  const [showUpiPayment, setShowUpiPayment] = useState(false);
+  const [paymentVerified, setPaymentVerified] = useState(false);
   const navigate = useNavigate();
 
   const createPayment = useCreatePayment();
   const updateOrderStatus = useUpdateOrderStatus();
   const { settings } = useShopSettings();
+  const dodoPay = useDodoPay();
 
   const remaining = total - paidAmount;
   const paymentAmount = parseFloat(amount) || 0;
-  
-  // Get UPI ID from settings
-  const upiId = (settings as any)?.upi_id || '';
   const shopName = settings?.shop_name || 'FoodShop';
 
-  // Generate UPI payment URL for QR code
-  const generateUpiUrl = () => {
-    if (!upiId) return '';
-    const params = new URLSearchParams({
-      pa: upiId,
-      pn: shopName,
-      am: paymentAmount.toFixed(2),
-      cu: 'INR',
-      tn: `Order ${orderNumber}`,
-    });
-    return `upi://pay?${params.toString()}`;
-  };
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setShowUpiPayment(false);
+      setPaymentVerified(false);
+      dodoPay.reset();
+    }
+  }, [open]);
+
+  // Start polling when UPI payment view is shown
+  useEffect(() => {
+    if (showUpiPayment && dodoPay.checkoutUrl) {
+      dodoPay.startPolling(orderId, () => {
+        setPaymentVerified(true);
+        toast.success('Payment verified automatically!');
+        setTimeout(() => {
+          onOpenChange(false);
+          navigate('/orders');
+        }, 1500);
+      });
+    }
+
+    return () => {
+      dodoPay.stopPolling();
+    };
+  }, [showUpiPayment, dodoPay.checkoutUrl, orderId]);
 
   const handleSubmit = async () => {
     if (paymentAmount <= 0) return;
 
-    // If UPI selected and QR not shown yet, show QR first
-    if (method === 'upi' && upiId && !showQrPayment) {
-      setShowQrPayment(true);
+    // For UPI, create DoDo checkout
+    if (method === 'upi') {
+      try {
+        await dodoPay.createCheckout({
+          orderId,
+          orderNumber,
+          amount: paymentAmount,
+          customerName,
+          customerPhone,
+        });
+        setShowUpiPayment(true);
+      } catch (error) {
+        // Error already handled in hook
+      }
       return;
     }
 
+    // For cash/card, process immediately
     await createPayment.mutateAsync({
       order_id: orderId,
       amount: paymentAmount,
       method,
     });
 
-    // If fully paid, mark order as completed
     if (paymentAmount >= remaining) {
       await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
     }
@@ -79,36 +114,24 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
     navigate('/orders');
   };
 
-  const handlePaymentVerified = async () => {
-    if (paymentAmount <= 0) return;
-
+  const handleManualVerify = async () => {
+    // Manual verification fallback
     await createPayment.mutateAsync({
       order_id: orderId,
       amount: paymentAmount,
-      method,
+      method: 'upi',
     });
 
-    // If fully paid, mark order as completed
     if (paymentAmount >= remaining) {
       await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
     }
 
-    toast.success('UPI Payment verified successfully!');
+    toast.success('Payment verified manually!');
     onOpenChange(false);
     navigate('/orders');
   };
 
   const handlePrintBill = () => {
-    // Create printable bill content with QR code
-    const upiUrl = generateUpiUrl();
-    const qrSection = upiId && method === 'upi' ? `
-      <div style="text-align: center; margin: 15px 0;">
-        <p style="font-size: 11px; margin-bottom: 5px;">Scan to pay with UPI</p>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}" alt="UPI QR Code" style="width: 120px; height: 120px;" />
-        <p style="font-size: 10px; color: #666; margin-top: 5px;">${upiId}</p>
-      </div>
-    ` : '';
-
     const billContent = `
       <html>
         <head>
@@ -133,7 +156,6 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
           <div class="row total"><span>Total</span><span>₹${total.toFixed(2)}</span></div>
           <div class="row"><span>Paid</span><span>₹${(paidAmount + paymentAmount).toFixed(2)}</span></div>
           <div class="row"><span>Method</span><span>${method.toUpperCase()}</span></div>
-          ${qrSection}
           <div class="line"></div>
           <p class="footer">Thank you for dining with us!</p>
         </body>
@@ -148,52 +170,77 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
     }
   };
 
-  // QR Payment View
-  if (showQrPayment && method === 'upi' && upiId) {
+  // UPI Payment View with DoDo Pay
+  if (showUpiPayment) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-center">Scan & Pay - ₹{paymentAmount.toFixed(2)}</DialogTitle>
+            <DialogTitle className="font-display text-center">UPI Payment - ₹{paymentAmount.toFixed(2)}</DialogTitle>
           </DialogHeader>
 
           <div className="flex flex-col items-center space-y-6 py-4">
-            <div className="bg-white p-4 rounded-xl shadow-lg">
-              <QRCodeSVG 
-                value={generateUpiUrl()} 
-                size={200}
-                level="H"
-                includeMargin
-              />
-            </div>
-            
-            <div className="text-center space-y-1">
-              <p className="text-sm text-muted-foreground">
-                Scan with any UPI app to pay
-              </p>
-              <p className="text-lg font-semibold text-primary">₹{paymentAmount.toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">UPI ID: {upiId}</p>
-            </div>
+            {paymentVerified ? (
+              <>
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-12 h-12 text-green-600" />
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-green-600">Payment Verified!</p>
+                  <p className="text-sm text-muted-foreground">Redirecting to orders...</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                </div>
+                
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Waiting for payment confirmation...
+                  </p>
+                  <p className="text-lg font-semibold text-primary">₹{paymentAmount.toFixed(2)}</p>
+                </div>
 
-            <div className="w-full space-y-3 pt-4">
-              <Button 
-                onClick={handlePaymentVerified} 
-                className="w-full"
-                size="lg"
-                disabled={createPayment.isPending}
-              >
-                <CheckCircle className="mr-2 h-5 w-5" />
-                {createPayment.isPending ? 'Verifying...' : 'Payment Received - Verify'}
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={() => setShowQrPayment(false)} 
-                className="w-full"
-              >
-                Back
-              </Button>
-            </div>
+                {dodoPay.checkoutUrl && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.open(dodoPay.checkoutUrl!, '_blank')}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open Payment Page
+                  </Button>
+                )}
+
+                <div className="w-full pt-4 border-t space-y-3">
+                  <p className="text-xs text-center text-muted-foreground">
+                    Payment will be verified automatically. If not detected, use manual verification.
+                  </p>
+                  
+                  <Button 
+                    variant="secondary"
+                    onClick={handleManualVerify} 
+                    className="w-full"
+                    disabled={createPayment.isPending}
+                  >
+                    {createPayment.isPending ? 'Verifying...' : 'Manual Verification'}
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => {
+                      dodoPay.stopPolling();
+                      setShowUpiPayment(false);
+                    }} 
+                    className="w-full"
+                  >
+                    Back
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -263,14 +310,6 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
             </RadioGroup>
           </div>
 
-          {/* UPI not configured warning */}
-          {method === 'upi' && !upiId && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-              <p className="font-medium">UPI ID not configured</p>
-              <p className="text-xs mt-1">Go to Settings → UPI Payment to add your UPI ID for QR code generation.</p>
-            </div>
-          )}
-
           {/* Amount */}
           <div className="space-y-2">
             <Label htmlFor="amount">Amount</Label>
@@ -292,15 +331,19 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
             <Button 
               onClick={handleSubmit} 
               className="flex-1"
-              disabled={createPayment.isPending || paymentAmount <= 0}
+              disabled={createPayment.isPending || dodoPay.isLoading || paymentAmount <= 0}
             >
-              {method === 'upi' && upiId ? (
+              {dodoPay.isLoading ? (
                 <>
-                  <QrCode className="mr-2 h-4 w-4" />
-                  Show QR
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
                 </>
+              ) : createPayment.isPending ? (
+                'Processing...'
+              ) : method === 'upi' ? (
+                'Pay with UPI'
               ) : (
-                createPayment.isPending ? 'Processing...' : 'Complete Payment'
+                'Complete Payment'
               )}
             </Button>
           </div>

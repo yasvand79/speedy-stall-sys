@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +9,9 @@ import { useCreatePayment } from '@/hooks/usePayments';
 import { useUpdateOrderStatus } from '@/hooks/useOrders';
 import { useShopSettings } from '@/hooks/useShopSettings';
 import { Database } from '@/integrations/supabase/types';
-import { Banknote, Smartphone, CreditCard, Printer, QrCode } from 'lucide-react';
+import { Banknote, Smartphone, CreditCard, Printer, QrCode, CheckCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'sonner';
 
 type PaymentMethod = Database['public']['Enums']['payment_method'];
 
@@ -25,6 +27,8 @@ interface PaymentDialogProps {
 export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total, paidAmount }: PaymentDialogProps) {
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState((total - paidAmount).toFixed(2));
+  const [showQrPayment, setShowQrPayment] = useState(false);
+  const navigate = useNavigate();
 
   const createPayment = useCreatePayment();
   const updateOrderStatus = useUpdateOrderStatus();
@@ -53,6 +57,12 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
   const handleSubmit = async () => {
     if (paymentAmount <= 0) return;
 
+    // If UPI selected and QR not shown yet, show QR first
+    if (method === 'upi' && upiId && !showQrPayment) {
+      setShowQrPayment(true);
+      return;
+    }
+
     await createPayment.mutateAsync({
       order_id: orderId,
       amount: paymentAmount,
@@ -64,7 +74,28 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
       await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
     }
 
+    toast.success('Payment completed successfully!');
     onOpenChange(false);
+    navigate('/orders');
+  };
+
+  const handlePaymentVerified = async () => {
+    if (paymentAmount <= 0) return;
+
+    await createPayment.mutateAsync({
+      order_id: orderId,
+      amount: paymentAmount,
+      method,
+    });
+
+    // If fully paid, mark order as completed
+    if (paymentAmount >= remaining) {
+      await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
+    }
+
+    toast.success('UPI Payment verified successfully!');
+    onOpenChange(false);
+    navigate('/orders');
   };
 
   const handlePrintBill = () => {
@@ -116,6 +147,58 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
       printWindow.print();
     }
   };
+
+  // QR Payment View
+  if (showQrPayment && method === 'upi' && upiId) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-center">Scan & Pay - ₹{paymentAmount.toFixed(2)}</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center space-y-6 py-4">
+            <div className="bg-white p-4 rounded-xl shadow-lg">
+              <QRCodeSVG 
+                value={generateUpiUrl()} 
+                size={200}
+                level="H"
+                includeMargin
+              />
+            </div>
+            
+            <div className="text-center space-y-1">
+              <p className="text-sm text-muted-foreground">
+                Scan with any UPI app to pay
+              </p>
+              <p className="text-lg font-semibold text-primary">₹{paymentAmount.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">UPI ID: {upiId}</p>
+            </div>
+
+            <div className="w-full space-y-3 pt-4">
+              <Button 
+                onClick={handlePaymentVerified} 
+                className="w-full"
+                size="lg"
+                disabled={createPayment.isPending}
+              >
+                <CheckCircle className="mr-2 h-5 w-5" />
+                {createPayment.isPending ? 'Verifying...' : 'Payment Received - Verify'}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={() => setShowQrPayment(false)} 
+                className="w-full"
+              >
+                Back
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,30 +263,6 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
             </RadioGroup>
           </div>
 
-          {/* UPI QR Code */}
-          {method === 'upi' && upiId && paymentAmount > 0 && (
-            <div className="flex flex-col items-center p-4 bg-muted rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <QrCode className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Scan to Pay</span>
-              </div>
-              <div className="bg-white p-3 rounded-lg shadow-sm">
-                <QRCodeSVG 
-                  value={generateUpiUrl()} 
-                  size={160}
-                  level="H"
-                  includeMargin
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Scan with any UPI app to pay ₹{paymentAmount.toFixed(2)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                UPI ID: {upiId}
-              </p>
-            </div>
-          )}
-
           {/* UPI not configured warning */}
           {method === 'upi' && !upiId && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
@@ -224,7 +283,6 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
             />
           </div>
 
-
           {/* Actions */}
           <div className="flex gap-2">
             <Button variant="outline" onClick={handlePrintBill} className="flex-1">
@@ -236,7 +294,14 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
               className="flex-1"
               disabled={createPayment.isPending || paymentAmount <= 0}
             >
-              {createPayment.isPending ? 'Processing...' : 'Complete Payment'}
+              {method === 'upi' && upiId ? (
+                <>
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Show QR
+                </>
+              ) : (
+                createPayment.isPending ? 'Processing...' : 'Complete Payment'
+              )}
             </Button>
           </div>
         </div>

@@ -25,7 +25,6 @@ interface PaymentDialogProps {
 export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total, paidAmount }: PaymentDialogProps) {
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState((total - paidAmount).toFixed(2));
-  const [transactionId, setTransactionId] = useState('');
 
   const createPayment = useCreatePayment();
   const updateOrderStatus = useUpdateOrderStatus();
@@ -58,7 +57,6 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
       order_id: orderId,
       amount: paymentAmount,
       method,
-      transaction_id: transactionId || undefined,
     });
 
     // If fully paid, mark order as completed
@@ -226,18 +224,6 @@ export function PaymentDialog({ open, onOpenChange, orderId, orderNumber, total,
             />
           </div>
 
-          {/* Transaction ID (for UPI/Card) */}
-          {method !== 'cash' && (
-            <div className="space-y-2">
-              <Label htmlFor="txn">Transaction ID</Label>
-              <Input
-                id="txn"
-                placeholder="Enter transaction reference"
-                value={transactionId}
-                onChange={(e) => setTransactionId(e.target.value)}
-              />
-            </div>
-          )}
 
           {/* Actions */}
           <div className="flex gap-2">

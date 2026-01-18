@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,7 @@ import { useUpdateOrderStatus } from '@/hooks/useOrders';
 import { useShopSettings } from '@/hooks/useShopSettings';
 import { useRazorpay } from '@/hooks/useRazorpay';
 import { Database } from '@/integrations/supabase/types';
-import { Banknote, Smartphone, CreditCard, Printer, Loader2 } from 'lucide-react';
+import { Banknote, Smartphone, CreditCard, Printer, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 type PaymentMethod = Database['public']['Enums']['payment_method'];
@@ -38,6 +39,7 @@ export function PaymentDialog({
 }: PaymentDialogProps) {
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState((total - paidAmount).toFixed(2));
+  const [showQrCode, setShowQrCode] = useState(false);
   const navigate = useNavigate();
 
   const createPayment = useCreatePayment();
@@ -48,38 +50,49 @@ export function PaymentDialog({
   const remaining = total - paidAmount;
   const paymentAmount = parseFloat(amount) || 0;
   const shopName = settings?.shop_name || 'FoodShop';
+  const upiId = settings?.upi_id;
 
-  // Reset amount when dialog opens
+  // Generate UPI payment URL
+  const upiUrl = upiId 
+    ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${paymentAmount.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Order ${orderNumber}`)}`
+    : null;
+
+  // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
       setAmount((total - paidAmount).toFixed(2));
+      setShowQrCode(false);
     }
   }, [open, total, paidAmount]);
 
   const handleSubmit = async () => {
     if (paymentAmount <= 0) return;
 
-    // For UPI, use Razorpay
+    // For UPI with QR code
     if (method === 'upi') {
-      razorpay.initiatePayment(
-        {
-          orderId,
-          orderNumber,
-          amount: paymentAmount,
-          customerName,
-          customerPhone,
-        },
-        () => {
-          // On success
-          onOpenChange(false);
-          navigate('/orders');
-        },
-        (error) => {
-          // On failure - error already shown via toast
-          console.error('Payment failed:', error);
-        }
-      );
-      return;
+      if (upiId) {
+        setShowQrCode(true);
+        return;
+      } else {
+        // Fallback to Razorpay if no UPI ID configured
+        razorpay.initiatePayment(
+          {
+            orderId,
+            orderNumber,
+            amount: paymentAmount,
+            customerName,
+            customerPhone,
+          },
+          () => {
+            onOpenChange(false);
+            navigate('/orders');
+          },
+          (error) => {
+            console.error('Payment failed:', error);
+          }
+        );
+        return;
+      }
     }
 
     // For cash/card, process immediately
@@ -94,6 +107,22 @@ export function PaymentDialog({
     }
 
     toast.success('Payment completed successfully!');
+    onOpenChange(false);
+    navigate('/orders');
+  };
+
+  const handleMarkAsPaid = async () => {
+    await createPayment.mutateAsync({
+      order_id: orderId,
+      amount: paymentAmount,
+      method: 'upi',
+    });
+
+    if (paymentAmount >= remaining) {
+      await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
+    }
+
+    toast.success('Payment marked as received!');
     onOpenChange(false);
     navigate('/orders');
   };
@@ -136,6 +165,69 @@ export function PaymentDialog({
       printWindow.print();
     }
   };
+
+  // QR Code View
+  if (showQrCode && upiUrl) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-center">Scan to Pay - ₹{paymentAmount.toFixed(2)}</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center space-y-6 py-4">
+            <div className="bg-white p-4 rounded-xl shadow-inner">
+              <QRCodeSVG 
+                value={upiUrl} 
+                size={200}
+                level="H"
+                includeMargin
+              />
+            </div>
+
+            <div className="text-center space-y-2">
+              <p className="text-2xl font-bold text-primary">₹{paymentAmount.toFixed(2)}</p>
+              <p className="text-sm text-muted-foreground">
+                Scan with any UPI app to pay
+              </p>
+              <p className="text-xs text-muted-foreground">
+                GPay, PhonePe, Paytm, etc.
+              </p>
+            </div>
+
+            <div className="w-full pt-4 border-t space-y-3">
+              <Button 
+                onClick={handleMarkAsPaid}
+                className="w-full"
+                disabled={createPayment.isPending}
+              >
+                {createPayment.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Mark as Paid
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowQrCode(false)} 
+                className="w-full"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -231,7 +323,7 @@ export function PaymentDialog({
               ) : createPayment.isPending ? (
                 'Processing...'
               ) : method === 'upi' ? (
-                'Pay with UPI'
+                upiId ? 'Show QR Code' : 'Pay with UPI'
               ) : (
                 'Complete Payment'
               )}

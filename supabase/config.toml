@@ -3,11 +3,8 @@ project_id = "nacnqwcbifavzfeulyjp"
 [functions.generate-invoice]
 verify_jwt = false
 
-[functions.create-dodo-checkout]
+[functions.create-razorpay-order]
 verify_jwt = false
 
-[functions.dodo-webhook]
-verify_jwt = false
-
-[functions.check-dodo-payment]
+[functions.verify-razorpay-payment]
 verify_jwt = false

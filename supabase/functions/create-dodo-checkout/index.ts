@@ -25,8 +25,8 @@ serve(async (req) => {
     
     console.log('Creating DoDo checkout for order:', orderNumber, 'amount:', amount);
 
-    // Create checkout session with DoDo Payments
-    const response = await fetch('https://live.dodopayments.com/checkouts', {
+    // Create payment with DoDo Payments API
+    const response = await fetch('https://api.dodopayments.com/payments', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${DODO_API_KEY}`,
@@ -46,19 +46,12 @@ serve(async (req) => {
           phone_number: customerPhone || undefined,
         },
         payment_link: true,
-        product_cart: [
-          {
-            product_id: orderId,
-            quantity: 1,
-          }
-        ],
         return_url: returnUrl || `${SUPABASE_URL}/functions/v1/dodo-payment-return?order_id=${orderId}`,
-        allowed_payment_method_types: ['upi_collect', 'upi_intent'],
         metadata: {
           order_id: orderId,
           order_number: orderNumber,
         },
-        total_amount: Math.round(amount * 100), // Amount in paisa
+        amount: Math.round(amount * 100), // Amount in paisa
         currency: 'INR',
       }),
     });

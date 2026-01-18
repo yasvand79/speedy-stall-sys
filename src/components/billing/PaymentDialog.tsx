@@ -8,9 +8,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCreatePayment } from '@/hooks/usePayments';
 import { useUpdateOrderStatus } from '@/hooks/useOrders';
 import { useShopSettings } from '@/hooks/useShopSettings';
-import { useDodoPay } from '@/hooks/useDodoPay';
+import { useRazorpay } from '@/hooks/useRazorpay';
 import { Database } from '@/integrations/supabase/types';
-import { Banknote, Smartphone, CreditCard, Printer, Loader2, CheckCircle, ExternalLink } from 'lucide-react';
+import { Banknote, Smartphone, CreditCard, Printer, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type PaymentMethod = Database['public']['Enums']['payment_method'];
@@ -38,63 +38,47 @@ export function PaymentDialog({
 }: PaymentDialogProps) {
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState((total - paidAmount).toFixed(2));
-  const [showUpiPayment, setShowUpiPayment] = useState(false);
-  const [paymentVerified, setPaymentVerified] = useState(false);
   const navigate = useNavigate();
 
   const createPayment = useCreatePayment();
   const updateOrderStatus = useUpdateOrderStatus();
   const { settings } = useShopSettings();
-  const dodoPay = useDodoPay();
+  const razorpay = useRazorpay();
 
   const remaining = total - paidAmount;
   const paymentAmount = parseFloat(amount) || 0;
   const shopName = settings?.shop_name || 'FoodShop';
 
-  // Reset state when dialog closes
+  // Reset amount when dialog opens
   useEffect(() => {
-    if (!open) {
-      setShowUpiPayment(false);
-      setPaymentVerified(false);
-      dodoPay.reset();
+    if (open) {
+      setAmount((total - paidAmount).toFixed(2));
     }
-  }, [open]);
-
-  // Start polling when UPI payment view is shown
-  useEffect(() => {
-    if (showUpiPayment && dodoPay.checkoutUrl) {
-      dodoPay.startPolling(orderId, () => {
-        setPaymentVerified(true);
-        toast.success('Payment verified automatically!');
-        setTimeout(() => {
-          onOpenChange(false);
-          navigate('/orders');
-        }, 1500);
-      });
-    }
-
-    return () => {
-      dodoPay.stopPolling();
-    };
-  }, [showUpiPayment, dodoPay.checkoutUrl, orderId]);
+  }, [open, total, paidAmount]);
 
   const handleSubmit = async () => {
     if (paymentAmount <= 0) return;
 
-    // For UPI, create DoDo checkout
+    // For UPI, use Razorpay
     if (method === 'upi') {
-      try {
-        await dodoPay.createCheckout({
+      razorpay.initiatePayment(
+        {
           orderId,
           orderNumber,
           amount: paymentAmount,
           customerName,
           customerPhone,
-        });
-        setShowUpiPayment(true);
-      } catch (error) {
-        // Error already handled in hook
-      }
+        },
+        () => {
+          // On success
+          onOpenChange(false);
+          navigate('/orders');
+        },
+        (error) => {
+          // On failure - error already shown via toast
+          console.error('Payment failed:', error);
+        }
+      );
       return;
     }
 
@@ -110,23 +94,6 @@ export function PaymentDialog({
     }
 
     toast.success('Payment completed successfully!');
-    onOpenChange(false);
-    navigate('/orders');
-  };
-
-  const handleManualVerify = async () => {
-    // Manual verification fallback
-    await createPayment.mutateAsync({
-      order_id: orderId,
-      amount: paymentAmount,
-      method: 'upi',
-    });
-
-    if (paymentAmount >= remaining) {
-      await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
-    }
-
-    toast.success('Payment verified manually!');
     onOpenChange(false);
     navigate('/orders');
   };
@@ -169,83 +136,6 @@ export function PaymentDialog({
       printWindow.print();
     }
   };
-
-  // UPI Payment View with DoDo Pay
-  if (showUpiPayment) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-center">UPI Payment - ₹{paymentAmount.toFixed(2)}</DialogTitle>
-          </DialogHeader>
-
-          <div className="flex flex-col items-center space-y-6 py-4">
-            {paymentVerified ? (
-              <>
-                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-12 h-12 text-green-600" />
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-semibold text-green-600">Payment Verified!</p>
-                  <p className="text-sm text-muted-foreground">Redirecting to orders...</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                </div>
-                
-                <div className="text-center space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Waiting for payment confirmation...
-                  </p>
-                  <p className="text-lg font-semibold text-primary">₹{paymentAmount.toFixed(2)}</p>
-                </div>
-
-                {dodoPay.checkoutUrl && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => window.open(dodoPay.checkoutUrl!, '_blank')}
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Open Payment Page
-                  </Button>
-                )}
-
-                <div className="w-full pt-4 border-t space-y-3">
-                  <p className="text-xs text-center text-muted-foreground">
-                    Payment will be verified automatically. If not detected, use manual verification.
-                  </p>
-                  
-                  <Button 
-                    variant="secondary"
-                    onClick={handleManualVerify} 
-                    className="w-full"
-                    disabled={createPayment.isPending}
-                  >
-                    {createPayment.isPending ? 'Verifying...' : 'Manual Verification'}
-                  </Button>
-                  
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => {
-                      dodoPay.stopPolling();
-                      setShowUpiPayment(false);
-                    }} 
-                    className="w-full"
-                  >
-                    Back
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -331,12 +221,12 @@ export function PaymentDialog({
             <Button 
               onClick={handleSubmit} 
               className="flex-1"
-              disabled={createPayment.isPending || dodoPay.isLoading || paymentAmount <= 0}
+              disabled={createPayment.isPending || razorpay.isLoading || paymentAmount <= 0}
             >
-              {dodoPay.isLoading ? (
+              {razorpay.isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  Loading...
                 </>
               ) : createPayment.isPending ? (
                 'Processing...'

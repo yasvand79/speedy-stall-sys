@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -9,10 +9,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCreatePayment } from '@/hooks/usePayments';
 import { useUpdateOrderStatus } from '@/hooks/useOrders';
 import { useShopSettings } from '@/hooks/useShopSettings';
-import { useRazorpay } from '@/hooks/useRazorpay';
-import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
-import { Banknote, Smartphone, CreditCard, Printer, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Banknote, Smartphone, CreditCard, Printer, CheckCircle, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 type PaymentMethod = Database['public']['Enums']['payment_method'];
@@ -28,13 +26,6 @@ interface PaymentDialogProps {
   customerPhone?: string;
 }
 
-interface QrPaymentState {
-  paymentLinkId: string;
-  shortUrl: string;
-  isPolling: boolean;
-  isPaid: boolean;
-}
-
 export function PaymentDialog({ 
   open, 
   onOpenChange, 
@@ -48,101 +39,40 @@ export function PaymentDialog({
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState((total - paidAmount).toFixed(2));
   const [showQrCode, setShowQrCode] = useState(false);
-  const [qrState, setQrState] = useState<QrPaymentState | null>(null);
-  const [isCreatingQr, setIsCreatingQr] = useState(false);
   const navigate = useNavigate();
 
   const createPayment = useCreatePayment();
   const updateOrderStatus = useUpdateOrderStatus();
   const { settings } = useShopSettings();
-  const razorpay = useRazorpay();
 
   const remaining = total - paidAmount;
   const paymentAmount = parseFloat(amount) || 0;
   const shopName = settings?.shop_name || 'FoodShop';
+  const upiId = settings?.upi_id;
+
+  // Generate direct UPI intent URL for GPay/PhonePe
+  const upiUrl = upiId 
+    ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${paymentAmount.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Order ${orderNumber}`)}`
+    : '';
 
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
       setAmount((total - paidAmount).toFixed(2));
       setShowQrCode(false);
-      setQrState(null);
     }
   }, [open, total, paidAmount]);
-
-  // Poll for payment status when QR is displayed
-  useEffect(() => {
-    if (!qrState?.isPolling || qrState?.isPaid) return;
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('check-razorpay-payment', {
-          body: {
-            paymentLinkId: qrState.paymentLinkId,
-            orderId,
-            amount: paymentAmount,
-          },
-        });
-
-        if (error) {
-          console.error('Error checking payment:', error);
-          return;
-        }
-
-        if (data.isPaid) {
-          setQrState(prev => prev ? { ...prev, isPaid: true, isPolling: false } : null);
-          toast.success('Payment received successfully!');
-          
-          // Wait a moment then close
-          setTimeout(() => {
-            onOpenChange(false);
-            navigate('/orders');
-          }, 2000);
-        }
-      } catch (err) {
-        console.error('Payment check error:', err);
-      }
-    }, 3000); // Poll every 3 seconds
-
-    return () => clearInterval(pollInterval);
-  }, [qrState, orderId, paymentAmount, onOpenChange, navigate]);
-
-  const handleCreateRazorpayQr = useCallback(async () => {
-    setIsCreatingQr(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-razorpay-qr', {
-        body: {
-          orderId,
-          orderNumber,
-          amount: paymentAmount,
-          customerName,
-        },
-      });
-
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
-
-      setQrState({
-        paymentLinkId: data.paymentLinkId,
-        shortUrl: data.shortUrl,
-        isPolling: true,
-        isPaid: false,
-      });
-      setShowQrCode(true);
-    } catch (err: any) {
-      console.error('Error creating QR:', err);
-      toast.error(err.message || 'Failed to generate QR code');
-    } finally {
-      setIsCreatingQr(false);
-    }
-  }, [orderId, orderNumber, paymentAmount, customerName]);
 
   const handleSubmit = async () => {
     if (paymentAmount <= 0) return;
 
-    // For UPI, create Razorpay QR with auto-verification
+    // For UPI, show QR code directly
     if (method === 'upi') {
-      await handleCreateRazorpayQr();
+      if (!upiId) {
+        toast.error('Please configure UPI ID in Settings first');
+        return;
+      }
+      setShowQrCode(true);
       return;
     }
 
@@ -162,15 +92,12 @@ export function PaymentDialog({
     navigate('/orders');
   };
 
-  const handleManualConfirm = async () => {
-    if (!qrState) return;
-    
-    // Manually confirm payment (fallback)
+  const handleMarkAsPaid = async () => {
+    // Mark UPI payment as received manually
     await createPayment.mutateAsync({
       order_id: orderId,
       amount: paymentAmount,
       method: 'upi',
-      transaction_id: qrState.paymentLinkId,
     });
 
     if (paymentAmount >= remaining) {
@@ -221,82 +148,62 @@ export function PaymentDialog({
     }
   };
 
-  // QR Code View with auto-verification
-  if (showQrCode && qrState) {
+  // Direct UPI QR Code View
+  if (showQrCode && upiUrl) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-center">
-              {qrState.isPaid ? 'Payment Successful!' : `Scan to Pay - ₹${paymentAmount.toFixed(2)}`}
+              Scan to Pay - ₹{paymentAmount.toFixed(2)}
             </DialogTitle>
           </DialogHeader>
 
           <div className="flex flex-col items-center space-y-6 py-4">
-            {qrState.isPaid ? (
-              <div className="flex flex-col items-center space-y-4">
-                <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="w-12 h-12 text-green-600" />
-                </div>
-                <p className="text-lg font-semibold text-green-600">Payment Received!</p>
-                <p className="text-sm text-muted-foreground">Redirecting...</p>
-              </div>
-            ) : (
-              <>
-                <div className="bg-white p-4 rounded-xl shadow-inner">
-                  <QRCodeSVG 
-                    value={qrState.shortUrl} 
-                    size={200}
-                    level="H"
-                    includeMargin
-                  />
-                </div>
+            <div className="bg-white p-4 rounded-xl shadow-inner">
+              <QRCodeSVG 
+                value={upiUrl} 
+                size={200}
+                level="H"
+                includeMargin
+              />
+            </div>
 
-                <div className="text-center space-y-2">
-                  <p className="text-2xl font-bold text-primary">₹{paymentAmount.toFixed(2)}</p>
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Waiting for payment...</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Scan with any UPI app (GPay, PhonePe, Paytm)
-                  </p>
-                </div>
+            <div className="text-center space-y-2">
+              <p className="text-2xl font-bold text-primary">₹{paymentAmount.toFixed(2)}</p>
+              <p className="text-sm text-muted-foreground">
+                Scan with <span className="font-semibold text-foreground">GPay</span>, <span className="font-semibold text-foreground">PhonePe</span>, or <span className="font-semibold text-foreground">Paytm</span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Opens directly in payment app
+              </p>
+            </div>
 
-                <div className="w-full pt-4 border-t space-y-3">
-                  <Button 
-                    onClick={handleManualConfirm}
-                    variant="outline"
-                    className="w-full"
-                    disabled={createPayment.isPending}
-                  >
-                    {createPayment.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Confirm Payment Manually
-                      </>
-                    )}
-                  </Button>
-                  
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => {
-                      setShowQrCode(false);
-                      setQrState(null);
-                    }} 
-                    className="w-full"
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
-                  </Button>
-                </div>
-              </>
-            )}
+            <div className="w-full pt-4 border-t space-y-3">
+              <Button 
+                onClick={handleMarkAsPaid}
+                className="w-full"
+                disabled={createPayment.isPending}
+              >
+                {createPayment.isPending ? (
+                  'Processing...'
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Mark as Paid
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowQrCode(false)} 
+                className="w-full"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -387,22 +294,12 @@ export function PaymentDialog({
             <Button 
               onClick={handleSubmit} 
               className="flex-1"
-              disabled={createPayment.isPending || razorpay.isLoading || isCreatingQr || paymentAmount <= 0}
+              disabled={createPayment.isPending || paymentAmount <= 0}
             >
-              {isCreatingQr ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating QR...
-                </>
-              ) : razorpay.isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Loading...
-                </>
-              ) : createPayment.isPending ? (
+              {createPayment.isPending ? (
                 'Processing...'
               ) : method === 'upi' ? (
-                'Generate UPI QR'
+                'Show UPI QR'
               ) : (
                 'Complete Payment'
               )}

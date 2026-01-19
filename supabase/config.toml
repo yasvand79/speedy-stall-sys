@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.verify-razorpay-payment]
 verify_jwt = false
+
+[functions.create-razorpay-qr]
+verify_jwt = false
+
+[functions.check-razorpay-payment]
+verify_jwt = false

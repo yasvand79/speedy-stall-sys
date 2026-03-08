@@ -199,7 +199,8 @@ export function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm p-0 overflow-hidden gap-0">
+      <DialogContent className="max-w-sm p-0 overflow-hidden gap-0" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Payment for Order {orderNumber}</DialogTitle>
         {/* Top bar with amount */}
         <div className="bg-primary text-primary-foreground px-6 py-5 text-center">
           <p className="text-sm opacity-80">Order {orderNumber}</p>

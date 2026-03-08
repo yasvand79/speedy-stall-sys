@@ -105,7 +105,7 @@ export default function Reports() {
     return peak.orders > 0 ? peak.hour : 'N/A';
   }, [hourlyData]);
 
-  const lowStockItems = inventory?.filter(i => Number(i.quantity) <= Number(i.min_quantity)) || [];
+  
 
   const orderTypeData = metrics ? [
     { name: 'Dine-in', value: metrics.dineInOrders },

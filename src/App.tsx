@@ -15,7 +15,7 @@ import Settings from "./pages/Settings";
 import Branches from "./pages/Branches";
 import StaffPerformance from "./pages/StaffPerformance";
 import InviteCodes from "./pages/InviteCodes";
-import UserApprovals from "./pages/UserApprovals";
+
 import PublicMenu from "./pages/PublicMenu";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";

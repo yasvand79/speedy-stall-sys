@@ -199,6 +199,32 @@ export default function Settings() {
           )}
         </div>
 
+        {/* Language Settings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2"><Languages className="h-5 w-5 text-primary" /><CardTitle className="font-display">{t('settings.language')}</CardTitle></div>
+            <CardDescription>Choose your preferred language / உங்கள் விருப்பமான மொழியைத் தேர்ந்தெடுக்கவும்</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <Button
+                variant={language === 'en' ? 'default' : 'outline'}
+                onClick={() => setLanguage('en')}
+                className="min-w-[100px]"
+              >
+                English
+              </Button>
+              <Button
+                variant={language === 'ta' ? 'default' : 'outline'}
+                onClick={() => setLanguage('ta')}
+                className="min-w-[100px]"
+              >
+                தமிழ்
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Shop Details */}
         <Card>
           <CardHeader>

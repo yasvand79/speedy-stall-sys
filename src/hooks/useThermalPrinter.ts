@@ -364,13 +364,36 @@ export function useThermalPrinter() {
       return devices.map(d => d.name);
     }
 
+    // Check if QZ is connected first
     const qz = window.qz;
-    if (!qz || !qz.websocket.isActive()) {
+    if (!qz) {
+      toast.error('Printer software not loaded', {
+        description: 'Please wait for QZ Tray to initialize or refresh the page.',
+      });
+      return [];
+    }
+
+    if (!qz.websocket.isActive()) {
+      toast.info('Connecting to printer software...', {
+        description: 'Make sure QZ Tray is running on your computer.',
+        action: {
+          label: 'Download QZ Tray',
+          onClick: () => window.open('https://qz.io/download/', '_blank'),
+        },
+        duration: 5000,
+      });
       await connectQZ();
     }
 
     if (!window.qz?.websocket.isActive()) {
-      toast.error('Not connected to QZ Tray');
+      toast.error('Cannot connect to QZ Tray', {
+        description: 'QZ Tray must be installed and running to detect printers.',
+        action: {
+          label: 'Get QZ Tray',
+          onClick: () => window.open('https://qz.io/download/', '_blank'),
+        },
+        duration: 8000,
+      });
       return [];
     }
 
@@ -378,6 +401,16 @@ export function useThermalPrinter() {
       const printers = await window.qz.printers.find();
       const printerList = Array.isArray(printers) ? printers : [printers];
       setAvailablePrinters(printerList);
+
+      if (printerList.length === 0) {
+        toast.warning('No printers found', {
+          description: 'Make sure your thermal printer is connected and powered on.',
+        });
+      } else {
+        toast.success(`Found ${printerList.length} printer(s)`, {
+          description: printerList.slice(0, 3).join(', ') + (printerList.length > 3 ? '...' : ''),
+        });
+      }
 
       if (savedPrinterName) {
         const match = printerList.find((p: string) =>
@@ -389,7 +422,21 @@ export function useThermalPrinter() {
       return printerList;
     } catch (e: any) {
       console.error('Printer detection error:', e);
-      toast.error('Failed to detect printers: ' + (e.message || 'Unknown error'));
+      
+      // More user-friendly error messages
+      if (e.message?.includes('sendData is not a function') || e.message?.includes('websocket')) {
+        toast.error('QZ Tray connection lost', {
+          description: 'Please restart QZ Tray and try again.',
+          action: {
+            label: 'Reconnect',
+            onClick: () => connectQZ(),
+          },
+        });
+      } else {
+        toast.error('Failed to detect printers', {
+          description: e.message || 'Check if your printer is connected.',
+        });
+      }
       return [];
     }
   }, [isNative, bluetooth, connectQZ, savedPrinterName]);

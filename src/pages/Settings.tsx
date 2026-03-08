@@ -95,6 +95,68 @@ export default function Settings() {
     updateSettings(billTemplate as any);
   };
 
+  const handleImportFromImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) { toast.error('File too large. Max 10MB.'); return; }
+
+    setIsAnalyzing(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke('analyze-bill-template', {
+        body: { image_base64: base64, mime_type: file.type || 'image/jpeg' },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const extracted = data.data;
+      if (!extracted) throw new Error('No data extracted');
+
+      // Auto-fill bill template fields
+      setBillTemplate(prev => ({
+        ...prev,
+        bill_header_text: extracted.bill_header_text || prev.bill_header_text,
+        bill_footer_text: extracted.bill_footer_text || prev.bill_footer_text,
+        bill_terms: extracted.bill_terms || prev.bill_terms,
+        bill_show_gstin: extracted.bill_show_gstin ?? prev.bill_show_gstin,
+        bill_show_fssai: extracted.bill_show_fssai ?? prev.bill_show_fssai,
+        bill_show_upi: extracted.bill_show_upi ?? prev.bill_show_upi,
+      }));
+
+      // Auto-fill shop details if extracted
+      setShopDetails(prev => ({
+        ...prev,
+        shop_name: extracted.shop_name || prev.shop_name,
+        address: extracted.address || prev.address,
+        phone: extracted.phone || prev.phone,
+        gst_number: extracted.gst_number || prev.gst_number,
+        fssai_license: extracted.fssai_license || prev.fssai_license,
+        upi_id: extracted.upi_id || prev.upi_id,
+      }));
+
+      toast.success('Template analyzed! Review the extracted fields and save.');
+    } catch (err: any) {
+      console.error('Import error:', err);
+      toast.error(err?.message || 'Failed to analyze template');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <MainLayout>

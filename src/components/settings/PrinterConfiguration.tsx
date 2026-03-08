@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Printer, Wifi, Bluetooth, Cable, Radio, Loader2, CheckCircle, AlertCircle, Search, ScanLine, X, WifiOff, Zap } from 'lucide-react';
+import { Printer, Wifi, Bluetooth, Cable, Radio, Loader2, CheckCircle, AlertCircle, Search, ScanLine, X, WifiOff, Zap, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { useThermalPrinter } from '@/hooks/useThermalPrinter';
+import { getSavedPaperWidth, savePaperWidth } from '@/hooks/useBluetoothPrinter';
 
 type ConnectionType = 'bluetooth' | 'wifi' | 'usb' | 'network';
 

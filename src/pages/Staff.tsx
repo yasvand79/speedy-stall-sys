@@ -35,7 +35,7 @@ import { Label } from '@/components/ui/label';
 import { useStaff, StaffMember } from '@/hooks/useStaff';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranches } from '@/hooks/useBranches';
-import { useInviteCodes } from '@/hooks/useInviteCodes';
+import { useStaffInvitations } from '@/hooks/useStaffInvitations';
 import { Search, Mail, Phone, Shield, UserCog, Receipt, Loader2, Building2, UserPlus, UserMinus, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Database } from '@/integrations/supabase/types';

@@ -140,12 +140,12 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Create New Order</DialogTitle>
         </DialogHeader>
 
-        <div className="flex gap-4 flex-1 min-h-0">
+        <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0 overflow-auto">
           {/* Left: Menu Items */}
           <div className="flex-1 min-h-0 flex flex-col">
             {/* Branch Selection */}

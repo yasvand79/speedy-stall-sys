@@ -40,11 +40,6 @@ export function PaymentDialog({
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState((total - paidAmount).toFixed(2));
   const [showQrCode, setShowQrCode] = useState(false);
-  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
-  const [paymentLinkId, setPaymentLinkId] = useState<string | null>(null);
-  const [upiIntentUrl, setUpiIntentUrl] = useState<string>('');
-  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
 
   const createPayment = useCreatePayment();

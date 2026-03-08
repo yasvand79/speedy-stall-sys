@@ -64,7 +64,7 @@ export function useStaffInvitations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-invitations'] });
-      toast.success('Invitation created! Staff member can now sign up with this email.');
+      toast.success('Staff email added! They can now sign up and login directly.');
     },
     onError: (error) => {
       toast.error(error.message);

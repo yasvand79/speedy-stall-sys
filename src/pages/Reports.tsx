@@ -220,7 +220,7 @@ export default function Reports() {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex rounded-lg border bg-muted/50 p-1">
-              {(['today', '7d', '30d'] as const).map(r => (
+              {(['today', '7d', '30d', '6m', 'all'] as const).map(r => (
                 <Button
                   key={r}
                   variant={range === r ? 'default' : 'ghost'}
@@ -228,7 +228,7 @@ export default function Reports() {
                   onClick={() => setRange(r)}
                   className="text-xs"
                 >
-                  {r === 'today' ? 'Today' : r === '7d' ? '7 Days' : '30 Days'}
+                  {r === 'today' ? 'Today' : r === '7d' ? '7 Days' : r === '30d' ? '30 Days' : r === '6m' ? '6 Months' : 'All'}
                 </Button>
               ))}
             </div>

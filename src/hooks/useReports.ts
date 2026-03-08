@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useMemo } from 'react';
 
 // ─── Date range helper ───
-export function useDateRange(range: 'today' | '7d' | '30d' | 'custom', customStart?: Date, customEnd?: Date) {
+export function useDateRange(range: 'today' | '7d' | '30d' | '6m' | 'all' | 'custom', customStart?: Date, customEnd?: Date) {
   return useMemo(() => {
     const end = new Date();
     end.setHours(23, 59, 59, 999);
@@ -16,6 +16,12 @@ export function useDateRange(range: 'today' | '7d' | '30d' | 'custom', customSta
       start.setHours(0, 0, 0, 0);
     } else if (range === '30d') {
       start.setDate(start.getDate() - 29);
+      start.setHours(0, 0, 0, 0);
+    } else if (range === '6m') {
+      start.setMonth(start.getMonth() - 6);
+      start.setHours(0, 0, 0, 0);
+    } else if (range === 'all') {
+      start = new Date('2020-01-01');
       start.setHours(0, 0, 0, 0);
     } else if (range === 'custom' && customStart && customEnd) {
       start = new Date(customStart);

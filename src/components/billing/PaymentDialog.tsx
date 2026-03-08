@@ -51,79 +51,13 @@ export function PaymentDialog({
   const shopName = settings?.shop_name || 'FoodShop';
   const upiId = settings?.upi_id;
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
-    };
-  }, []);
-
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
       setAmount((total - paidAmount).toFixed(2));
       setShowQrCode(false);
-      setPaymentLinkId(null);
-      setUpiIntentUrl('');
-      setIsCheckingPayment(false);
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
     }
   }, [open, total, paidAmount]);
-
-  // Start polling when payment link is created
-  useEffect(() => {
-    if (paymentLinkId && showQrCode) {
-      console.log('Starting payment polling for:', paymentLinkId);
-      
-      const checkPayment = async () => {
-        try {
-          setIsCheckingPayment(true);
-          const { data, error } = await supabase.functions.invoke('check-razorpay-payment', {
-            body: {
-              paymentLinkId,
-              orderId,
-              amount: paymentAmount,
-            },
-          });
-
-          if (error) {
-            console.error('Error checking payment:', error);
-            return;
-          }
-
-          console.log('Payment check result:', data);
-
-          if (data.isPaid) {
-            // Payment successful!
-            if (pollingRef.current) {
-              clearInterval(pollingRef.current);
-            }
-            toast.success('Payment received successfully!');
-            onOpenChange(false);
-            navigate('/orders');
-          }
-        } catch (err) {
-          console.error('Payment check error:', err);
-        } finally {
-          setIsCheckingPayment(false);
-        }
-      };
-
-      // Check immediately and then every 3 seconds
-      checkPayment();
-      pollingRef.current = setInterval(checkPayment, 3000);
-
-      return () => {
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
-        }
-      };
-    }
-  }, [paymentLinkId, showQrCode, orderId, paymentAmount, onOpenChange, navigate]);
 
   const handleSubmit = async () => {
     if (paymentAmount <= 0) return;

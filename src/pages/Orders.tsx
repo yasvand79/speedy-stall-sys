@@ -47,6 +47,7 @@ export default function Orders() {
   const { printBill, isPrinting: isThermalPrinting } = useThermalPrinter();
 
   const isAdmin = role === 'admin' || role === 'branch_admin';
+  const isCentralAdmin = role === 'admin';
   const isBilling = role === 'billing';
 
   const handleStatusChange = (orderId: string, newStatus: string) => {

@@ -94,7 +94,9 @@ export default function Billing() {
         {/* Header */}
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Billing</h1>
-          <p className="text-muted-foreground">Manage payments and generate invoices</p>
+          <p className="text-muted-foreground">
+            {isBillingRole ? 'Process pending payments' : 'Manage payments and generate invoices'}
+          </p>
         </div>
 
         {/* Stats */}

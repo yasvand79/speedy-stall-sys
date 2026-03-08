@@ -201,7 +201,7 @@ export default function Orders() {
                 className="pl-10"
               />
             </div>
-            {isAdmin && (
+            {isCentralAdmin && (
               <Select value={branchFilter} onValueChange={setBranchFilter}>
                 <SelectTrigger className="w-[160px]">
                   <Building2 className="h-4 w-4 mr-1.5 shrink-0" />

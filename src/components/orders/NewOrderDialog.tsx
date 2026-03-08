@@ -33,7 +33,7 @@ interface NewOrderDialogProps {
 export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
   const [open, setOpen] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>('dine-in');
-  const [tableNumber, setTableNumber] = useState('');
+  
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);

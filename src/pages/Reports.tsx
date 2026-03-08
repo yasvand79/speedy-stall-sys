@@ -132,10 +132,21 @@ export default function Reports() {
   const [range, setRange] = useState<DateRange>('7d');
   const { start, end } = useDateRange(range);
 
+  // Calculate previous period for comparison
+  const prevPeriod = useMemo(() => {
+    const diff = end.getTime() - start.getTime();
+    const prevEnd = new Date(start.getTime() - 1);
+    prevEnd.setHours(23, 59, 59, 999);
+    const prevStart = new Date(prevEnd.getTime() - diff);
+    prevStart.setHours(0, 0, 0, 0);
+    return { start: prevStart, end: prevEnd };
+  }, [start, end]);
+
   const { data: dailySales } = useDailySales();
   const { data: topItems } = useTopSellingItems(range === 'today' ? 1 : range === '7d' ? 7 : range === '30d' ? 30 : range === '6m' ? 180 : 3650);
   const { data: weeklyRevenue, isLoading: weeklyLoading } = useWeeklyRevenue();
   const { data: orders, isLoading: ordersLoading } = useOrdersAnalytics(start, end);
+  const { data: prevOrders } = useOrdersAnalytics(prevPeriod.start, prevPeriod.end);
   const { data: payments } = usePaymentAnalytics(start, end);
   const { data: categorySales } = useCategorySales(start, end);
   const { data: staffSales } = useStaffSales(start, end);

@@ -356,7 +356,6 @@ export default function Menu() {
                       </Select>
                     </div>
                   </div>
-                  </div>
                   <div>
                     <Label>Ingredients (comma separated)</Label>
                     <Input

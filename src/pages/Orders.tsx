@@ -381,9 +381,13 @@ export default function Orders() {
                           variant="ghost"
                           className="h-8 w-8 p-0"
                           onClick={() => handlePrintClick(order.id)}
-                          disabled={printingOrderId === order.id}
+                          disabled={printingOrderId === order.id || isThermalPrinting}
                         >
-                          <Printer className="h-3.5 w-3.5" />
+                          {printingOrderId === order.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Printer className="h-3.5 w-3.5" />
+                          )}
                         </Button>
                       )}
 

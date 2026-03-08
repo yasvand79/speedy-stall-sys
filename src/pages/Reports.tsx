@@ -15,8 +15,8 @@ import {
 } from 'recharts';
 import {
   Download, TrendingUp, IndianRupee, ShoppingCart, Clock, Loader2,
-  CreditCard, Users, Package, XCircle, Receipt, Utensils,
-  ArrowUpRight, ArrowDownRight, Banknote, Smartphone,
+  CreditCard, Users, XCircle,
+  Banknote, Smartphone,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 

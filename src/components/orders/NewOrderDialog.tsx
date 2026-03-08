@@ -350,8 +350,8 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
                   <span>₹{subtotal.toFixed(0)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>GST (5%)</span>
-                  <span>₹{gst.toFixed(0)}</span>
+                  <span>GST ({(settings?.gst_rate ?? 5)}%){includeGstInPrice ? ' (included)' : ''}</span>
+                  <span>{includeGstInPrice ? 'Incl.' : `₹${gst.toFixed(0)}`}</span>
                 </div>
                 <div className="flex justify-between font-semibold">
                   <span>Total</span>

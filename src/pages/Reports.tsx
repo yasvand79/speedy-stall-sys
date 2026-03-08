@@ -4,11 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import {
   useDailySales, useTopSellingItems, useWeeklyRevenue,
   useOrdersAnalytics, usePaymentAnalytics, useCategorySales,
   useStaffSales, useDateRange,
 } from '@/hooks/useReports';
+import { useBranches } from '@/hooks/useBranches';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -21,9 +25,11 @@ import {
   ArrowUpRight, ArrowDownRight, BarChart3, PieChart as PieChartIcon, Filter,
   GitBranch, CalendarDays, Hash, ArrowRight, CheckCircle, ChefHat, Bell, Ban,
   Lightbulb, Zap, Target, RefreshCw, TrendingDown as TrendDown,
-  Megaphone, UtensilsCrossed, UserCheck,
+  Megaphone, UtensilsCrossed, UserCheck, CalendarIcon, X, Building2,
 } from 'lucide-react';
 import { useMemo, useState, useCallback } from 'react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useShopSettings } from '@/hooks/useShopSettings';
@@ -31,7 +37,7 @@ import { useShopSettings } from '@/hooks/useShopSettings';
 const COLORS = ['hsl(24,95%,53%)', 'hsl(142,72%,42%)', 'hsl(217,91%,60%)', 'hsl(280,65%,60%)', 'hsl(45,93%,47%)', 'hsl(340,75%,55%)'];
 const HEATMAP_COLORS = ['hsl(var(--muted))', 'hsl(24,95%,90%)', 'hsl(24,95%,75%)', 'hsl(24,95%,60%)', 'hsl(24,95%,45%)'];
 
-type DateRange = 'today' | '7d' | '30d' | '6m' | 'all';
+type DateRange = 'today' | '7d' | '30d' | '6m' | 'all' | 'custom';
 
 function useCustomerAnalytics(start: Date, end: Date) {
   return useQuery({

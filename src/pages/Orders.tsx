@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { NewOrderDialog } from '@/components/orders/NewOrderDialog';
 import { PaymentDialog } from '@/components/billing/PaymentDialog';
 import { useOrders, useUpdateOrderStatus, OrderWithItems } from '@/hooks/useOrders';
@@ -15,7 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle,
   Building2, User, UtensilsCrossed, Printer, Package,
-  ArrowRight, Hash, CreditCard, Loader2, CheckCircle
+  ArrowRight, Hash, CreditCard, Loader2, CheckCircle, Eye
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -39,8 +39,11 @@ export default function Orders() {
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<StatusTab>('active');
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
-  const [confirmPrintOrderId, setConfirmPrintOrderId] = useState<string | null>(null);
-  const [printStatus, setPrintStatus] = useState<'idle' | 'generating' | 'printing' | 'success' | 'error'>('idle');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewOrderId, setPreviewOrderId] = useState<string | null>(null);
+  const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
 
   const { data: orders, isLoading } = useOrders();
   const { branches } = useBranches();
@@ -60,102 +63,89 @@ export default function Orders() {
     setPaymentOpen(true);
   };
 
-  const handlePrintClick = (orderId: string) => {
-    setConfirmPrintOrderId(orderId);
-  };
-
-  const handleConfirmPrint = async () => {
-    const orderId = confirmPrintOrderId;
-    if (!orderId) return;
-    setConfirmPrintOrderId(null);
-    setPrintingOrderId(orderId);
-    setPrintStatus('generating');
+  const handlePrintClick = async (orderId: string) => {
+    setPreviewOrderId(orderId);
+    setPreviewLoading(true);
+    setPreviewHtml('');
+    setPreviewOpen(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-invoice', {
         body: { orderId }
       });
       if (error) throw error;
       if (data?.html) {
-        setPrintStatus('printing');
-
-        // Create a hidden iframe using srcdoc for reliable onload firing
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.top = '-10000px';
-        iframe.style.left = '-10000px';
-        iframe.style.width = '80mm';
-        iframe.style.height = '0';
-        iframe.style.border = 'none';
-        iframe.style.visibility = 'hidden';
-        
-        let printTriggered = false;
-        const triggerPrint = () => {
-          if (printTriggered) return;
-          printTriggered = true;
-          
-          const onAfterPrint = () => {
-            iframe.contentWindow?.removeEventListener('afterprint', onAfterPrint);
-            if (document.body.contains(iframe)) document.body.removeChild(iframe);
-            setPrintStatus('success');
-            setTimeout(() => setPrintStatus('idle'), 2000);
-          };
-          iframe.contentWindow?.addEventListener('afterprint', onAfterPrint);
-          
-          // Fallback cleanup after 15s
-          setTimeout(() => {
-            if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-              setPrintStatus('success');
-              setTimeout(() => setPrintStatus('idle'), 2000);
-            }
-          }, 15000);
-
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        };
-
-        // Use srcdoc which reliably triggers onload after content is parsed
-        iframe.srcdoc = data.html;
-        
-        iframe.onload = () => {
-          // Wait for fonts to load, then print
-          const iframeDoc = iframe.contentDocument;
-          if (iframeDoc && (iframeDoc as any).fonts?.ready) {
-            (iframeDoc as any).fonts.ready.then(() => {
-              // Extra delay to ensure paint is complete
-              setTimeout(triggerPrint, 500);
-            }).catch(() => {
-              setTimeout(triggerPrint, 1000);
-            });
-          } else {
-            // Fallback for browsers without document.fonts
-            setTimeout(triggerPrint, 2000);
-          }
-        };
-
-        iframe.onerror = () => {
-          if (document.body.contains(iframe)) document.body.removeChild(iframe);
-          setPrintStatus('error');
-          toast.error('Failed to load print content');
-          setTimeout(() => setPrintStatus('idle'), 2000);
-        };
-
-        document.body.appendChild(iframe);
-        
-        // Ultimate fallback if onload never fires
-        setTimeout(() => {
-          if (document.body.contains(iframe)) {
-            triggerPrint();
-          }
-        }, 5000);
+        setPreviewHtml(data.html);
       }
     } catch {
-      setPrintStatus('error');
       toast.error('Failed to generate invoice');
-      setTimeout(() => setPrintStatus('idle'), 2000);
+      setPreviewOpen(false);
     } finally {
-      setPrintingOrderId(null);
+      setPreviewLoading(false);
     }
+  };
+
+  const handlePrintFromPreview = () => {
+    if (!previewHtml) return;
+    setPreviewOpen(false);
+    setPrintStatus('printing');
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.top = '-10000px';
+    iframe.style.left = '-10000px';
+    iframe.style.width = '80mm';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+
+    let printTriggered = false;
+    const triggerPrint = () => {
+      if (printTriggered) return;
+      printTriggered = true;
+
+      const onAfterPrint = () => {
+        iframe.contentWindow?.removeEventListener('afterprint', onAfterPrint);
+        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+        setPrintStatus('success');
+        setTimeout(() => setPrintStatus('idle'), 2000);
+      };
+      iframe.contentWindow?.addEventListener('afterprint', onAfterPrint);
+
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+          setPrintStatus('success');
+          setTimeout(() => setPrintStatus('idle'), 2000);
+        }
+      }, 15000);
+
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    };
+
+    iframe.srcdoc = previewHtml;
+    iframe.onload = () => {
+      const iframeDoc = iframe.contentDocument;
+      if (iframeDoc && (iframeDoc as any).fonts?.ready) {
+        (iframeDoc as any).fonts.ready.then(() => {
+          setTimeout(triggerPrint, 500);
+        }).catch(() => {
+          setTimeout(triggerPrint, 1000);
+        });
+      } else {
+        setTimeout(triggerPrint, 2000);
+      }
+    };
+    iframe.onerror = () => {
+      if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      setPrintStatus('error');
+      toast.error('Failed to load print content');
+      setTimeout(() => setPrintStatus('idle'), 2000);
+    };
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      if (document.body.contains(iframe)) triggerPrint();
+    }, 5000);
   };
 
   const getPaidAmount = (orderId: string) => {
@@ -490,35 +480,43 @@ export default function Orders() {
         />
       )}
 
-      {/* Print Confirmation Dialog */}
-      <AlertDialog open={!!confirmPrintOrderId} onOpenChange={(open) => !open && setConfirmPrintOrderId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Print Invoice</AlertDialogTitle>
-            <AlertDialogDescription>
-              Do you want to print the invoice for this order?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmPrint}>
+      {/* Print Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0">
+          <DialogHeader className="p-4 pb-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Receipt Preview
+            </DialogTitle>
+            <DialogDescription>Review the receipt before printing</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto border-y border-border bg-white">
+            {previewLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Generating receipt...</p>
+              </div>
+            ) : previewHtml ? (
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full min-h-[400px] h-[60vh] border-0"
+                title="Receipt Preview"
+              />
+            ) : null}
+          </div>
+          <DialogFooter className="p-4 pt-2 gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>Cancel</Button>
+            <Button onClick={handlePrintFromPreview} disabled={!previewHtml || previewLoading}>
               <Printer className="mr-2 h-4 w-4" />Print
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Print Status Overlay */}
       {printStatus !== 'idle' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border border-border shadow-2xl max-w-xs w-full text-center">
-            {printStatus === 'generating' && (
-              <>
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-lg font-semibold text-foreground">Generating Invoice...</p>
-                <p className="text-sm text-muted-foreground">Preparing your receipt</p>
-              </>
-            )}
             {printStatus === 'printing' && (
               <>
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />

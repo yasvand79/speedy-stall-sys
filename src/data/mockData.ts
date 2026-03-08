@@ -224,7 +224,7 @@ export const mockStaff: StaffMember[] = [
     id: '1',
     name: 'Amit Kumar',
     email: 'amit@foodshop.com',
-    role: 'developer',
+    role: 'admin',
     phone: '9876543210',
     isActive: true,
     createdAt: new Date('2024-01-01'),

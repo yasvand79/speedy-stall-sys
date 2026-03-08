@@ -312,8 +312,7 @@ export default function Staff() {
                             <SelectContent>
                               <SelectItem value="billing">Billing</SelectItem>
                               <SelectItem value="branch_admin">Branch Admin</SelectItem>
-                              <SelectItem value="central_admin">Central Admin</SelectItem>
-                              {isDeveloper && <SelectItem value="developer">Developer</SelectItem>}
+                              <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

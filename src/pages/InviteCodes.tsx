@@ -36,12 +36,10 @@ export default function InviteCodes() {
   const [newRole, setNewRole] = useState<AppRole>('billing');
   const [newBranchId, setNewBranchId] = useState<string>('');
 
-  const canManage = isDeveloper || isCentralAdmin;
+  const canManage = isAdmin;
   const requiresBranch = branchRequiredRoles.includes(newRole);
 
-  const availableRoles: AppRole[] = isDeveloper
-    ? ['developer', 'central_admin', 'branch_admin', 'billing']
-    : ['branch_admin', 'billing'];
+  const availableRoles: AppRole[] = ['admin', 'branch_admin', 'billing'];
 
   const handleCreate = async () => {
     if (!newEmail.trim()) {

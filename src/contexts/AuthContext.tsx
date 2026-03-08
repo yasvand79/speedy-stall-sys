@@ -168,10 +168,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signUp,
     signOut,
-    isDeveloper: role === 'developer',
-    isCentralAdmin: role === 'central_admin',
+    isAdmin: role === 'admin',
     isBranchAdmin: role === 'branch_admin',
-    isAdmin: role === 'branch_admin' || role === 'central_admin' || role === 'developer',
     isBilling: role === 'billing',
     isApproved,
   };

@@ -22,9 +22,9 @@ export default function StaffPerformance() {
   
   const { data: orders = [], isLoading } = useOrders();
   const { branches } = useBranches();
-  const { isDeveloper, isCentralAdmin, isAdmin, profile } = useAuth();
+  const { isAdmin, profile } = useAuth();
 
-  const canViewAllBranches = isDeveloper || isCentralAdmin;
+  const canViewAllBranches = isAdmin;
 
   // Filter orders by date range and branch
   const filteredOrders = useMemo(() => {

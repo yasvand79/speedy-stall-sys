@@ -327,7 +327,7 @@ export default function Reports() {
       .sort((a, b) => b.revenue - a.revenue);
   }, [orders]);
 
-
+  if (isLoading) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[400px]">

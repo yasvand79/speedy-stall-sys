@@ -161,6 +161,14 @@ export default function Menu() {
       return;
     }
 
+    setIsUploading(true);
+    let imageUrl = formData.image_url || null;
+    
+    if (imageFile) {
+      const uploaded = await uploadImage(imageFile);
+      if (uploaded) imageUrl = uploaded;
+    }
+
     const data = {
       name: formData.name,
       description: formData.description || null,
@@ -169,8 +177,9 @@ export default function Menu() {
       preparation_time: parseInt(formData.preparation_time) || 15,
       ingredients: formData.ingredients.split(',').map(s => s.trim()).filter(Boolean),
       is_available: true,
-      image_url: null,
+      image_url: imageUrl,
     };
+    setIsUploading(false);
 
     if (editingItem) {
       await updateItem.mutateAsync({ id: editingItem.id, ...data });

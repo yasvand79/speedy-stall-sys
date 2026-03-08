@@ -8,16 +8,18 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { Store, Bell, Receipt, Loader2, Smartphone, FileText } from 'lucide-react';
+import { Store, Bell, Receipt, Loader2, Smartphone, FileText, Upload, ImageIcon } from 'lucide-react';
 import { useShopSettings } from '@/hooks/useShopSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { PrinterConfiguration } from '@/components/settings/PrinterConfiguration';
 import { DataExportImport } from '@/components/settings/DataExportImport';
 
 export default function Settings() {
   const { settings, isLoading, updateSettings, updateSetting, isSaving } = useShopSettings();
   const { role } = useAuth();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   const canEdit = role === 'admin';
 
@@ -91,6 +93,68 @@ export default function Settings() {
   const handleSaveBillTemplate = () => {
     if (!canEdit) { toast.error('You do not have permission to edit settings'); return; }
     updateSettings(billTemplate as any);
+  };
+
+  const handleImportFromImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) { toast.error('File too large. Max 10MB.'); return; }
+
+    setIsAnalyzing(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke('analyze-bill-template', {
+        body: { image_base64: base64, mime_type: file.type || 'image/jpeg' },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const extracted = data.data;
+      if (!extracted) throw new Error('No data extracted');
+
+      // Auto-fill bill template fields
+      setBillTemplate(prev => ({
+        ...prev,
+        bill_header_text: extracted.bill_header_text || prev.bill_header_text,
+        bill_footer_text: extracted.bill_footer_text || prev.bill_footer_text,
+        bill_terms: extracted.bill_terms || prev.bill_terms,
+        bill_show_gstin: extracted.bill_show_gstin ?? prev.bill_show_gstin,
+        bill_show_fssai: extracted.bill_show_fssai ?? prev.bill_show_fssai,
+        bill_show_upi: extracted.bill_show_upi ?? prev.bill_show_upi,
+      }));
+
+      // Auto-fill shop details if extracted
+      setShopDetails(prev => ({
+        ...prev,
+        shop_name: extracted.shop_name || prev.shop_name,
+        address: extracted.address || prev.address,
+        phone: extracted.phone || prev.phone,
+        gst_number: extracted.gst_number || prev.gst_number,
+        fssai_license: extracted.fssai_license || prev.fssai_license,
+        upi_id: extracted.upi_id || prev.upi_id,
+      }));
+
+      toast.success('Template analyzed! Review the extracted fields and save.');
+    } catch (err: any) {
+      console.error('Import error:', err);
+      toast.error(err?.message || 'Failed to analyze template');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   if (isLoading) {
@@ -208,10 +272,20 @@ export default function Settings() {
         {/* Bill Template */}
         {canEdit && (
           <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /><CardTitle className="font-display">Bill / Receipt Template</CardTitle></div>
-              <CardDescription>Customize what appears on your printed receipts</CardDescription>
-            </CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /><CardTitle className="font-display">Bill / Receipt Template</CardTitle></div>
+                <CardDescription>Customize what appears on your printed receipts</CardDescription>
+              </div>
+              <div>
+                <input type="file" id="bill-import" accept="image/*,.pdf" className="hidden" onChange={handleImportFromImage} disabled={isAnalyzing} />
+                <Button variant="outline" size="sm" onClick={() => document.getElementById('bill-import')?.click()} disabled={isAnalyzing}>
+                  {isAnalyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</> : <><ImageIcon className="mr-2 h-4 w-4" />Import from Image</>}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="billHeader">Header Text</Label>

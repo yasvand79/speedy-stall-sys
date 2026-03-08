@@ -24,7 +24,7 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; status?: string }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null; autoApproved?: boolean }>;
+  signUp: (email: string, password: string, fullName: string, phone?: string) => Promise<{ error: Error | null; autoApproved?: boolean }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
   isBranchAdmin: boolean;

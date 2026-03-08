@@ -19,6 +19,8 @@ export default function Billing() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const { printBill, isPrinting: isThermalPrinting } = useThermalPrinter();
+  const { role } = useAuth();
+  const isBillingRole = role === 'billing';
 
   const handlePrintReceipt = async (order: OrderWithItems) => {
     const orderPayments = (payments || []).filter(p => p.order_id === order.id);

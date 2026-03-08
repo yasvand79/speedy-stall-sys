@@ -413,18 +413,15 @@ export function useThermalPrinter() {
     } catch (e: any) {
       console.error('Printer detection error:', e);
       
-      // More user-friendly error messages
       if (e.message?.includes('sendData is not a function') || e.message?.includes('websocket')) {
-        toast.error('QZ Tray connection lost', {
-          description: 'Please restart QZ Tray and try again.',
-          action: {
-            label: 'Reconnect',
-            onClick: () => connectQZ(),
-          },
+        setPrinterError({
+          title: '🖨️ Printer Connection Lost',
+          message: 'The connection to QZ Tray was interrupted. Please restart QZ Tray and try again.',
         });
       } else {
-        toast.error('Failed to detect printers', {
-          description: e.message || 'Check if your printer is connected.',
+        setPrinterError({
+          title: '🖨️ Printer Detection Failed',
+          message: e.message || 'Unable to detect printers. Please check your printer connection and try again.',
         });
       }
       return [];

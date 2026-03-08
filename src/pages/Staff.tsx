@@ -107,11 +107,17 @@ export default function Staff() {
       toast.error('Please enter an email address');
       return;
     }
+    // Branch admins can only add billing staff to their own branch
+    const roleToAssign = (isBranchAdmin && !isAdmin) ? 'billing' as AppRole : newStaffRole;
+    const branchToAssign = (isBranchAdmin && !isAdmin)
+      ? profile?.branch_id || undefined
+      : (newStaffBranch && newStaffBranch !== 'none' ? newStaffBranch : undefined);
+
     try {
       await createInvitation({
         email: newStaffEmail,
-        role: newStaffRole,
-        branchId: newStaffBranch && newStaffBranch !== 'none' ? newStaffBranch : undefined,
+        role: roleToAssign,
+        branchId: branchToAssign,
       });
       resetAddDialog();
     } catch {

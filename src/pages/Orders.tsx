@@ -38,23 +38,27 @@ export default function Orders() {
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<StatusTab>('active');
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
+  const [confirmPrintOrderId, setConfirmPrintOrderId] = useState<string | null>(null);
+  const printIframeRef = useRef<HTMLIFrameElement>(null);
 
   const { data: orders, isLoading } = useOrders();
-  const { data: allPayments } = usePayments();
   const { branches } = useBranches();
   const updateStatus = useUpdateOrderStatus();
-  const { isAdmin, isBilling } = useAuth();
+  const { addPayment, isLoading: isPaymentLoading } = usePayments();
+  const { role } = useAuth();
 
-  const handleStatusChange = (orderId: string, newStatus: 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled') => {
-    updateStatus.mutate({ orderId, status: newStatus });
+  const handleStatusUpdate = (orderId: string, newStatus: string) => {
+    updateStatus.mutate({ orderId, status: newStatus as any });
   };
 
-  const handleProcessPayment = (order: OrderWithItems) => {
-    setSelectedOrder(order);
-    setPaymentOpen(true);
+  const handlePrintClick = (orderId: string) => {
+    setConfirmPrintOrderId(orderId);
   };
 
-  const handlePrintInvoice = async (orderId: string) => {
+  const handleConfirmPrint = async () => {
+    const orderId = confirmPrintOrderId;
+    if (!orderId) return;
+    setConfirmPrintOrderId(null);
     setPrintingOrderId(orderId);
     try {
       const { data, error } = await supabase.functions.invoke('generate-invoice', {
@@ -62,14 +66,19 @@ export default function Orders() {
       });
       if (error) throw error;
       if (data?.html) {
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(data.html);
-          printWindow.document.close();
-          printWindow.focus();
-          setTimeout(() => printWindow.print(), 250);
+        const iframe = printIframeRef.current;
+        if (iframe) {
+          const doc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (doc) {
+            doc.open();
+            doc.write(data.html);
+            doc.close();
+            setTimeout(() => {
+              iframe.contentWindow?.print();
+            }, 300);
+          }
         }
-        toast.success('Invoice generated');
+        toast.success('Invoice sent to printer');
       }
     } catch {
       toast.error('Failed to generate invoice');

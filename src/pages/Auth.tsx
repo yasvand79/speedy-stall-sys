@@ -5,26 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChefHat, Mail, Lock, User, Ticket, AlertCircle, Clock, CheckCircle, Info } from 'lucide-react';
+import { ChefHat, Mail, Lock, User, Clock, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { validateInviteCode } from '@/hooks/useInviteCodes';
-import { Badge } from '@/components/ui/badge';
-import { Database } from '@/integrations/supabase/types';
-
-type AppRole = Database['public']['Enums']['app_role'];
 
 const emailSchema = z.string().email('Invalid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
-
-const roleLabels: Record<AppRole, string> = {
-  developer: 'Developer (Super Admin)',
-  central_admin: 'Central Admin',
-  branch_admin: 'Branch Admin',
-  billing: 'Billing / Cashier',
-};
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -34,49 +22,17 @@ export default function Auth() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
-  // Signup fields
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
-  
-  // Invite code validation state
-  const [isValidating, setIsValidating] = useState(false);
-  const [codeValidation, setCodeValidation] = useState<{
-    valid: boolean;
-    role?: AppRole;
-    branch_id?: string;
-    error?: string;
-  } | null>(null);
 
   useEffect(() => {
     if (!loading && user && profile) {
-      // Check if user is approved
       if (profile.status === 'approved') {
         navigate('/');
       }
     }
   }, [user, loading, navigate, profile]);
-
-  // Validate invite code when it changes
-  useEffect(() => {
-    const validateCode = async () => {
-      if (inviteCode.length >= 8) {
-        setIsValidating(true);
-        const result = await validateInviteCode(inviteCode);
-        setCodeValidation(result);
-        setIsValidating(false);
-      } else if (inviteCode.length === 0) {
-        // No invite code - allowed for billing only
-        setCodeValidation(null);
-      } else {
-        setCodeValidation(null);
-      }
-    };
-
-    const timeout = setTimeout(validateCode, 500);
-    return () => clearTimeout(timeout);
-  }, [inviteCode]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +70,6 @@ export default function Auth() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form
     try {
       emailSchema.parse(signupEmail);
       passwordSchema.parse(signupPassword);
@@ -129,32 +84,9 @@ export default function Auth() {
       }
     }
 
-    // Determine registration type
-    const hasInviteCode = inviteCode.trim().length > 0;
-    
-    // If invite code provided, validate it
-    if (hasInviteCode) {
-      if (!codeValidation?.valid) {
-        toast.error(codeValidation?.error || 'Invalid invite code');
-        return;
-      }
-    }
-
     setIsSubmitting(true);
     
-    // If no invite code, register as billing with pending status
-    // If invite code valid, use the role from the code (auto-approved)
-    const role = hasInviteCode && codeValidation?.valid ? codeValidation.role! : 'billing';
-    const branchId = hasInviteCode && codeValidation?.valid ? codeValidation.branch_id : undefined;
-    
-    const { error, autoApproved } = await signUp(
-      signupEmail, 
-      signupPassword, 
-      signupName, 
-      role,
-      branchId,
-      hasInviteCode ? inviteCode : undefined
-    );
+    const { error, autoApproved } = await signUp(signupEmail, signupPassword, signupName);
     
     if (error) {
       if (error.message.includes('already registered')) {
@@ -164,20 +96,13 @@ export default function Auth() {
       }
     } else {
       if (autoApproved) {
-        toast.success('Registration successful! You can now log in.', {
-          duration: 5000,
-        });
+        toast.success('Registration successful! You can now log in.', { duration: 5000 });
       } else {
-        toast.success('Registration successful! Waiting for admin approval.', {
-          duration: 5000,
-        });
+        toast.success('Registration submitted! Waiting for admin approval.', { duration: 5000 });
       }
-      // Clear form
       setSignupEmail('');
       setSignupPassword('');
       setSignupName('');
-      setInviteCode('');
-      setCodeValidation(null);
     }
     setIsSubmitting(false);
   };
@@ -190,7 +115,6 @@ export default function Auth() {
     );
   }
 
-  // Show pending status if user is logged in but pending
   if (user && profile && profile.status !== 'approved') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
@@ -291,55 +215,12 @@ export default function Auth() {
             
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
-                {/* Invite Code - Optional */}
-                <div className="space-y-2">
-                  <Label htmlFor="invite-code">Invite Code (optional)</Label>
-                  <div className="relative">
-                    <Ticket className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="invite-code"
-                      type="text"
-                      placeholder="Enter invite code if you have one"
-                      value={inviteCode}
-                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                      className="pl-10 font-mono uppercase"
-                    />
-                  </div>
-                  {isValidating && (
-                    <p className="text-xs text-muted-foreground">Validating code...</p>
-                  )}
-                  {inviteCode.length === 0 && (
-                    <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
-                      <Info className="h-4 w-4 text-blue-600" />
-                      <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm">
-                        Without an invite code, you'll register as Billing Staff and require admin approval.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  {codeValidation && (
-                    codeValidation.valid ? (
-                      <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <AlertDescription className="text-green-700 dark:text-green-400 flex flex-col gap-1">
-                          <span className="flex items-center gap-2">
-                            Valid code! Role: 
-                            <Badge variant="outline" className="ml-1">
-                              {roleLabels[codeValidation.role!]}
-                            </Badge>
-                          </span>
-                          <span className="text-xs">You'll be approved immediately upon registration.</span>
-                        </AlertDescription>
-                      </Alert>
-                    ) : (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>
-                          {codeValidation.error || 'Invalid or expired invite code'}
-                        </AlertDescription>
-                      </Alert>
-                    )
-                  )}
-                </div>
+                <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm">
+                    If your admin has invited you by email, you'll be approved automatically. Otherwise, your registration will require admin approval.
+                  </AlertDescription>
+                </Alert>
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full Name</Label>
@@ -389,12 +270,8 @@ export default function Auth() {
                   </div>
                 </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isSubmitting || (inviteCode.length > 0 && inviteCode.length < 8)}
-                >
-                  {isSubmitting ? 'Creating account...' : inviteCode.length > 0 ? 'Register with Invite Code' : 'Register as Billing Staff'}
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creating account...' : 'Sign Up'}
                 </Button>
               </form>
             </TabsContent>

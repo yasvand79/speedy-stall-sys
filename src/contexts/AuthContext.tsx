@@ -13,7 +13,6 @@ interface Profile {
   is_active: boolean;
   branch_id: string | null;
   status: string | null;
-  invite_code_used: string | null;
   approved_at: string | null;
   approved_by: string | null;
 }
@@ -25,7 +24,7 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; status?: string }>;
-  signUp: (email: string, password: string, fullName: string, role?: AppRole, branchId?: string, inviteCode?: string) => Promise<{ error: Error | null; autoApproved?: boolean }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null; autoApproved?: boolean }>;
   signOut: () => Promise<void>;
   isDeveloper: boolean;
   isCentralAdmin: boolean;
@@ -45,13 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Defer fetching profile and role using setTimeout
         if (session?.user) {
           setTimeout(() => {
             fetchUserData(session.user.id);
@@ -64,7 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -81,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function fetchUserData(userId: string) {
     try {
-      // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -90,7 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setProfile(profileData);
 
-      // Fetch role
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
@@ -115,7 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: error as Error };
     }
 
-    // Check user approval status
     if (data.user) {
       const { data: profileData } = await supabase
         .from('profiles')
@@ -125,7 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const status = profileData?.status;
 
-      // If not approved, sign out and return status
       if (status !== 'approved') {
         await supabase.auth.signOut();
         return { error: null, status };
@@ -138,16 +130,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (
     email: string, 
     password: string, 
-    fullName: string, 
-    role: AppRole = 'billing', 
-    branchId?: string,
-    inviteCode?: string
+    fullName: string
   ) => {
     const redirectUrl = `${window.location.origin}/`;
-    
-    // Determine if this will be auto-approved
-    // Users with invite codes or developer role are auto-approved
-    const willBeAutoApproved = !!inviteCode || role === 'developer';
     
     const { error } = await supabase.auth.signUp({
       email,
@@ -156,19 +141,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
-          role: role,
-          branch_id: branchId || null,
-          invite_code: inviteCode || null,
         },
       },
     });
     
-    // Always sign out after signup - user needs to log in explicitly
     if (!error) {
       await supabase.auth.signOut();
     }
     
-    return { error: error as Error | null, autoApproved: willBeAutoApproved };
+    // The handle_new_user trigger checks staff_invitations to determine auto-approval
+    return { error: error as Error | null, autoApproved: undefined };
   };
 
   const signOut = async () => {

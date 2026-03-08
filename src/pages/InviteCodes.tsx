@@ -27,7 +27,7 @@ const roleLabels: Record<string, string> = {
 const branchRequiredRoles: AppRole[] = ['branch_admin', 'billing'];
 
 export default function InviteCodes() {
-  const { isDeveloper, isCentralAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { invitations, isLoading, createInvitation, revokeInvitation, isCreating } = useStaffInvitations();
   const { branches } = useBranches();
 

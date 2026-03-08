@@ -609,7 +609,7 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
               )}
 
               {qzPrinterName && (
-                <p className="text-xs text-emerald-600 flex items-center gap-1">
+                <p className="text-xs text-primary flex items-center gap-1">
                   <CheckCircle className="h-3 w-3" />
                   Active printer: {qzPrinterName}
                 </p>

@@ -107,9 +107,7 @@ export function buildEscPosData(order: OrderForPrint, shopSettings: any, paperWi
   data.push(...textEncoder(padRight('Date', 16) + padLeft(orderDate.toLocaleDateString('en-IN'), LINE_WIDTH - 16) + '\n'));
   data.push(...textEncoder(padRight('Time', 16) + padLeft(orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), LINE_WIDTH - 16) + '\n'));
 
-  const orderTypeText = order.type === 'dine-in' && order.tableNumber
-    ? `Dine-In / Table ${order.tableNumber}`
-    : order.type === 'dine-in' ? 'Dine-In' : 'Takeaway';
+  const orderTypeText = order.type === 'dine-in' ? 'Dine-In' : 'Takeaway';
   data.push(...textEncoder(padRight('Type', 16) + padLeft(orderTypeText, LINE_WIDTH - 16) + '\n'));
 
   if (order.customerName) {

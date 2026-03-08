@@ -149,7 +149,7 @@ export default function Billing() {
                         <div className="flex items-center gap-2">
                           <span className="font-display font-semibold">{order.order_number}</span>
                           <Badge variant="secondary">
-                            {order.type === 'dine-in' ? `Table ${order.table_number}` : 'Takeaway'}
+                            {order.type === 'dine-in' ? 'Dine-in' : 'Takeaway'}
                           </Badge>
                           <Badge variant="outline" className="capitalize">{order.status}</Badge>
                         </div>

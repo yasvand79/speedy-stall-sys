@@ -277,7 +277,7 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
           </div>
 
           {/* Right: Cart */}
-          <div className="w-72 flex flex-col border rounded-lg p-4 bg-muted/30">
+          <div className="w-full md:w-72 flex flex-col border rounded-lg p-4 bg-muted/30">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5" />

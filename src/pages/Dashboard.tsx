@@ -140,7 +140,7 @@ function LiveOrderTabs({ orders, recentOrders }: { orders: any[]; recentOrders: 
                     )}
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    {order.type === 'dine-in' ? `Table ${order.table_number}` : order.customer_name || 'Takeaway'} • {order.order_items?.length || 0} items
+                    {order.type === 'dine-in' ? 'Dine-in' : order.customer_name || 'Takeaway'} • {order.order_items?.length || 0} items
                     {order.staff_name && <span> • by {order.staff_name}</span>}
                   </p>
                   <OrderProgressBar status={order.status} />

@@ -40,12 +40,6 @@ export function RecentOrders({ orders }: RecentOrdersProps) {
                   </Badge>
                 </div>
                 <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-                  {order.tableNumber && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5" />
-                      Table {order.tableNumber}
-                    </span>
-                  )}
                   {order.customerName && (
                     <span className="flex items-center gap-1">
                       <Phone className="h-3.5 w-3.5" />

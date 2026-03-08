@@ -12,6 +12,7 @@ import { useMenuItems } from '@/hooks/useMenuItems';
 import { useCreateOrder } from '@/hooks/useOrders';
 import { useBranches } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
+import { useShopSettings } from '@/hooks/useShopSettings';
 import { Database } from '@/integrations/supabase/types';
 import { Plus, Minus, ShoppingCart, X, UtensilsCrossed, Package, Building2, User } from 'lucide-react';
 import { toast } from 'sonner';
@@ -42,6 +43,7 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
   const { data: menuItems, isLoading } = useMenuItems();
   const { branches, activeBranches } = useBranches();
   const { profile, isDeveloper, isCentralAdmin } = useAuth();
+  const { settings } = useShopSettings();
   const createOrder = useCreateOrder();
 
   // Auto-select branch for non-developer/central-admin users
@@ -81,8 +83,11 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
 
   const clearCart = () => setCart([]);
 
+  const gstRate = (settings?.gst_rate ?? 5) / 100;
+  const includeGstInPrice = settings?.include_gst_in_price ?? false;
+
   const subtotal = cart.reduce((sum, item) => sum + Number(item.menuItem.price) * item.quantity, 0);
-  const gst = subtotal * 0.05;
+  const gst = includeGstInPrice ? 0 : subtotal * gstRate;
   const total = subtotal + gst;
 
   const handleSubmit = async () => {
@@ -345,8 +350,8 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
                   <span>₹{subtotal.toFixed(0)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>GST (5%)</span>
-                  <span>₹{gst.toFixed(0)}</span>
+                  <span>GST ({(settings?.gst_rate ?? 5)}%){includeGstInPrice ? ' (included)' : ''}</span>
+                  <span>{includeGstInPrice ? 'Incl.' : `₹${gst.toFixed(0)}`}</span>
                 </div>
                 <div className="flex justify-between font-semibold">
                   <span>Total</span>

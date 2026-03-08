@@ -45,6 +45,10 @@ export default function Menu() {
   // Branch admins can only edit prices for their branch
   const canEditBranchPrices = isBranchAdmin && profile?.branch_id;
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -53,6 +57,7 @@ export default function Menu() {
     category: 'veg' as MenuCategory,
     preparation_time: '15',
     ingredients: '',
+    image_url: '',
   });
 
   // Get branch-specific price for an item

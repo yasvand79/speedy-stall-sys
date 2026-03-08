@@ -95,7 +95,14 @@ export default function Settings() {
 
   const handleSaveBillTemplate = () => {
     if (!canEdit) { toast.error('You do not have permission to edit settings'); return; }
-    updateSettings(billTemplate as any);
+    updateSettings({ ...billTemplate, custom_bill_html: customBillHtml } as any);
+  };
+
+  const handleResetTemplate = () => {
+    if (!canEdit) { toast.error('You do not have permission to edit settings'); return; }
+    setCustomBillHtml(null);
+    updateSettings({ custom_bill_html: null } as any);
+    toast.success('Template reset to default');
   };
 
   const handleImportFromImage = async (e: React.ChangeEvent<HTMLInputElement>) => {

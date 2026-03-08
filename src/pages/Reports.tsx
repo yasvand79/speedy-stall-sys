@@ -130,19 +130,36 @@ const tooltipStyle = {
   fontSize: '12px',
 };
 // ─── AI Insights Section ───
-const INSIGHT_ICONS: Record<string, React.ElementType> = {
-  revenue: IndianRupee, operations: Zap, menu: UtensilsCrossed,
-  customers: UserCheck, staff: Award, marketing: Megaphone,
+const SECTION_CONFIG: Record<string, { icon: React.ElementType; color: string; bgClass: string }> = {
+  sales: { icon: IndianRupee, color: 'primary', bgClass: 'bg-primary/10 text-primary' },
+  customers: { icon: Users, color: 'info', bgClass: 'bg-info/10 text-info' },
+  staff: { icon: Award, color: 'warning', bgClass: 'bg-warning/10 text-warning' },
+  growth: { icon: TrendingUp, color: 'success', bgClass: 'bg-success/10 text-success' },
 };
-const INSIGHT_COLORS: Record<string, string> = {
-  revenue: 'primary', operations: 'warning', menu: 'success',
-  customers: 'info', staff: 'primary', marketing: 'destructive',
+
+const STATUS_LABELS: Record<string, { label: string; color: string; emoji: string }> = {
+  excellent: { label: 'Excellent', color: 'text-success', emoji: '🟢' },
+  good: { label: 'Good', color: 'text-info', emoji: '🔵' },
+  average: { label: 'Average', color: 'text-warning', emoji: '🟡' },
+  needs_work: { label: 'Needs Work', color: 'text-destructive', emoji: '🔴' },
 };
-const IMPACT_STYLES: Record<string, string> = {
-  high: 'bg-destructive/10 text-destructive border-destructive/20',
-  medium: 'bg-warning/10 text-warning border-warning/20',
-  low: 'bg-info/10 text-info border-info/20',
-};
+
+function ScoreRing({ score, size = 48 }: { score: number; size?: number }) {
+  const radius = (size - 6) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = score >= 75 ? 'hsl(142,72%,42%)' : score >= 50 ? 'hsl(45,93%,47%)' : 'hsl(0,84%,60%)';
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} strokeWidth={3} stroke="hsl(var(--muted))" fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={radius} strokeWidth={3} stroke={color} fill="none"
+          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-1000" />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center font-display text-xs font-bold">{score}</span>
+    </div>
+  );
+}
 
 interface InsightsSectionProps {
   metrics: ReturnType<typeof Object> | null;
@@ -152,7 +169,7 @@ interface InsightsSectionProps {
 }
 
 function InsightsSection({ metrics, peakHour, busiestDay, repeatRate, totalCustomers, staffCount, topCategory, topItem, activeTables }: InsightsSectionProps) {
-  const [insights, setInsights] = useState<any[]>([]);
+  const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
 
@@ -180,8 +197,12 @@ function InsightsSection({ metrics, peakHour, busiestDay, repeatRate, totalCusto
           },
         },
       });
-      if (data?.insights) {
-        setInsights(data.insights);
+      if (error) {
+        console.error('Insights error:', error);
+        return;
+      }
+      if (data?.analysis) {
+        setAnalysis(data.analysis);
         setGenerated(true);
       }
     } catch (e) {
@@ -196,7 +217,7 @@ function InsightsSection({ metrics, peakHour, busiestDay, repeatRate, totalCusto
       <CardHeader className="pb-2 pt-4 px-4">
         <div className="flex items-center justify-between">
           <CardTitle className="font-display text-sm flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-warning" /> AI Business Insights
+            <Lightbulb className="h-4 w-4 text-warning" /> AI Business Report
           </CardTitle>
           <Button
             size="sm"
@@ -206,51 +227,102 @@ function InsightsSection({ metrics, peakHour, busiestDay, repeatRate, totalCusto
             disabled={loading || !metrics}
           >
             {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Zap className="h-3 w-3 mr-1" />}
-            {loading ? 'Analyzing...' : generated ? 'Refresh Insights' : 'Generate Insights'}
+            {loading ? 'Analyzing...' : generated ? 'Refresh Report' : 'Generate Report'}
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground">AI-powered recommendations to improve your hotel business</p>
+        <p className="text-[10px] text-muted-foreground">Complete analysis of your business — Sales, Customers, Staff & Growth Tips</p>
       </CardHeader>
       <CardContent className="px-4 pb-4">
         {!generated ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Lightbulb className="h-10 w-10 text-muted-foreground/30 mb-3" />
-            <p className="text-sm text-muted-foreground">Click "Generate Insights" to get AI-powered recommendations</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Based on your current data and trends</p>
+            <div className="h-14 w-14 rounded-full bg-warning/10 flex items-center justify-center mb-3">
+              <Lightbulb className="h-7 w-7 text-warning" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Get Your Business Health Report</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+              Our AI will analyze your sales, customers, staff performance and give you easy-to-follow tips to grow your business
+            </p>
+            <div className="flex gap-2 mt-4 flex-wrap justify-center">
+              {['📊 Sales Analysis', '👥 Customer Insights', '👨‍🍳 Staff Review', '📈 Growth Tips'].map(tag => (
+                <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
+              ))}
+            </div>
+          </div>
+        ) : analysis ? (
+          <div className="space-y-4">
+            {/* Overall Health Score */}
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/5 via-transparent to-success/5 border border-border/50">
+              <ScoreRing score={analysis.healthScore || 0} size={64} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-display text-sm font-bold text-foreground">Overall Business Health</h4>
+                  <Badge variant="outline" className="text-[10px]">
+                    {analysis.healthScore >= 75 ? '🟢 Healthy' : analysis.healthScore >= 50 ? '🟡 Okay' : '🔴 Needs Attention'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{analysis.summary}</p>
+              </div>
+            </div>
+
+            {/* Section Cards */}
+            <div className="grid gap-3 md:grid-cols-2">
+              {(analysis.sections || []).map((section: any) => {
+                const config = SECTION_CONFIG[section.id] || SECTION_CONFIG.sales;
+                const status = STATUS_LABELS[section.status] || STATUS_LABELS.average;
+                const Icon = config.icon;
+                return (
+                  <div key={section.id} className="p-4 rounded-xl border border-border/50 bg-card hover:shadow-md transition-all space-y-3">
+                    {/* Section Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${config.bgClass}`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground">{section.title}</h4>
+                          <span className={`text-[10px] font-medium ${status.color}`}>{status.emoji} {status.label}</span>
+                        </div>
+                      </div>
+                      <ScoreRing score={section.score || 0} size={40} />
+                    </div>
+
+                    {/* Summary */}
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">{section.summary}</p>
+
+                    {/* Key Findings */}
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Key Findings</p>
+                      {(section.insights || []).map((insight: any, j: number) => (
+                        <div key={j} className="flex items-start gap-2">
+                          <span className="mt-0.5 shrink-0">
+                            {insight.type === 'positive' ? '✅' : insight.type === 'negative' ? '⚠️' : 'ℹ️'}
+                          </span>
+                          <span className="text-[11px] text-foreground leading-relaxed">{insight.point}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Tips */}
+                    {section.tips && section.tips.length > 0 && (
+                      <div className="pt-2 border-t border-border/50 space-y-1.5">
+                        <p className="text-[10px] font-semibold text-success uppercase tracking-wider flex items-center gap-1">
+                          <Lightbulb className="h-3 w-3" /> What To Do
+                        </p>
+                        {section.tips.map((tip: string, j: number) => (
+                          <div key={j} className="flex items-start gap-2 p-1.5 rounded-md bg-success/5">
+                            <span className="text-[10px] font-bold text-success shrink-0 mt-px">{j + 1}.</span>
+                            <span className="text-[11px] text-foreground leading-relaxed">{tip}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {insights.map((insight, i) => {
-              const Icon = INSIGHT_ICONS[insight.category] || Target;
-              const color = INSIGHT_COLORS[insight.category] || 'primary';
-              const colorClass = `bg-${color}/10 text-${color}`;
-              return (
-                <div key={i} className="p-3 rounded-lg border border-border/50 bg-card hover:shadow-sm transition-shadow space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ${colorClass}`}>
-                        <Icon className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-foreground leading-tight">{insight.title}</p>
-                        <Badge variant="outline" className="text-[9px] capitalize mt-0.5">{insight.category}</Badge>
-                      </div>
-                    </div>
-                    <Badge className={`text-[9px] border shrink-0 ${IMPACT_STYLES[insight.impact] || IMPACT_STYLES.medium}`}>
-                      {insight.impact}
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">{insight.insight}</p>
-                  {insight.metric && (
-                    <div className="flex items-center gap-1 pt-1 border-t border-border/50">
-                      <Target className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[10px] font-medium text-foreground">{insight.metric}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <div className="text-center py-6 text-muted-foreground text-xs">Could not generate report. Please try again.</div>
         )}
       </CardContent>
     </Card>

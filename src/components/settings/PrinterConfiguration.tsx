@@ -391,11 +391,15 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
     printerName: qzPrinterName,
     availablePrinters: qzPrinters,
     isPrinting: qzPrinting,
+    isNative,
     connectQZ,
     detectPrinters: detectQZPrinters,
     selectPrinter: selectQZPrinter,
     printTestPage,
+    bluetooth,
   } = useThermalPrinter();
+
+  const [btPaperWidth, setBtPaperWidth] = useState<'58mm' | '80mm'>(getSavedPaperWidth);
 
   const [qzDetecting, setQzDetecting] = useState(false);
 

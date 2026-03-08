@@ -501,11 +501,26 @@ export function PaymentDialog({
                   : `₹${paymentAmount.toFixed(0)} received via ${method.toUpperCase()}`
                 }
               </p>
+              {/* Thermal printer status */}
+              {qzStatus === 'connected' && (
+                <div className="flex items-center justify-center gap-1.5 mt-2">
+                  <Wifi className="h-3 w-3 text-emerald-500" />
+                  <span className="text-xs text-emerald-600">
+                    {isThermalPrinting ? 'Printing...' : 'Auto-printed via thermal printer'}
+                  </span>
+                </div>
+              )}
+              {qzStatus !== 'connected' && (
+                <div className="flex items-center justify-center gap-1.5 mt-2">
+                  <WifiOff className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">QZ Tray not connected</span>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handlePrintBill} className="flex-1">
+              <Button variant="outline" onClick={handlePrintBill} className="flex-1" disabled={isThermalPrinting}>
                 <Printer className="mr-2 h-4 w-4" />
-                Print Bill
+                {isThermalPrinting ? 'Printing...' : 'Print Bill'}
               </Button>
               <Button onClick={handleDone} className="flex-1">
                 Done

@@ -495,9 +495,16 @@ export default function Orders() {
             ) : null}
           </div>
           <DialogFooter className="p-4 pt-2 gap-2 sm:gap-2">
+            <div className="flex items-center gap-1.5 mr-auto">
+              {qzStatus === 'connected' ? (
+                <><Wifi className="h-3.5 w-3.5 text-emerald-500" /><span className="text-xs text-emerald-600">Thermal printer ready</span></>
+              ) : (
+                <><WifiOff className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">Browser print</span></>
+              )}
+            </div>
             <Button variant="outline" onClick={() => setPreviewOpen(false)}>Cancel</Button>
-            <Button onClick={handlePrintFromPreview} disabled={!previewHtml || previewLoading}>
-              <Printer className="mr-2 h-4 w-4" />Print
+            <Button onClick={handlePrintFromPreview} disabled={!previewHtml || previewLoading || isThermalPrinting}>
+              <Printer className="mr-2 h-4 w-4" />{isThermalPrinting ? 'Printing...' : 'Print'}
             </Button>
           </DialogFooter>
         </DialogContent>

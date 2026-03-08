@@ -11,6 +11,7 @@ import {
   TrendingUp,
   UserPlus,
   Settings,
+  UserCircle,
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,7 @@ const moreMenuItems = [
   { name: 'Performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
   { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['admin'] },
   { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
+  { name: 'Profile', href: '/profile', icon: UserCircle },
 ];
 
 export function BottomNav() {

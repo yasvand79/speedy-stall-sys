@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import Branches from "./pages/Branches";
 import StaffPerformance from "./pages/StaffPerformance";
 import InviteCodes from "./pages/InviteCodes";
+import Profile from "./pages/Profile";
 
 import PublicMenu from "./pages/PublicMenu";
 import Auth from "./pages/Auth";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Reports /></ProtectedRoute>} />
             <Route path="/invite-codes" element={<ProtectedRoute allowedRoles={['admin']}><InviteCodes /></ProtectedRoute>} />
             
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

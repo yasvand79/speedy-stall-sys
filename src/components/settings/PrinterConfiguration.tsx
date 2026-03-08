@@ -385,6 +385,19 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
   const [discoveredPrinters, setDiscoveredPrinters] = useState<DiscoveredPrinter[]>([]);
   const [activeTarget, setActiveTarget] = useState<'receipt' | 'kitchen'>('receipt');
 
+  const {
+    qzStatus,
+    printerName: qzPrinterName,
+    availablePrinters: qzPrinters,
+    isPrinting: qzPrinting,
+    connectQZ,
+    detectPrinters: detectQZPrinters,
+    selectPrinter: selectQZPrinter,
+    printTestPage,
+  } = useThermalPrinter();
+
+  const [qzDetecting, setQzDetecting] = useState(false);
+
   useEffect(() => {
     setReceipt(parsePrinterConfig(receiptPrinter));
     setKitchen(parsePrinterConfig(kitchenPrinter));
@@ -398,27 +411,24 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
     const allDiscovered: DiscoveredPrinter[] = [];
     
     try {
-      // Scan Bluetooth if requested or auto-detect
       if (!type || type === 'bluetooth') {
         try {
           const btPrinters = await scanBluetooth();
           allDiscovered.push(...btPrinters);
         } catch (e: any) {
           if (type === 'bluetooth') {
-            toast.error(e.message || 'Bluetooth scanning failed. Make sure Bluetooth is enabled.');
+            toast.error(e.message || 'Bluetooth scanning failed.');
           }
-          // Silent fail for auto-detect
         }
       }
       
-      // Scan Network if requested or auto-detect
       if (!type || type === 'wifi' || type === 'network') {
         try {
           const netPrinters = await scanNetwork();
           allDiscovered.push(...netPrinters);
         } catch {
           if (type === 'wifi' || type === 'network') {
-            toast.error('Network scanning failed. Check your network connection.');
+            toast.error('Network scanning failed.');
           }
         }
       }
@@ -426,9 +436,9 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
       setDiscoveredPrinters(allDiscovered);
       
       if (allDiscovered.length === 0) {
-        toast.info('No printers found. Make sure your printer is powered on and connected to the same network or Bluetooth is enabled.');
+        toast.info('No printers found. Make sure your printer is powered on.');
       } else {
-        toast.success(`Found ${allDiscovered.length} printer${allDiscovered.length > 1 ? 's' : ''}! Tap to connect.`);
+        toast.success(`Found ${allDiscovered.length} printer${allDiscovered.length > 1 ? 's' : ''}!`);
       }
     } catch (e: any) {
       toast.error(e.message || 'Scanning failed');
@@ -448,14 +458,36 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
       enabled: true,
     };
     
-    if (target === 'receipt') {
-      setReceipt(updatedConfig);
-    } else {
-      setKitchen(updatedConfig);
-    }
+    if (target === 'receipt') setReceipt(updatedConfig);
+    else setKitchen(updatedConfig);
     
     setDiscoveredPrinters([]);
     toast.success(`${printer.name} selected as ${target} printer`);
+  };
+
+  const handleDetectQZPrinters = async () => {
+    setQzDetecting(true);
+    try {
+      if (qzStatus !== 'connected') {
+        await connectQZ();
+      }
+      await detectQZPrinters();
+    } catch {
+      // handled in hook
+    } finally {
+      setQzDetecting(false);
+    }
+  };
+
+  const handleSelectQZPrinter = (name: string) => {
+    selectQZPrinter(name);
+    // Also update receipt printer config name
+    setReceipt(prev => ({ ...prev, name, enabled: true }));
+    toast.success(`Selected printer: ${name}`);
+  };
+
+  const handleQZTestPrint = async () => {
+    await printTestPage();
   };
 
   const handleSave = () => {
@@ -472,9 +504,127 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
           <Printer className="h-5 w-5 text-primary" />
           <CardTitle className="font-display">Printer Configuration</CardTitle>
         </div>
-        <CardDescription>Setup receipt and kitchen printers — auto-detect via Bluetooth, Wi-Fi, USB, or LAN</CardDescription>
+        <CardDescription>Setup receipt and kitchen printers — auto-detect via QZ Tray, Bluetooth, Wi-Fi, USB, or LAN</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+
+        {/* QZ Tray Status Section */}
+        <div className="rounded-lg border-2 border-dashed border-border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                qzStatus === 'connected' ? 'bg-emerald-100 dark:bg-emerald-900/30' :
+                qzStatus === 'connecting' ? 'bg-amber-100 dark:bg-amber-900/30' :
+                'bg-muted'
+              }`}>
+                {qzStatus === 'connected' ? (
+                  <Zap className="h-5 w-5 text-emerald-600" />
+                ) : qzStatus === 'connecting' ? (
+                  <Loader2 className="h-5 w-5 text-amber-600 animate-spin" />
+                ) : (
+                  <WifiOff className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-semibold">QZ Tray — Direct Thermal Printing</p>
+                <p className="text-xs text-muted-foreground">
+                  {qzStatus === 'connected' ? 'Connected — silent ESC/POS printing active' :
+                   qzStatus === 'connecting' ? 'Connecting...' :
+                   qzStatus === 'error' ? 'Connection failed — is QZ Tray running?' :
+                   'Not connected — install QZ Tray for direct printing'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={qzStatus === 'connected' ? 'default' : 'secondary'} className="text-xs">
+                {qzStatus === 'connected' ? '● Connected' :
+                 qzStatus === 'connecting' ? '○ Connecting' :
+                 '○ Offline'}
+              </Badge>
+              {qzStatus !== 'connected' && (
+                <Button variant="outline" size="sm" onClick={connectQZ} disabled={qzStatus === 'connecting'}>
+                  {qzStatus === 'connecting' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* QZ Printer Detection */}
+          {qzStatus === 'connected' && canEdit && (
+            <div className="space-y-3 pt-2">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleDetectQZPrinters}
+                  disabled={qzDetecting}
+                  className="flex-1"
+                >
+                  {qzDetecting ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Detecting...</>
+                  ) : (
+                    <><ScanLine className="mr-2 h-4 w-4" /> Detect OS Printers via QZ Tray</>
+                  )}
+                </Button>
+                {qzPrinterName && (
+                  <Button variant="outline" onClick={handleQZTestPrint} disabled={qzPrinting}>
+                    {qzPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                  </Button>
+                )}
+              </div>
+
+              {/* QZ Detected Printers List */}
+              {qzPrinters.length > 0 && (
+                <div className="rounded-lg border border-border bg-card p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-medium">Found {qzPrinters.length} printer{qzPrinters.length > 1 ? 's' : ''} via QZ Tray</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    {qzPrinters.map((name, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleSelectQZPrinter(name)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-md border transition-all text-left ${
+                          qzPrinterName === name
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary hover:bg-primary/5'
+                        }`}
+                      >
+                        <Printer className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{name}</p>
+                        </div>
+                        {qzPrinterName === name && (
+                          <Badge className="text-xs shrink-0">Selected</Badge>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {qzPrinterName && (
+                <p className="text-xs text-emerald-600 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Active printer: {qzPrinterName}
+                </p>
+              )}
+            </div>
+          )}
+
+          {qzStatus !== 'connected' && (
+            <p className="text-xs text-muted-foreground">
+              Download QZ Tray from{' '}
+              <a href="https://qz.io/download/" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                qz.io/download
+              </a>
+              {' '}for silent thermal printing without browser dialogs.
+            </p>
+          )}
+        </div>
+
+        <Separator />
+
         <PrinterSetup
           label="Receipt Printer"
           description="Thermal printer for customer receipts"

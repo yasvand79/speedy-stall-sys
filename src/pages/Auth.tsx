@@ -57,9 +57,9 @@ export default function Auth() {
         toast.error(error.message);
       }
     } else if (status === 'pending') {
-      toast.info('Your account is pending approval. Please wait for an admin to approve your registration.');
+      toast.error('Your email is not authorized. Please contact your admin to get access.');
     } else if (status === 'rejected') {
-      toast.error('Your registration was rejected. Please contact an administrator.');
+      toast.error('Your access has been revoked. Please contact an administrator.');
     } else {
       toast.success('Welcome back!');
       navigate('/');

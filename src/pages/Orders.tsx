@@ -86,19 +86,40 @@ export default function Orders() {
     }
   };
 
-  const handlePrintFromPreview = () => {
+  const handlePrintFromPreview = async () => {
     if (!previewHtml) return;
     setPreviewOpen(false);
 
-    // Print using hidden iframe with the configured printer
+    // Try thermal print via QZ Tray first
+    if (qzStatus === 'connected' && previewOrderId) {
+      const order = orders?.find(o => o.id === previewOrderId);
+      if (order) {
+        const thermalOrder = {
+          orderNumber: order.order_number,
+          type: order.type,
+          tableNumber: order.table_number,
+          customerName: order.customer_name,
+          staffName: order.staff_name,
+          items: order.order_items.map((item: any) => ({
+            name: item.menu_items?.name || 'Unknown',
+            quantity: item.quantity,
+            price: Number(item.price),
+          })),
+          subtotal: Number(order.subtotal),
+          gst: Number(order.gst),
+          discount: Number(order.discount),
+          total: Number(order.total),
+          paymentMethod: order.payment_status === 'completed' ? 'Paid' : 'Pending',
+        };
+
+        const success = await printBill(thermalOrder);
+        if (success) return;
+      }
+    }
+
+    // Fallback: Print using hidden iframe with the configured printer
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.top = '-10000px';
-    iframe.style.left = '-10000px';
-    iframe.style.width = '80mm';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    iframe.style.visibility = 'hidden';
+    iframe.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:80mm;height:0;border:none;visibility:hidden';
     iframe.srcdoc = previewHtml;
 
     iframe.onload = () => {

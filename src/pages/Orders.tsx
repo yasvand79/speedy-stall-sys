@@ -66,102 +66,89 @@ export default function Orders() {
     setPaymentOpen(true);
   };
 
-  const handlePrintClick = (orderId: string) => {
-    setConfirmPrintOrderId(orderId);
-  };
-
-  const handleConfirmPrint = async () => {
-    const orderId = confirmPrintOrderId;
-    if (!orderId) return;
-    setConfirmPrintOrderId(null);
-    setPrintingOrderId(orderId);
-    setPrintStatus('generating');
+  const handlePrintClick = async (orderId: string) => {
+    setPreviewOrderId(orderId);
+    setPreviewLoading(true);
+    setPreviewHtml('');
+    setPreviewOpen(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-invoice', {
         body: { orderId }
       });
       if (error) throw error;
       if (data?.html) {
-        setPrintStatus('printing');
-
-        // Create a hidden iframe using srcdoc for reliable onload firing
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.top = '-10000px';
-        iframe.style.left = '-10000px';
-        iframe.style.width = '80mm';
-        iframe.style.height = '0';
-        iframe.style.border = 'none';
-        iframe.style.visibility = 'hidden';
-        
-        let printTriggered = false;
-        const triggerPrint = () => {
-          if (printTriggered) return;
-          printTriggered = true;
-          
-          const onAfterPrint = () => {
-            iframe.contentWindow?.removeEventListener('afterprint', onAfterPrint);
-            if (document.body.contains(iframe)) document.body.removeChild(iframe);
-            setPrintStatus('success');
-            setTimeout(() => setPrintStatus('idle'), 2000);
-          };
-          iframe.contentWindow?.addEventListener('afterprint', onAfterPrint);
-          
-          // Fallback cleanup after 15s
-          setTimeout(() => {
-            if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-              setPrintStatus('success');
-              setTimeout(() => setPrintStatus('idle'), 2000);
-            }
-          }, 15000);
-
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        };
-
-        // Use srcdoc which reliably triggers onload after content is parsed
-        iframe.srcdoc = data.html;
-        
-        iframe.onload = () => {
-          // Wait for fonts to load, then print
-          const iframeDoc = iframe.contentDocument;
-          if (iframeDoc && (iframeDoc as any).fonts?.ready) {
-            (iframeDoc as any).fonts.ready.then(() => {
-              // Extra delay to ensure paint is complete
-              setTimeout(triggerPrint, 500);
-            }).catch(() => {
-              setTimeout(triggerPrint, 1000);
-            });
-          } else {
-            // Fallback for browsers without document.fonts
-            setTimeout(triggerPrint, 2000);
-          }
-        };
-
-        iframe.onerror = () => {
-          if (document.body.contains(iframe)) document.body.removeChild(iframe);
-          setPrintStatus('error');
-          toast.error('Failed to load print content');
-          setTimeout(() => setPrintStatus('idle'), 2000);
-        };
-
-        document.body.appendChild(iframe);
-        
-        // Ultimate fallback if onload never fires
-        setTimeout(() => {
-          if (document.body.contains(iframe)) {
-            triggerPrint();
-          }
-        }, 5000);
+        setPreviewHtml(data.html);
       }
     } catch {
-      setPrintStatus('error');
       toast.error('Failed to generate invoice');
-      setTimeout(() => setPrintStatus('idle'), 2000);
+      setPreviewOpen(false);
     } finally {
-      setPrintingOrderId(null);
+      setPreviewLoading(false);
     }
+  };
+
+  const handlePrintFromPreview = () => {
+    if (!previewHtml) return;
+    setPreviewOpen(false);
+    setPrintStatus('printing');
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.top = '-10000px';
+    iframe.style.left = '-10000px';
+    iframe.style.width = '80mm';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+
+    let printTriggered = false;
+    const triggerPrint = () => {
+      if (printTriggered) return;
+      printTriggered = true;
+
+      const onAfterPrint = () => {
+        iframe.contentWindow?.removeEventListener('afterprint', onAfterPrint);
+        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+        setPrintStatus('success');
+        setTimeout(() => setPrintStatus('idle'), 2000);
+      };
+      iframe.contentWindow?.addEventListener('afterprint', onAfterPrint);
+
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+          setPrintStatus('success');
+          setTimeout(() => setPrintStatus('idle'), 2000);
+        }
+      }, 15000);
+
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    };
+
+    iframe.srcdoc = previewHtml;
+    iframe.onload = () => {
+      const iframeDoc = iframe.contentDocument;
+      if (iframeDoc && (iframeDoc as any).fonts?.ready) {
+        (iframeDoc as any).fonts.ready.then(() => {
+          setTimeout(triggerPrint, 500);
+        }).catch(() => {
+          setTimeout(triggerPrint, 1000);
+        });
+      } else {
+        setTimeout(triggerPrint, 2000);
+      }
+    };
+    iframe.onerror = () => {
+      if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      setPrintStatus('error');
+      toast.error('Failed to load print content');
+      setTimeout(() => setPrintStatus('idle'), 2000);
+    };
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      if (document.body.contains(iframe)) triggerPrint();
+    }, 5000);
   };
 
   const getPaidAmount = (orderId: string) => {

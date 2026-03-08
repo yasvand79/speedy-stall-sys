@@ -28,7 +28,7 @@ export default function Orders() {
   const { data: allPayments } = usePayments();
   const { branches } = useBranches();
   const updateStatus = useUpdateOrderStatus();
-  const { isDeveloper, isAdmin, isBilling, isCentralAdmin } = useAuth();
+  const { isAdmin, isBilling } = useAuth();
 
   // Calculate staff performance stats
   const staffStats = useMemo(() => {

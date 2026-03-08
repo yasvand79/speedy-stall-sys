@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCreatePayment } from '@/hooks/usePayments';
 import { useUpdateOrderStatus } from '@/hooks/useOrders';
 import { useShopSettings } from '@/hooks/useShopSettings';
 import { Database } from '@/integrations/supabase/types';
-import { Banknote, Smartphone, CreditCard, Printer, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { Banknote, Smartphone, CreditCard, CheckCircle, ArrowLeft, Loader2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 
 type PaymentMethod = Database['public']['Enums']['payment_method'];
@@ -26,6 +25,8 @@ interface PaymentDialogProps {
   customerPhone?: string;
 }
 
+type Step = 'method' | 'amount' | 'qr' | 'success';
+
 export function PaymentDialog({ 
   open, 
   onOpenChange, 
@@ -33,12 +34,10 @@ export function PaymentDialog({
   orderNumber, 
   total, 
   paidAmount,
-  customerName,
-  customerPhone,
 }: PaymentDialogProps) {
+  const [step, setStep] = useState<Step>('method');
   const [method, setMethod] = useState<PaymentMethod>('cash');
-  const [amount, setAmount] = useState((total - paidAmount).toFixed(2));
-  const [showQrCode, setShowQrCode] = useState(false);
+  const [amount, setAmount] = useState('');
   const navigate = useNavigate();
 
   const createPayment = useCreatePayment();
@@ -54,27 +53,30 @@ export function PaymentDialog({
     ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${paymentAmount.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Order ${orderNumber}`)}`
     : '';
 
-  // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
-      setAmount((total - paidAmount).toFixed(2));
-      setShowQrCode(false);
+      setStep('method');
+      setMethod('cash');
+      setAmount(remaining.toFixed(2));
     }
-  }, [open, total, paidAmount]);
+  }, [open, remaining]);
 
-  const handleSubmit = async () => {
-    if (paymentAmount <= 0) return;
-
-    if (method === 'upi') {
+  const selectMethod = (m: PaymentMethod) => {
+    setMethod(m);
+    if (m === 'upi') {
       if (!upiId) {
         toast.error('Please configure UPI ID in Settings first');
         return;
       }
-      setShowQrCode(true);
-      return;
+      setStep('qr');
+    } else {
+      setStep('amount');
     }
+  };
 
-    // For cash/card, process immediately
+  const handleConfirmPayment = async () => {
+    if (paymentAmount <= 0) return;
+
     await createPayment.mutateAsync({
       order_id: orderId,
       amount: paymentAmount,
@@ -85,12 +87,12 @@ export function PaymentDialog({
       await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
     }
 
-    toast.success('Payment completed successfully!');
-    onOpenChange(false);
-    navigate('/orders');
+    setStep('success');
   };
 
-  const handleMarkAsPaid = async () => {
+  const handleMarkUpiPaid = async () => {
+    if (paymentAmount <= 0) return;
+
     await createPayment.mutateAsync({
       order_id: orderId,
       amount: paymentAmount,
@@ -101,211 +103,210 @@ export function PaymentDialog({
       await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
     }
 
-    toast.success('Payment marked as received!');
+    setStep('success');
+  };
+
+  const handleDone = () => {
     onOpenChange(false);
     navigate('/orders');
   };
 
   const handlePrintBill = () => {
     const billContent = `
-      <html>
-        <head>
-          <title>Bill - ${orderNumber}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; max-width: 300px; margin: 0 auto; }
-            h2 { text-align: center; margin-bottom: 5px; }
-            .shop-name { text-align: center; font-size: 12px; margin-bottom: 20px; }
-            .line { border-bottom: 1px dashed #000; margin: 10px 0; }
-            .row { display: flex; justify-content: space-between; margin: 5px 0; }
-            .total { font-weight: bold; font-size: 16px; }
-            .footer { text-align: center; margin-top: 20px; font-size: 11px; }
-          </style>
-        </head>
-        <body>
-          <h2>${shopName}</h2>
-          <p class="shop-name">Food Shop Management System</p>
-          <div class="line"></div>
-          <div class="row"><span>Order #</span><span>${orderNumber}</span></div>
-          <div class="row"><span>Date</span><span>${new Date().toLocaleString()}</span></div>
-          <div class="line"></div>
-          <div class="row total"><span>Total</span><span>₹${total.toFixed(2)}</span></div>
-          <div class="row"><span>Paid</span><span>₹${(paidAmount + paymentAmount).toFixed(2)}</span></div>
-          <div class="row"><span>Method</span><span>${method.toUpperCase()}</span></div>
-          <div class="line"></div>
-          <p class="footer">Thank you for dining with us!</p>
-        </body>
-      </html>
+      <html><head><title>Bill - ${orderNumber}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 300px; margin: 0 auto; }
+        h2 { text-align: center; margin-bottom: 5px; }
+        .sub { text-align: center; font-size: 12px; margin-bottom: 20px; }
+        .line { border-bottom: 1px dashed #000; margin: 10px 0; }
+        .row { display: flex; justify-content: space-between; margin: 5px 0; }
+        .total { font-weight: bold; font-size: 16px; }
+        .footer { text-align: center; margin-top: 20px; font-size: 11px; }
+      </style></head><body>
+        <h2>${shopName}</h2>
+        <div class="line"></div>
+        <div class="row"><span>Order #</span><span>${orderNumber}</span></div>
+        <div class="row"><span>Date</span><span>${new Date().toLocaleString()}</span></div>
+        <div class="line"></div>
+        <div class="row total"><span>Total</span><span>₹${total.toFixed(2)}</span></div>
+        <div class="row"><span>Paid</span><span>₹${paymentAmount.toFixed(2)}</span></div>
+        <div class="row"><span>Method</span><span>${method.toUpperCase()}</span></div>
+        <div class="line"></div>
+        <p class="footer">Thank you!</p>
+      </body></html>
     `;
-    
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(billContent);
-      printWindow.document.close();
-      printWindow.print();
-    }
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(billContent); w.document.close(); w.print(); }
   };
-
-  // Direct UPI QR Code View
-  if (showQrCode && upiUrl) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-center">
-              Scan to Pay - ₹{paymentAmount.toFixed(2)}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex flex-col items-center space-y-6 py-4">
-            <div className="bg-white p-4 rounded-xl shadow-inner">
-              <QRCodeSVG 
-                value={upiUrl} 
-                size={200}
-                level="H"
-                includeMargin
-              />
-            </div>
-
-            <div className="text-center space-y-2">
-              <p className="text-2xl font-bold text-primary">₹{paymentAmount.toFixed(2)}</p>
-              <p className="text-sm text-muted-foreground">
-                Scan with <span className="font-semibold text-foreground">GPay</span>, <span className="font-semibold text-foreground">PhonePe</span>, or <span className="font-semibold text-foreground">Paytm</span>
-              </p>
-            </div>
-
-            <div className="w-full pt-4 border-t space-y-3">
-              <Button 
-                onClick={handleMarkAsPaid}
-                className="w-full"
-                disabled={createPayment.isPending}
-              >
-                {createPayment.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Mark as Paid
-                  </>
-                )}
-              </Button>
-              
-              <Button 
-                variant="ghost" 
-                onClick={() => setShowQrCode(false)} 
-                className="w-full"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-display">Process Payment - {orderNumber}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-sm p-0 overflow-hidden gap-0">
+        {/* Top bar with amount */}
+        <div className="bg-primary text-primary-foreground px-6 py-5 text-center">
+          <p className="text-sm opacity-80">Order {orderNumber}</p>
+          <p className="text-3xl font-bold font-display mt-1">₹{remaining.toFixed(0)}</p>
+          <p className="text-xs opacity-70 mt-1">
+            {paidAmount > 0 ? `₹${paidAmount.toFixed(0)} already paid` : 'Amount due'}
+          </p>
+        </div>
 
-        <div className="space-y-6">
-          {/* Amount Summary */}
-          <div className="rounded-lg bg-muted p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Order Total</span>
-              <span>₹{total.toFixed(2)}</span>
+        {/* Step: Choose Payment Method */}
+        {step === 'method' && (
+          <div className="p-6 space-y-3">
+            <p className="text-sm font-medium text-muted-foreground text-center mb-4">How is the customer paying?</p>
+            
+            <button
+              onClick={() => selectMethod('cash')}
+              className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-accent transition-all text-left group"
+            >
+              <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                <Banknote className="h-6 w-6 text-success" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Cash</p>
+                <p className="text-xs text-muted-foreground">Accept cash payment</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => selectMethod('upi')}
+              className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-accent transition-all text-left group"
+            >
+              <div className="h-12 w-12 rounded-full bg-info/10 flex items-center justify-center shrink-0">
+                <Smartphone className="h-6 w-6 text-info" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">UPI</p>
+                <p className="text-xs text-muted-foreground">GPay, PhonePe, Paytm</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => selectMethod('card')}
+              className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-accent transition-all text-left group"
+            >
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <CreditCard className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Card</p>
+                <p className="text-xs text-muted-foreground">Debit or Credit card</p>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* Step: Enter Amount (Cash/Card) */}
+        {step === 'amount' && (
+          <div className="p-6 space-y-5">
+            <button onClick={() => setStep('method')} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
+
+            <div className="space-y-2">
+              <Label htmlFor="pay-amount" className="text-sm text-muted-foreground">Payment Amount</Label>
+              <Input
+                id="pay-amount"
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="text-center text-2xl font-bold h-14"
+                step="0.01"
+                autoFocus
+              />
+              <div className="flex gap-2 justify-center">
+                {[remaining, Math.ceil(remaining / 100) * 100, 500].filter((v, i, a) => a.indexOf(v) === i && v >= remaining).slice(0, 3).map(v => (
+                  <button
+                    key={v}
+                    onClick={() => setAmount(v.toFixed(2))}
+                    className="text-xs px-3 py-1.5 rounded-full border border-border hover:bg-accent transition-colors"
+                  >
+                    ₹{v}
+                  </button>
+                ))}
+              </div>
             </div>
-            {paidAmount > 0 && (
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Already Paid</span>
-                <span>₹{paidAmount.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-semibold text-lg pt-2 border-t">
-              <span>Remaining</span>
-              <span className="text-primary">₹{remaining.toFixed(2)}</span>
-            </div>
-          </div>
 
-          {/* Payment Method */}
-          <div className="space-y-3">
-            <Label>Payment Method</Label>
-            <RadioGroup value={method} onValueChange={(v) => setMethod(v as PaymentMethod)} className="grid grid-cols-3 gap-4">
-              <div>
-                <RadioGroupItem value="cash" id="cash" className="peer sr-only" />
-                <Label
-                  htmlFor="cash"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
-                >
-                  <Banknote className="mb-2 h-6 w-6" />
-                  <span className="text-sm font-medium">Cash</span>
-                </Label>
-              </div>
-              <div>
-                <RadioGroupItem value="upi" id="upi" className="peer sr-only" />
-                <Label
-                  htmlFor="upi"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
-                >
-                  <Smartphone className="mb-2 h-6 w-6" />
-                  <span className="text-sm font-medium">UPI</span>
-                </Label>
-              </div>
-              <div>
-                <RadioGroupItem value="card" id="card" className="peer sr-only" />
-                <Label
-                  htmlFor="card"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
-                >
-                  <CreditCard className="mb-2 h-6 w-6" />
-                  <span className="text-sm font-medium">Card</span>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Amount */}
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
-            <Input
-              id="amount"
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              step="0.01"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handlePrintBill} className="flex-1">
-              <Printer className="mr-2 h-4 w-4" />
-              Print Bill
-            </Button>
-            <Button 
-              onClick={handleSubmit} 
-              className="flex-1"
+            <Button
+              onClick={handleConfirmPayment}
+              className="w-full h-12 text-base"
               disabled={createPayment.isPending || paymentAmount <= 0}
             >
               {createPayment.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : method === 'upi' ? (
-                'Generate UPI QR'
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
               ) : (
-                'Complete Payment'
+                <>
+                  <CheckCircle className="mr-2 h-5 w-5" />
+                  Collect ₹{paymentAmount.toFixed(0)} via {method === 'cash' ? 'Cash' : 'Card'}
+                </>
               )}
             </Button>
           </div>
-        </div>
+        )}
+
+        {/* Step: UPI QR Code */}
+        {step === 'qr' && (
+          <div className="p-6 space-y-5">
+            <button onClick={() => setStep('method')} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
+
+            <div className="flex flex-col items-center space-y-4">
+              <div className="bg-white p-3 rounded-xl shadow-sm border">
+                <QRCodeSVG 
+                  value={upiUrl} 
+                  size={180}
+                  level="H"
+                  includeMargin
+                />
+              </div>
+
+              <p className="text-sm text-muted-foreground text-center">
+                Customer scans with <span className="font-semibold text-foreground">GPay</span>, <span className="font-semibold text-foreground">PhonePe</span>, or <span className="font-semibold text-foreground">Paytm</span>
+              </p>
+
+              <Button
+                onClick={handleMarkUpiPaid}
+                className="w-full h-12 text-base"
+                disabled={createPayment.isPending}
+              >
+                {createPayment.isPending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    Payment Received
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Success */}
+        {step === 'success' && (
+          <div className="p-6 space-y-5 text-center">
+            <div className="mx-auto h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
+              <CheckCircle className="h-8 w-8 text-success" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-foreground">Payment Complete!</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                ₹{paymentAmount.toFixed(0)} received via {method.toUpperCase()}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handlePrintBill} className="flex-1">
+                <Printer className="mr-2 h-4 w-4" />
+                Print Bill
+              </Button>
+              <Button onClick={handleDone} className="flex-1">
+                Done
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

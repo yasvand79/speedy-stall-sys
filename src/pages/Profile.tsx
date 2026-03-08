@@ -238,8 +238,6 @@ export default function Profile() {
             </Button>
           </CardContent>
         </Card>
-
-        <DisplaySettings />
       </div>
     </MainLayout>
   );

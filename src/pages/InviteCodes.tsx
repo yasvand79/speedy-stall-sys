@@ -18,9 +18,8 @@ import { format } from 'date-fns';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
-const roleLabels: Record<AppRole, string> = {
-  developer: 'Developer',
-  central_admin: 'Central Admin',
+const roleLabels: Record<string, string> = {
+  admin: 'Admin',
   branch_admin: 'Branch Admin',
   billing: 'Billing',
 };

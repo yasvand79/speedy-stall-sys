@@ -328,6 +328,7 @@ serve(async (req) => {
     ${shopAddress ? `<div class="shop-detail">${shopAddress}</div>` : ''}
     ${shopPhone ? `<div class="shop-detail">Tel: ${shopPhone}</div>` : ''}
     ${branchName ? `<div class="branch-name">Branch: ${branchName}</div>` : ''}
+    ${billHeaderText ? `<div class="shop-detail" style="margin-top:2px;">${billHeaderText}</div>` : ''}
 
     <hr class="sep" />
 

@@ -52,6 +52,7 @@ export function PaymentDialog({
   const createPayment = useCreatePayment();
   const updateOrderStatus = useUpdateOrderStatus();
   const { settings } = useShopSettings();
+  const { printBill, qzStatus, isPrinting: isThermalPrinting } = useThermalPrinter();
 
   const remaining = total - paidAmount;
   const paymentAmount = parseFloat(amount) || 0;

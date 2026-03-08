@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { PrinterConfiguration } from '@/components/settings/PrinterConfiguration';
 import { DataExportImport } from '@/components/settings/DataExportImport';
+import DisplaySettings from '@/components/profile/DisplaySettings';
 
 export default function Settings() {
   const { settings, isLoading, updateSettings, updateSetting, isSaving } = useShopSettings();

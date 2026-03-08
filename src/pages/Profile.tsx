@@ -42,6 +42,10 @@ export default function Profile() {
   };
 
   const handleChangePassword = async () => {
+    if (!currentPassword) {
+      toast.error('Please enter your current password');
+      return;
+    }
     if (!newPassword || newPassword.length < 6) {
       toast.error('New password must be at least 6 characters');
       return;
@@ -52,6 +56,16 @@ export default function Profile() {
     }
     setChangingPassword(true);
     try {
+      // Re-authenticate with current password first
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: currentPassword,
+      });
+      if (signInError) {
+        toast.error('Current password is incorrect');
+        return;
+      }
+      
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       toast.success('Password changed successfully');

@@ -185,7 +185,7 @@ export default function Orders() {
         </div>
 
         {/* Staff Performance Summary */}
-        {(isDeveloper || isCentralAdmin || isAdmin) && staffStats.length > 0 && (
+        {isAdmin && staffStats.length > 0 && (
           <Card className="bg-muted/30">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">

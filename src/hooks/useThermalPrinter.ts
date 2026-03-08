@@ -464,7 +464,10 @@ export function useThermalPrinter() {
       if (!printer) {
         const detected = await detectPrinters();
         if (detected.length === 0) {
-          toast.error('No printer found. Please check printer connection.');
+          setPrinterError({
+            title: '🖨️ No Printer Found',
+            message: 'Please connect your thermal printer, power it on, and try again.',
+          });
           setIsPrinting(false);
           return false;
         }

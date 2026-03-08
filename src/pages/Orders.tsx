@@ -20,8 +20,6 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
 
 type StatusTab = 'active' | 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
 

@@ -29,8 +29,8 @@ export function useLogAction() {
       action: string;
       table_name: string;
       record_id?: string;
-      old_value?: Record<string, unknown>;
-      new_value?: Record<string, unknown>;
+      old_value?: Json;
+      new_value?: Json;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
 

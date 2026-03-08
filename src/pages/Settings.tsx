@@ -19,6 +19,7 @@ import { DataExportImport } from '@/components/settings/DataExportImport';
 export default function Settings() {
   const { settings, isLoading, updateSettings, updateSetting, isSaving } = useShopSettings();
   const { role } = useAuth();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   const canEdit = role === 'admin';
 

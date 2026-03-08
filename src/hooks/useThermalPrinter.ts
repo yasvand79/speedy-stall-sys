@@ -476,7 +476,10 @@ export function useThermalPrinter() {
 
       const finalPrinter = targetPrinter || printerName || availablePrinters[0];
       if (!finalPrinter) {
-        toast.error('No printer selected.');
+        setPrinterError({
+          title: '🖨️ No Printer Selected',
+          message: 'Please go to Settings > Printer Configuration and select a printer.',
+        });
         setIsPrinting(false);
         return false;
       }

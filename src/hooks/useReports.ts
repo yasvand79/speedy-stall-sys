@@ -109,6 +109,7 @@ export function useWeeklyRevenue() {
   return useQuery({
     queryKey: ['reports', 'weekly-revenue'],
     refetchInterval: 5000,
+    queryFn: async () => {
       const days = [];
       for (let i = 6; i >= 0; i--) {
         const date = new Date();

@@ -356,13 +356,6 @@ export default function Menu() {
                       </Select>
                     </div>
                   </div>
-                  <div>
-                    <Label>Prep Time (minutes)</Label>
-                    <Input
-                      type="number"
-                      value={formData.preparation_time}
-                      onChange={(e) => setFormData(p => ({ ...p, preparation_time: e.target.value }))}
-                    />
                   </div>
                   <div>
                     <Label>Ingredients (comma separated)</Label>

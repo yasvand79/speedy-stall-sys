@@ -17,6 +17,33 @@ export default function Billing() {
   const { data: dailySales } = useDailySales();
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const { printBill, isPrinting: isThermalPrinting } = useThermalPrinter();
+
+  const handlePrintReceipt = async (order: OrderWithItems) => {
+    const orderPayments = (payments || []).filter(p => p.order_id === order.id);
+    const latestPayment = orderPayments[0];
+
+    const thermalOrder = {
+      orderNumber: order.order_number,
+      type: order.type,
+      tableNumber: order.table_number,
+      customerName: order.customer_name,
+      staffName: order.staff_name,
+      items: order.order_items.map(i => ({
+        name: i.menu_items?.name || 'Item',
+        quantity: i.quantity,
+        price: Number(i.price),
+      })),
+      subtotal: Number(order.subtotal),
+      gst: Number(order.gst),
+      discount: Number(order.discount),
+      total: Number(order.total),
+      paymentMethod: latestPayment?.method || undefined,
+      paidAmount: Number(order.total),
+    };
+
+    await printBill(thermalOrder);
+  };
 
   if (ordersLoading || paymentsLoading) {
     return (

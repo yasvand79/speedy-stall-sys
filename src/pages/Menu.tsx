@@ -30,6 +30,8 @@ export default function Menu() {
   const [newBranchPrice, setNewBranchPrice] = useState('');
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState({ current: 0, total: 0 });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const { data: menuItems, isLoading } = useMenuItems();
   const createItem = useCreateMenuItem();

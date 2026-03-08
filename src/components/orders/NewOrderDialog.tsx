@@ -122,7 +122,7 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
 
     // Reset form
     setCart([]);
-    setTableNumber('');
+    
     setCustomerName('');
     setCustomerPhone('');
     setNotes('');

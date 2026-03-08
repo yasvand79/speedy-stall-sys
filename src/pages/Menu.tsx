@@ -14,7 +14,7 @@ import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem }
 import { useBranchMenuPrices } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
-import { Plus, Search, Pencil, Trash2, Clock, DollarSign, Building2, ImagePlus, X, Loader2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, DollarSign, Building2, ImagePlus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 

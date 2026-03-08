@@ -14,7 +14,7 @@ import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem }
 import { useBranchMenuPrices } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
-import { Plus, Search, Pencil, Trash2, Clock, DollarSign, Building2, ImagePlus, X, Loader2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, DollarSign, Building2, ImagePlus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -57,7 +57,6 @@ export default function Menu() {
     description: '',
     price: '',
     category: 'veg' as MenuCategory,
-    preparation_time: '15',
     ingredients: '',
     image_url: '',
   });
@@ -75,7 +74,6 @@ export default function Menu() {
       description: '',
       price: '',
       category: 'veg',
-      preparation_time: '15',
       ingredients: '',
       image_url: '',
     });
@@ -91,7 +89,6 @@ export default function Menu() {
       description: item.description || '',
       price: String(item.price),
       category: item.category,
-      preparation_time: String(item.preparation_time || 15),
       ingredients: (item.ingredients || []).join(', '),
       image_url: item.image_url || '',
     });
@@ -176,8 +173,8 @@ export default function Menu() {
       description: formData.description || null,
       price: parseFloat(formData.price),
       category: formData.category,
-      preparation_time: parseInt(formData.preparation_time) || 15,
       ingredients: formData.ingredients.split(',').map(s => s.trim()).filter(Boolean),
+      preparation_time: 10,
       is_available: true,
       image_url: imageUrl,
     };
@@ -358,14 +355,6 @@ export default function Menu() {
                     </div>
                   </div>
                   <div>
-                    <Label>Prep Time (minutes)</Label>
-                    <Input
-                      type="number"
-                      value={formData.preparation_time}
-                      onChange={(e) => setFormData(p => ({ ...p, preparation_time: e.target.value }))}
-                    />
-                  </div>
-                  <div>
                     <Label>Ingredients (comma separated)</Label>
                     <Input
                       value={formData.ingredients}
@@ -508,10 +497,6 @@ export default function Menu() {
                           <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
                         )}
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {item.preparation_time} min
-                          </div>
                           <Badge variant="secondary" className="text-xs capitalize">
                             {item.category}
                           </Badge>

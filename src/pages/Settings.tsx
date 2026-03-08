@@ -8,10 +8,11 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { Store, Bell, Receipt, Loader2, Smartphone, FileText } from 'lucide-react';
+import { Store, Bell, Receipt, Loader2, Smartphone, FileText, Upload, ImageIcon } from 'lucide-react';
 import { useShopSettings } from '@/hooks/useShopSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { PrinterConfiguration } from '@/components/settings/PrinterConfiguration';
 import { DataExportImport } from '@/components/settings/DataExportImport';
 

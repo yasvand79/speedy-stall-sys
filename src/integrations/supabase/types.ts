@@ -939,6 +939,13 @@ export type Database = {
       generate_invite_code: { Args: never; Returns: string }
       generate_invoice_number: { Args: never; Returns: string }
       generate_order_number: { Args: never; Returns: string }
+      get_staff_emails: {
+        Args: { user_ids: string[] }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
       get_user_branch: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }

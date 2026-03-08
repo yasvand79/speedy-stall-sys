@@ -101,10 +101,6 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
       return;
     }
 
-    if (orderType === 'dine-in' && !tableNumber) {
-      toast.error('Please enter table number for dine-in orders');
-      return;
-    }
 
     const selectedBranch = branches?.find(b => b.id === selectedBranchId);
 

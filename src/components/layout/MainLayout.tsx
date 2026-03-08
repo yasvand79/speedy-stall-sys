@@ -26,7 +26,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               {children}
             </main>
             {/* Mobile floating printer indicator */}
-            <div className="fixed top-3 right-3 z-40 md:hidden">
+            <div className="fixed top-3 right-3 z-40 md:hidden rounded-full bg-background/90 backdrop-blur shadow-md border">
               <PrinterStatusIndicator />
             </div>
           </div>

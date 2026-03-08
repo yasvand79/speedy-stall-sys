@@ -38,6 +38,7 @@ export function PaymentDialog({
   const [step, setStep] = useState<Step>('method');
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState('');
+  const customerWindowRef = useRef<Window | null>(null);
   const navigate = useNavigate();
 
   const createPayment = useCreatePayment();

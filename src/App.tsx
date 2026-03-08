@@ -16,7 +16,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Branches from "./pages/Branches";
 import StaffPerformance from "./pages/StaffPerformance";
-import InviteCodes from "./pages/InviteCodes";
+
 import Profile from "./pages/Profile";
 import PrinterSetup from "./pages/PrinterSetup";
 import Install from "./pages/Install";
@@ -48,7 +48,7 @@ const App = () => (
               <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Staff /></ProtectedRoute>} />
               <Route path="/staff-performance" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><StaffPerformance /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
-              <Route path="/invite-codes" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><InviteCodes /></ProtectedRoute>} />
+              
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/printer-setup" element={<ProtectedRoute><PrinterSetup /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />

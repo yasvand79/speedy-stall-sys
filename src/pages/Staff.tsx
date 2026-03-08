@@ -103,30 +103,27 @@ export default function Staff() {
     }
   };
 
-  const handleGenerateInviteCode = async () => {
+  const handleInviteStaff = async () => {
+    if (!newStaffEmail.trim()) {
+      toast.error('Please enter an email address');
+      return;
+    }
     try {
-      const code = await createCode({
+      await createInvitation({
+        email: newStaffEmail,
         role: newStaffRole,
-        branchId: newStaffBranch || undefined,
-        maxUses: 1,
+        branchId: newStaffBranch && newStaffBranch !== 'none' ? newStaffBranch : undefined,
       });
-      setGeneratedCode(code);
-    } catch (error) {
+      resetAddDialog();
+    } catch {
       // Error handled in hook
     }
   };
 
-  const handleCopyCode = () => {
-    if (generatedCode) {
-      navigator.clipboard.writeText(generatedCode);
-      toast.success('Invite code copied to clipboard');
-    }
-  };
-
   const resetAddDialog = () => {
+    setNewStaffEmail('');
     setNewStaffRole('billing');
     setNewStaffBranch('');
-    setGeneratedCode(null);
     setShowAddDialog(false);
   };
 

@@ -544,6 +544,8 @@ export function useThermalPrinter() {
     availablePrinters: isNative ? bluetooth.discoveredDevices.map(d => d.name) : availablePrinters,
     isPrinting: isNative ? bluetooth.status === 'printing' : isPrinting,
     isNative,
+    printerError,
+    clearPrinterError: () => setPrinterError(null),
     connectQZ,
     disconnectQZ,
     detectPrinters,

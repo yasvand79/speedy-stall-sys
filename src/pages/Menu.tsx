@@ -174,6 +174,7 @@ export default function Menu() {
       price: parseFloat(formData.price),
       category: formData.category,
       ingredients: formData.ingredients.split(',').map(s => s.trim()).filter(Boolean),
+      preparation_time: 10,
       is_available: true,
       image_url: imageUrl,
     };

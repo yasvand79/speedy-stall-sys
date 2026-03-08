@@ -517,12 +517,6 @@ export default function Orders() {
         </div>
       )}
 
-      {/* Hidden iframe for printing */}
-      <iframe
-        ref={printIframeRef}
-        className="hidden"
-        title="Print Invoice"
-      />
     </MainLayout>
   );
 }

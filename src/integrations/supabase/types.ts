@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          new_value: Json | null
+          old_value: Json | null
+          record_id: string | null
+          table_name: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          record_id?: string | null
+          table_name: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          record_id?: string | null
+          table_name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       branch_menu_prices: {
         Row: {
           branch_id: string
@@ -115,6 +151,42 @@ export type Database = {
           location?: string
           name?: string
           phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          loyalty_points: number
+          name: string
+          phone: string | null
+          total_orders: number
+          total_spent: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          loyalty_points?: number
+          name: string
+          phone?: string | null
+          total_orders?: number
+          total_spent?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          loyalty_points?: number
+          name?: string
+          phone?: string | null
+          total_orders?: number
+          total_spent?: number
           updated_at?: string
         }
         Relationships: []
@@ -243,6 +315,41 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          created_at: string
+          id: string
+          invoice_data: Json
+          invoice_number: string
+          order_id: string
+          pdf_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invoice_data?: Json
+          invoice_number: string
+          order_id: string
+          pdf_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invoice_data?: Json
+          invoice_number?: string
+          order_id?: string
+          pdf_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -417,6 +524,8 @@ export type Database = {
           method: Database["public"]["Enums"]["payment_method"]
           order_id: string
           transaction_id: string | null
+          verified: boolean | null
+          verified_at: string | null
         }
         Insert: {
           amount: number
@@ -426,6 +535,8 @@ export type Database = {
           method: Database["public"]["Enums"]["payment_method"]
           order_id: string
           transaction_id?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
         }
         Update: {
           amount?: number
@@ -435,6 +546,8 @@ export type Database = {
           method?: Database["public"]["Enums"]["payment_method"]
           order_id?: string
           transaction_id?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
         }
         Relationships: [
           {
@@ -495,6 +608,60 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refunds: {
+        Row: {
+          amount: number
+          approved_by: string | null
+          created_at: string
+          id: string
+          order_id: string
+          payment_id: string | null
+          reason: string
+          requested_by: string | null
+          status: Database["public"]["Enums"]["refund_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          payment_id?: string | null
+          reason: string
+          requested_by?: string | null
+          status?: Database["public"]["Enums"]["refund_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          payment_id?: string | null
+          reason?: string
+          requested_by?: string | null
+          status?: Database["public"]["Enums"]["refund_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
             referencedColumns: ["id"]
           },
         ]
@@ -729,6 +896,7 @@ export type Database = {
         Returns: boolean
       }
       generate_invite_code: { Args: never; Returns: string }
+      generate_invoice_number: { Args: never; Returns: string }
       generate_order_number: { Args: never; Returns: string }
       get_user_branch: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
@@ -760,6 +928,7 @@ export type Database = {
       order_type: "dine-in" | "takeaway"
       payment_method: "cash" | "upi" | "card"
       payment_status: "pending" | "partial" | "completed"
+      refund_status: "requested" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -893,6 +1062,7 @@ export const Constants = {
       order_type: ["dine-in", "takeaway"],
       payment_method: ["cash", "upi", "card"],
       payment_status: ["pending", "partial", "completed"],
+      refund_status: ["requested", "approved", "rejected"],
     },
   },
 } as const

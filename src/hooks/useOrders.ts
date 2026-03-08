@@ -118,7 +118,6 @@ export function useCreateOrder() {
         .insert({
           order_number: '',
           type: orderData.type,
-          table_number: orderData.table_number,
           customer_name: orderData.customer_name,
           customer_phone: orderData.customer_phone,
           notes: orderData.notes,

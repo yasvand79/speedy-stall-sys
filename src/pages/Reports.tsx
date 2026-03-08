@@ -1454,7 +1454,7 @@ export default function Reports() {
           staffCount={staffSales?.length || 0}
           topCategory={categorySales?.[0]?.category || ''}
           topItem={topItems?.[0]?.name || ''}
-          activeTables={tableAnalytics.length}
+          activeTables={0}
         />
 
         </div> {/* close reportRef */}

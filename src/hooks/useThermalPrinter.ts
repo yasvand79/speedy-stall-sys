@@ -507,7 +507,6 @@ export function useThermalPrinter() {
     const testOrder: OrderForPrint = {
       orderNumber: 'TEST-001',
       type: 'dine-in',
-      tableNumber: 1,
       customerName: 'Test Customer',
       staffName: 'Admin',
       items: [

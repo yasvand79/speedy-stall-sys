@@ -12,6 +12,7 @@ import { useMenuItems } from '@/hooks/useMenuItems';
 import { useCreateOrder } from '@/hooks/useOrders';
 import { useBranches } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
+import { useShopSettings } from '@/hooks/useShopSettings';
 import { Database } from '@/integrations/supabase/types';
 import { Plus, Minus, ShoppingCart, X, UtensilsCrossed, Package, Building2, User } from 'lucide-react';
 import { toast } from 'sonner';

@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { NewOrderDialog } from '@/components/orders/NewOrderDialog';
 import { PaymentDialog } from '@/components/billing/PaymentDialog';
 import { useOrders, useUpdateOrderStatus, OrderWithItems } from '@/hooks/useOrders';
@@ -38,15 +39,20 @@ export default function Orders() {
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<StatusTab>('active');
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
+  const [confirmPrintOrderId, setConfirmPrintOrderId] = useState<string | null>(null);
+  const printIframeRef = useRef<HTMLIFrameElement>(null);
 
   const { data: orders, isLoading } = useOrders();
-  const { data: allPayments } = usePayments();
   const { branches } = useBranches();
   const updateStatus = useUpdateOrderStatus();
-  const { isAdmin, isBilling } = useAuth();
+  const { data: allPayments } = usePayments();
+  const { role } = useAuth();
 
-  const handleStatusChange = (orderId: string, newStatus: 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled') => {
-    updateStatus.mutate({ orderId, status: newStatus });
+  const isAdmin = role === 'admin' || role === 'branch_admin';
+  const isBilling = role === 'billing';
+
+  const handleStatusChange = (orderId: string, newStatus: string) => {
+    updateStatus.mutate({ orderId, status: newStatus as any });
   };
 
   const handleProcessPayment = (order: OrderWithItems) => {
@@ -54,7 +60,14 @@ export default function Orders() {
     setPaymentOpen(true);
   };
 
-  const handlePrintInvoice = async (orderId: string) => {
+  const handlePrintClick = (orderId: string) => {
+    setConfirmPrintOrderId(orderId);
+  };
+
+  const handleConfirmPrint = async () => {
+    const orderId = confirmPrintOrderId;
+    if (!orderId) return;
+    setConfirmPrintOrderId(null);
     setPrintingOrderId(orderId);
     try {
       const { data, error } = await supabase.functions.invoke('generate-invoice', {
@@ -62,14 +75,19 @@ export default function Orders() {
       });
       if (error) throw error;
       if (data?.html) {
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(data.html);
-          printWindow.document.close();
-          printWindow.focus();
-          setTimeout(() => printWindow.print(), 250);
+        const iframe = printIframeRef.current;
+        if (iframe) {
+          const doc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (doc) {
+            doc.open();
+            doc.write(data.html);
+            doc.close();
+            setTimeout(() => {
+              iframe.contentWindow?.print();
+            }, 300);
+          }
         }
-        toast.success('Invoice generated');
+        toast.success('Invoice sent to printer');
       }
     } catch {
       toast.error('Failed to generate invoice');
@@ -370,7 +388,7 @@ export default function Orders() {
                           size="sm"
                           variant="ghost"
                           className="h-8 w-8 p-0"
-                          onClick={() => handlePrintInvoice(order.id)}
+                          onClick={() => handlePrintClick(order.id)}
                           disabled={printingOrderId === order.id}
                         >
                           <Printer className="h-3.5 w-3.5" />
@@ -409,6 +427,31 @@ export default function Orders() {
           paidAmount={getPaidAmount(selectedOrder.id)}
         />
       )}
+
+      {/* Print Confirmation Dialog */}
+      <AlertDialog open={!!confirmPrintOrderId} onOpenChange={(open) => !open && setConfirmPrintOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Print Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do you want to print the invoice for this order?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPrint}>
+              <Printer className="mr-2 h-4 w-4" />Print
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Hidden iframe for printing */}
+      <iframe
+        ref={printIframeRef}
+        className="hidden"
+        title="Print Invoice"
+      />
     </MainLayout>
   );
 }

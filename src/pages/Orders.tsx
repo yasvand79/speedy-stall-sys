@@ -86,15 +86,33 @@ export default function Orders() {
 
   const handlePrintFromPreview = () => {
     if (!previewHtml) return;
-    // Open receipt in a new tab — user can print manually from there
-    const newWindow = window.open('', '_blank');
-    if (newWindow) {
-      newWindow.document.write(previewHtml);
-      newWindow.document.close();
-    } else {
-      toast.error('Pop-up blocked. Please allow pop-ups for this site.');
-    }
     setPreviewOpen(false);
+
+    // Print using hidden iframe with the configured printer
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.top = '-10000px';
+    iframe.style.left = '-10000px';
+    iframe.style.width = '80mm';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+    iframe.srcdoc = previewHtml;
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      }, 300);
+
+      const cleanup = () => {
+        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      };
+      iframe.contentWindow?.addEventListener('afterprint', cleanup);
+      setTimeout(cleanup, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   const getPaidAmount = (orderId: string) => {

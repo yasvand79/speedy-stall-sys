@@ -8,8 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Ticket, Plus, Copy, XCircle, Building2, Clock, Users } from 'lucide-react';
-import { useInviteCodes } from '@/hooks/useInviteCodes';
+import { Mail, Plus, XCircle, Building2, UserPlus, CheckCircle } from 'lucide-react';
+import { useStaffInvitations } from '@/hooks/useStaffInvitations';
 import { useBranches } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -29,59 +29,51 @@ const branchRequiredRoles: AppRole[] = ['branch_admin', 'billing'];
 
 export default function InviteCodes() {
   const { isDeveloper, isCentralAdmin } = useAuth();
-  const { inviteCodes, isLoading, createCode, deactivateCode, isCreating } = useInviteCodes();
+  const { invitations, isLoading, createInvitation, revokeInvitation, isCreating } = useStaffInvitations();
   const { branches } = useBranches();
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<AppRole>('billing');
   const [newBranchId, setNewBranchId] = useState<string>('');
-  const [newMaxUses, setNewMaxUses] = useState('1');
-  const [newExpiresInDays, setNewExpiresInDays] = useState('7');
 
-  const canManageCodes = isDeveloper || isCentralAdmin;
+  const canManage = isDeveloper || isCentralAdmin;
   const requiresBranch = branchRequiredRoles.includes(newRole);
 
-  // Filter roles based on current user's role
   const availableRoles: AppRole[] = isDeveloper
     ? ['developer', 'central_admin', 'branch_admin', 'billing']
-    : ['branch_admin', 'billing']; // Central admin can't create developer codes
+    : ['branch_admin', 'billing'];
 
-  const handleCreateCode = async () => {
+  const handleCreate = async () => {
+    if (!newEmail.trim()) {
+      toast.error('Please enter an email address');
+      return;
+    }
     if (requiresBranch && !newBranchId) {
       toast.error('Please select a branch for this role');
       return;
     }
 
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + parseInt(newExpiresInDays));
-
     try {
-      await createCode({
+      await createInvitation({
+        email: newEmail,
         role: newRole,
         branchId: requiresBranch ? newBranchId : undefined,
-        maxUses: parseInt(newMaxUses),
-        expiresAt: expiresAt.toISOString(),
       });
       setIsDialogOpen(false);
+      setNewEmail('');
       setNewRole('billing');
       setNewBranchId('');
-      setNewMaxUses('1');
-      setNewExpiresInDays('7');
-    } catch (error) {
+    } catch {
       // Error handled in hook
     }
   };
 
-  const copyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success('Code copied to clipboard');
-  };
-
-  if (!canManageCodes) {
+  if (!canManage) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground">You don't have permission to manage invite codes.</p>
+          <p className="text-muted-foreground">You don't have permission to manage staff invitations.</p>
         </div>
       </MainLayout>
     );
@@ -92,24 +84,38 @@ export default function InviteCodes() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold">Invite Codes</h1>
-            <p className="text-muted-foreground">Generate and manage staff invite codes</p>
+            <h1 className="font-display text-3xl font-bold">Staff Invitations</h1>
+            <p className="text-muted-foreground">Invite staff by email — they'll be auto-approved on signup</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                Generate Code
+                Invite Staff
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Generate Invite Code</DialogTitle>
+                <DialogTitle>Invite Staff Member</DialogTitle>
                 <DialogDescription>
-                  Create a new invite code for staff registration
+                  Enter their email and assign a role. They'll be auto-approved when they sign up.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      placeholder="staff@example.com"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label>Role</Label>
                   <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
@@ -143,34 +149,13 @@ export default function InviteCodes() {
                     </Select>
                   </div>
                 )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Max Uses</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={newMaxUses}
-                      onChange={(e) => setNewMaxUses(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Expires In (Days)</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={newExpiresInDays}
-                      onChange={(e) => setNewExpiresInDays(e.target.value)}
-                    />
-                  </div>
-                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateCode} disabled={isCreating}>
-                  {isCreating ? 'Generating...' : 'Generate'}
+                <Button onClick={handleCreate} disabled={isCreating}>
+                  {isCreating ? 'Inviting...' : 'Send Invitation'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -180,11 +165,11 @@ export default function InviteCodes() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Ticket className="h-5 w-5" />
-              Active Invite Codes
+              <UserPlus className="h-5 w-5" />
+              Staff Invitations
             </CardTitle>
             <CardDescription>
-              Share these codes with new staff members for registration
+              Staff members invited by email. They'll be auto-approved when they sign up with the invited email.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -192,103 +177,68 @@ export default function InviteCodes() {
               <div className="flex justify-center py-8">
                 <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
               </div>
-            ) : inviteCodes.length === 0 ? (
+            ) : invitations.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No invite codes yet. Generate one to get started.
+                No invitations yet. Invite a staff member to get started.
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Branch</TableHead>
-                    <TableHead>Usage</TableHead>
-                    <TableHead>Expires</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {inviteCodes.map((code) => {
-                    const isExpired = code.expires_at && new Date(code.expires_at) < new Date();
-                    const isExhausted = code.used_count >= code.max_uses;
-                    const isValid = code.is_active && !isExpired && !isExhausted;
-
-                    return (
-                      <TableRow key={code.id}>
-                        <TableCell>
-                          <code className="bg-muted px-2 py-1 rounded font-mono text-sm">
-                            {code.code}
-                          </code>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{roleLabels[code.role_assigned]}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {code.branch ? (
-                            <span className="flex items-center gap-1 text-sm">
-                              <Building2 className="h-3 w-3" />
-                              {code.branch.name}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
+                  {invitations.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-medium">{inv.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{roleLabels[inv.role_assigned]}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {inv.branch ? (
                           <span className="flex items-center gap-1 text-sm">
-                            <Users className="h-3 w-3" />
-                            {code.used_count} / {code.max_uses}
+                            <Building2 className="h-3 w-3" />
+                            {inv.branch.name}
                           </span>
-                        </TableCell>
-                        <TableCell>
-                          {code.expires_at ? (
-                            <span className="flex items-center gap-1 text-sm">
-                              <Clock className="h-3 w-3" />
-                              {format(new Date(code.expires_at), 'MMM d, yyyy')}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">Never</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {isValid ? (
-                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                              Active
-                            </Badge>
-                          ) : isExpired ? (
-                            <Badge variant="secondary">Expired</Badge>
-                          ) : isExhausted ? (
-                            <Badge variant="secondary">Exhausted</Badge>
-                          ) : (
-                            <Badge variant="destructive">Disabled</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => copyCode(code.code)}
-                              title="Copy code"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                            {code.is_active && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => deactivateCode(code.id)}
-                                title="Deactivate"
-                              >
-                                <XCircle className="h-4 w-4 text-destructive" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {inv.status === 'pending' ? (
+                          <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                            Pending
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            <CheckCircle className="mr-1 h-3 w-3" />
+                            Used
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {format(new Date(inv.created_at), 'MMM d, yyyy')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {inv.status === 'pending' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => revokeInvitation(inv.id)}
+                            title="Revoke invitation"
+                          >
+                            <XCircle className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             )}

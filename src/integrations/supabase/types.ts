@@ -824,6 +824,47 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_invitations: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          email: string
+          id: string
+          invited_by: string
+          role_assigned: Database["public"]["Enums"]["app_role"]
+          status: string
+          used_at: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          invited_by: string
+          role_assigned?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          used_at?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string
+          role_assigned?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invitations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_performance: {
         Row: {
           average_bill_value: number

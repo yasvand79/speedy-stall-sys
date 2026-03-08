@@ -13,6 +13,9 @@ import {
   TrendingUp,
   Ticket,
   UserCheck,
+  CookingPot,
+  Heart,
+  RotateCcw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';

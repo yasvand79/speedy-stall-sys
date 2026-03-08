@@ -45,6 +45,8 @@ export default function Settings() {
     bill_show_upi: true,
   });
 
+  const [customBillHtml, setCustomBillHtml] = useState<string | null>(null);
+
   useEffect(() => {
     if (settings) {
       setShopDetails({

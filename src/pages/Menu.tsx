@@ -405,6 +405,27 @@ export default function Menu() {
           )}
         </div>
 
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Menu Item</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete <strong>"{itemToDelete?.name}"</strong>? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleConfirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Branch Price Dialog */}
         <Dialog open={priceDialogOpen} onOpenChange={(open) => { setPriceDialogOpen(open); if (!open) { setEditingPrice(null); setNewBranchPrice(''); } }}>
           <DialogContent>

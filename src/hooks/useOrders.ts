@@ -18,6 +18,7 @@ export interface OrderWithItems extends Order {
 export function useOrders(statusFilter?: OrderStatus | OrderStatus[]) {
   return useQuery({
     queryKey: ['orders', statusFilter],
+    refetchInterval: 5000,
     queryFn: async () => {
       let query = supabase
         .from('orders')

@@ -38,6 +38,7 @@ export function useDailySales(date?: Date) {
 
   return useQuery({
     queryKey: ['reports', 'daily-sales', startOfDay.toISOString()],
+    refetchInterval: 5000,
     queryFn: async () => {
       const { data: orders, error } = await supabase
         .from('orders')
@@ -64,6 +65,7 @@ export function useTopSellingItems(days: number = 7) {
 
   return useQuery({
     queryKey: ['reports', 'top-selling', days],
+    refetchInterval: 5000,
     queryFn: async () => {
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
@@ -106,6 +108,7 @@ export function useTopSellingItems(days: number = 7) {
 export function useWeeklyRevenue() {
   return useQuery({
     queryKey: ['reports', 'weekly-revenue'],
+    refetchInterval: 5000,
     queryFn: async () => {
       const days = [];
       for (let i = 6; i >= 0; i--) {
@@ -247,6 +250,7 @@ export function useStaffSales(startDate: Date, endDate: Date) {
 export function useInventoryStatus() {
   return useQuery({
     queryKey: ['reports', 'inventory-status'],
+    refetchInterval: 5000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('inventory')

@@ -10,6 +10,7 @@ export function usePayments(orderId?: string) {
   return useQuery({
     queryKey: ['payments', orderId],
     refetchInterval: 5000,
+    queryFn: async () => {
       let query = supabase
         .from('payments')
         .select('*')

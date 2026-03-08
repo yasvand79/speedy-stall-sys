@@ -257,27 +257,34 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
                       className="cursor-pointer hover:border-primary transition-colors"
                       onClick={() => addToCart(item)}
                     >
-                      <CardContent className="p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
+                      <CardContent className="p-0">
+                        <div className="flex items-center gap-2">
+                          {item.image_url ? (
+                            <img src={item.image_url} alt={item.name} className="h-14 w-14 rounded-l-lg object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="h-14 w-14 rounded-l-lg bg-muted flex items-center justify-center flex-shrink-0 text-lg">
+                              {item.category === 'veg' ? '🥬' : item.category === 'non-veg' ? '🍗' : item.category === 'beverages' ? '🥤' : '🍱'}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0 py-2 pr-2">
                             <div className="flex items-center gap-1">
                               <Badge
                                 variant="outline"
                                 className={
                                   item.category === 'veg'
-                                    ? 'h-4 w-4 p-0 border-green-500 bg-green-50'
+                                    ? 'h-3.5 w-3.5 p-0 border-green-500 bg-green-50'
                                     : item.category === 'non-veg'
-                                    ? 'h-4 w-4 p-0 border-red-500 bg-red-50'
+                                    ? 'h-3.5 w-3.5 p-0 border-red-500 bg-red-50'
                                     : 'hidden'
                                 }
                               >
-                                <span className={`h-2 w-2 rounded-full ${item.category === 'veg' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                <span className={`h-1.5 w-1.5 rounded-full ${item.category === 'veg' ? 'bg-green-500' : 'bg-red-500'}`} />
                               </Badge>
                               <span className="font-medium text-sm truncate">{item.name}</span>
                             </div>
-                            <p className="text-sm font-semibold text-primary mt-1">₹{Number(item.price).toFixed(0)}</p>
+                            <p className="text-sm font-semibold text-primary">₹{Number(item.price).toFixed(0)}</p>
                           </div>
-                          <Button size="icon" variant="ghost" className="h-6 w-6">
+                          <Button size="icon" variant="ghost" className="h-6 w-6 mr-2 flex-shrink-0">
                             <Plus className="h-4 w-4" />
                           </Button>
                         </div>

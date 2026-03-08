@@ -14,8 +14,9 @@ import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem }
 import { useBranchMenuPrices } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
-import { Plus, Search, Pencil, Trash2, Clock, DollarSign, Building2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Clock, DollarSign, Building2, ImagePlus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 type MenuCategory = Database['public']['Enums']['menu_category'];
 
@@ -44,6 +45,10 @@ export default function Menu() {
   // Branch admins can only edit prices for their branch
   const canEditBranchPrices = isBranchAdmin && profile?.branch_id;
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -52,6 +57,7 @@ export default function Menu() {
     category: 'veg' as MenuCategory,
     preparation_time: '15',
     ingredients: '',
+    image_url: '',
   });
 
   // Get branch-specific price for an item
@@ -69,8 +75,11 @@ export default function Menu() {
       category: 'veg',
       preparation_time: '15',
       ingredients: '',
+      image_url: '',
     });
     setEditingItem(null);
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const handleEdit = (item: any) => {
@@ -82,8 +91,34 @@ export default function Menu() {
       category: item.category,
       preparation_time: String(item.preparation_time || 15),
       ingredients: (item.ingredients || []).join(', '),
+      image_url: item.image_url || '',
     });
+    setImagePreview(item.image_url || null);
+    setImageFile(null);
     setEditDialogOpen(true);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be less than 2MB');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    const { error } = await supabase.storage.from('menu-images').upload(fileName, file);
+    if (error) {
+      toast.error('Failed to upload image');
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('menu-images').getPublicUrl(fileName);
+    return urlData.publicUrl;
   };
 
   const handleEditBranchPrice = (item: any) => {
@@ -126,6 +161,14 @@ export default function Menu() {
       return;
     }
 
+    setIsUploading(true);
+    let imageUrl = formData.image_url || null;
+    
+    if (imageFile) {
+      const uploaded = await uploadImage(imageFile);
+      if (uploaded) imageUrl = uploaded;
+    }
+
     const data = {
       name: formData.name,
       description: formData.description || null,
@@ -134,8 +177,9 @@ export default function Menu() {
       preparation_time: parseInt(formData.preparation_time) || 15,
       ingredients: formData.ingredients.split(',').map(s => s.trim()).filter(Boolean),
       is_available: true,
-      image_url: null,
+      image_url: imageUrl,
     };
+    setIsUploading(false);
 
     if (editingItem) {
       await updateItem.mutateAsync({ id: editingItem.id, ...data });
@@ -279,8 +323,31 @@ export default function Menu() {
                       placeholder="Rice, Chicken, Spices..."
                     />
                   </div>
-                  <Button onClick={handleSubmit} className="w-full" disabled={createItem.isPending || updateItem.isPending}>
-                    {editingItem ? 'Update Item' : 'Add Item'}
+                  <div>
+                    <Label>Food Image</Label>
+                    <div className="mt-1.5 flex items-center gap-3">
+                      {imagePreview ? (
+                        <div className="relative h-20 w-20 rounded-lg overflow-hidden border">
+                          <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => { setImageFile(null); setImagePreview(null); setFormData(p => ({ ...p, image_url: '' })); }}
+                            className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary transition-colors">
+                          <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                          <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+                        </label>
+                      )}
+                      <p className="text-xs text-muted-foreground">Upload image (max 2MB)</p>
+                    </div>
+                  </div>
+                  <Button onClick={handleSubmit} className="w-full" disabled={createItem.isPending || updateItem.isPending || isUploading}>
+                    {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</> : editingItem ? 'Update Item' : 'Add Item'}
                   </Button>
                 </div>
               </DialogContent>
@@ -354,7 +421,12 @@ export default function Menu() {
                   const hasBranchPrice = isBranchAdmin && branchPrices?.some(p => p.menu_item_id === item.id);
                   
                   return (
-                    <Card key={item.id} className={!item.is_available ? 'opacity-60' : ''}>
+                    <Card key={item.id} className={`overflow-hidden ${!item.is_available ? 'opacity-60' : ''}`}>
+                      {item.image_url && (
+                        <div className="h-36 w-full overflow-hidden">
+                          <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+                        </div>
+                      )}
                       <CardHeader className="pb-2">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">

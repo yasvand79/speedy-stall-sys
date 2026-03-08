@@ -20,10 +20,12 @@ import {
   Banknote, Smartphone, Receipt, UserPlus, Repeat, Star, Award, Activity,
   ArrowUpRight, ArrowDownRight, BarChart3, PieChart as PieChartIcon, Filter,
   GitBranch, CalendarDays, Hash, ArrowRight, CheckCircle, ChefHat, Bell, Ban,
+  Lightbulb, Zap, Target, RefreshCw, TrendingDown as TrendDown,
+  Megaphone, UtensilsCrossed, UserCheck,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useShopSettings } from '@/hooks/useShopSettings';
 
 const COLORS = ['hsl(24,95%,53%)', 'hsl(142,72%,42%)', 'hsl(217,91%,60%)', 'hsl(280,65%,60%)', 'hsl(45,93%,47%)', 'hsl(340,75%,55%)'];

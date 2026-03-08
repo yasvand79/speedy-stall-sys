@@ -86,7 +86,7 @@ serve(async (req) => {
     // Fetch shop settings for GST/FSSAI info
     const { data: shopSettings } = await supabase
       .from('shop_settings')
-      .select('shop_name, phone, address, gst_number, fssai_license, upi_id, gst_rate')
+      .select('*')
       .limit(1)
       .maybeSingle();
 
@@ -97,6 +97,14 @@ serve(async (req) => {
     const fssaiLicense = escapeHtml(shopSettings?.fssai_license || '');
     const upiId = escapeHtml(shopSettings?.upi_id || '');
     const branchName = escapeHtml(order.branches?.name || '');
+
+    // Bill template settings
+    const billHeaderText = escapeHtml((shopSettings as any)?.bill_header_text || '');
+    const billFooterText = escapeHtml((shopSettings as any)?.bill_footer_text || 'Thank You! Visit us again');
+    const billTerms = escapeHtml((shopSettings as any)?.bill_terms || '');
+    const billShowGstin = (shopSettings as any)?.bill_show_gstin ?? true;
+    const billShowFssai = (shopSettings as any)?.bill_show_fssai ?? true;
+    const billShowUpi = (shopSettings as any)?.bill_show_upi ?? true;
 
     const orderDate = new Date(order.created_at);
     const dateStr = orderDate.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });

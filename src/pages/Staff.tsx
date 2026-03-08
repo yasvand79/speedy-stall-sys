@@ -146,10 +146,10 @@ export default function Staff() {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Staff Management</h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {activeStaff} active staff members • {staff.length} total
               {isBranchAdmin && profile?.branch_id && (
                 <span className="ml-2 text-primary">
@@ -164,7 +164,7 @@ export default function Staff() {
               else setShowAddDialog(true);
             }}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
+                <Button className="gap-2 w-full sm:w-auto shrink-0">
                   <UserPlus className="h-4 w-4" />
                   Add Staff
                 </Button>

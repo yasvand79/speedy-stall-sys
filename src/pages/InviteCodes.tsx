@@ -53,10 +53,15 @@ export default function InviteCodes() {
     }
 
     try {
+      // Branch admin always assigns to their own branch
+      const branchId = isBranchAdmin && profile?.branch_id
+        ? profile.branch_id
+        : (requiresBranch ? newBranchId : undefined);
+
       await createInvitation({
         email: newEmail,
         role: newRole,
-        branchId: requiresBranch ? newBranchId : undefined,
+        branchId,
       });
       setIsDialogOpen(false);
       setNewEmail('');

@@ -193,9 +193,16 @@ export default function Menu() {
     resetForm();
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Delete "${name}"?`)) {
-      await deleteItem.mutateAsync(id);
+  const handleDeleteClick = (id: string, name: string) => {
+    setItemToDelete({ id, name });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteItem.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 

@@ -27,6 +27,8 @@ export default function Menu() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editingPrice, setEditingPrice] = useState<{ itemId: string; itemName: string; currentPrice: number } | null>(null);
   const [newBranchPrice, setNewBranchPrice] = useState('');
+  const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const [generatingProgress, setGeneratingProgress] = useState({ current: 0, total: 0 });
 
   const { data: menuItems, isLoading } = useMenuItems();
   const createItem = useCreateMenuItem();

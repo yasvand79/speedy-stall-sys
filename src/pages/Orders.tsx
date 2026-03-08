@@ -360,7 +360,7 @@ export default function Orders() {
                                   Ready
                                 </Button>
                               )}
-                              {(isDeveloper || isAdmin || isBilling) && order.status === 'ready' && order.payment_status === 'completed' && (
+                              {(isAdmin || isBilling) && order.status === 'ready' && order.payment_status === 'completed' && (
                                 <Button 
                                   size="sm"
                                   onClick={() => handleStatusChange(order.id, 'completed')}

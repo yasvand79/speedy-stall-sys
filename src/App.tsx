@@ -17,6 +17,7 @@ import StaffPerformance from "./pages/StaffPerformance";
 import InviteCodes from "./pages/InviteCodes";
 import UserApprovals from "./pages/UserApprovals";
 import Auth from "./pages/Auth";
+import CustomerDisplay from "./pages/CustomerDisplay";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

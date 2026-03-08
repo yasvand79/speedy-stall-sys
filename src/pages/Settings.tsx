@@ -88,6 +88,11 @@ export default function Settings() {
     updateSettings({ receipt_printer: receipt, kitchen_printer: kitchen });
   };
 
+  const handleSaveBillTemplate = () => {
+    if (!canEdit) { toast.error('You do not have permission to edit settings'); return; }
+    updateSettings(billTemplate as any);
+  };
+
   if (isLoading) {
     return (
       <MainLayout>

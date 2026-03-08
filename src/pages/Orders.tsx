@@ -427,6 +427,31 @@ export default function Orders() {
           paidAmount={getPaidAmount(selectedOrder.id)}
         />
       )}
+
+      {/* Print Confirmation Dialog */}
+      <AlertDialog open={!!confirmPrintOrderId} onOpenChange={(open) => !open && setConfirmPrintOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Print Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do you want to print the invoice for this order?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPrint}>
+              <Printer className="mr-2 h-4 w-4" />Print
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Hidden iframe for printing */}
+      <iframe
+        ref={printIframeRef}
+        className="hidden"
+        title="Print Invoice"
+      />
     </MainLayout>
   );
 }

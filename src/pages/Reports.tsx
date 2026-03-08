@@ -20,10 +20,12 @@ import {
   Banknote, Smartphone, Receipt, UserPlus, Repeat, Star, Award, Activity,
   ArrowUpRight, ArrowDownRight, BarChart3, PieChart as PieChartIcon, Filter,
   GitBranch, CalendarDays, Hash, ArrowRight, CheckCircle, ChefHat, Bell, Ban,
+  Lightbulb, Zap, Target, RefreshCw, TrendingDown as TrendDown,
+  Megaphone, UtensilsCrossed, UserCheck,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useShopSettings } from '@/hooks/useShopSettings';
 
 const COLORS = ['hsl(24,95%,53%)', 'hsl(142,72%,42%)', 'hsl(217,91%,60%)', 'hsl(280,65%,60%)', 'hsl(45,93%,47%)', 'hsl(340,75%,55%)'];
@@ -127,6 +129,133 @@ const tooltipStyle = {
   borderRadius: '8px',
   fontSize: '12px',
 };
+// ─── AI Insights Section ───
+const INSIGHT_ICONS: Record<string, React.ElementType> = {
+  revenue: IndianRupee, operations: Zap, menu: UtensilsCrossed,
+  customers: UserCheck, staff: Award, marketing: Megaphone,
+};
+const INSIGHT_COLORS: Record<string, string> = {
+  revenue: 'primary', operations: 'warning', menu: 'success',
+  customers: 'info', staff: 'primary', marketing: 'destructive',
+};
+const IMPACT_STYLES: Record<string, string> = {
+  high: 'bg-destructive/10 text-destructive border-destructive/20',
+  medium: 'bg-warning/10 text-warning border-warning/20',
+  low: 'bg-info/10 text-info border-info/20',
+};
+
+interface InsightsSectionProps {
+  metrics: ReturnType<typeof Object> | null;
+  peakHour: string; busiestDay: string; repeatRate: number;
+  totalCustomers: number; staffCount: number; topCategory: string;
+  topItem: string; activeTables: number;
+}
+
+function InsightsSection({ metrics, peakHour, busiestDay, repeatRate, totalCustomers, staffCount, topCategory, topItem, activeTables }: InsightsSectionProps) {
+  const [insights, setInsights] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [generated, setGenerated] = useState(false);
+
+  const generateInsights = useCallback(async () => {
+    if (!metrics) return;
+    setLoading(true);
+    try {
+      const m = metrics as any;
+      const { data, error } = await supabase.functions.invoke('generate-insights', {
+        body: {
+          metrics: {
+            totalRevenue: Math.round(m.totalRevenue || 0),
+            completedOrders: m.completedOrders || 0,
+            avgOrderValue: Math.round(m.avgOrderValue || 0),
+            cancelRate: (m.cancelRate || 0).toFixed(1),
+            dineInOrders: m.dineInOrders || 0,
+            dineInRevenue: Math.round(m.dineInRevenue || 0),
+            takeawayOrders: m.takeawayOrders || 0,
+            takeawayRevenue: Math.round(m.takeawayRevenue || 0),
+            totalGST: Math.round(m.totalGST || 0),
+            totalDiscount: Math.round(m.totalDiscount || 0),
+            peakHour, busiestDay, topCategory, topItem,
+            repeatRate: repeatRate.toFixed(1),
+            totalCustomers, staffCount, activeTables,
+          },
+        },
+      });
+      if (data?.insights) {
+        setInsights(data.insights);
+        setGenerated(true);
+      }
+    } catch (e) {
+      console.error('Insights error:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [metrics, peakHour, busiestDay, repeatRate, totalCustomers, staffCount, topCategory, topItem, activeTables]);
+
+  return (
+    <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.02] to-transparent">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="font-display text-sm flex items-center gap-2">
+            <Lightbulb className="h-4 w-4 text-warning" /> AI Business Insights
+          </CardTitle>
+          <Button
+            size="sm"
+            variant={generated ? 'outline' : 'default'}
+            className="h-7 text-[11px]"
+            onClick={generateInsights}
+            disabled={loading || !metrics}
+          >
+            {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Zap className="h-3 w-3 mr-1" />}
+            {loading ? 'Analyzing...' : generated ? 'Refresh Insights' : 'Generate Insights'}
+          </Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground">AI-powered recommendations to improve your hotel business</p>
+      </CardHeader>
+      <CardContent className="px-4 pb-4">
+        {!generated ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Lightbulb className="h-10 w-10 text-muted-foreground/30 mb-3" />
+            <p className="text-sm text-muted-foreground">Click "Generate Insights" to get AI-powered recommendations</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Based on your current data and trends</p>
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {insights.map((insight, i) => {
+              const Icon = INSIGHT_ICONS[insight.category] || Target;
+              const color = INSIGHT_COLORS[insight.category] || 'primary';
+              const colorClass = `bg-${color}/10 text-${color}`;
+              return (
+                <div key={i} className="p-3 rounded-lg border border-border/50 bg-card hover:shadow-sm transition-shadow space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ${colorClass}`}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-foreground leading-tight">{insight.title}</p>
+                        <Badge variant="outline" className="text-[9px] capitalize mt-0.5">{insight.category}</Badge>
+                      </div>
+                    </div>
+                    <Badge className={`text-[9px] border shrink-0 ${IMPACT_STYLES[insight.impact] || IMPACT_STYLES.medium}`}>
+                      {insight.impact}
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">{insight.insight}</p>
+                  {insight.metric && (
+                    <div className="flex items-center gap-1 pt-1 border-t border-border/50">
+                      <Target className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-[10px] font-medium text-foreground">{insight.metric}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Reports() {
   const [range, setRange] = useState<DateRange>('7d');
@@ -903,6 +1032,20 @@ export default function Reports() {
         )}
 
 
+        {/* ═══════ ROW 7: AI BUSINESS INSIGHTS ═══════ */}
+        <InsightsSection
+          metrics={metrics}
+          peakHour={peakHour}
+          busiestDay={busiestDay}
+          repeatRate={customerData?.repeatRate || 0}
+          totalCustomers={customerData?.totalCustomers || 0}
+          staffCount={staffSales?.length || 0}
+          topCategory={categorySales?.[0]?.category || ''}
+          topItem={topItems?.[0]?.name || ''}
+          activeTables={tableAnalytics.length}
+        />
+
+        {/* ═══════ FINANCIAL SUMMARY STRIP ═══════ */}
         <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
             <Banknote className="h-4 w-4 text-muted-foreground shrink-0" />

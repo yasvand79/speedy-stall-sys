@@ -15,8 +15,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle,
   Building2, User, UtensilsCrossed, Printer, Package,
-  ArrowRight, Hash, CreditCard, Loader2, CheckCircle
+  ArrowRight, Hash, CreditCard, Loader2, CheckCircle, Eye
 } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
+} from '@/components/ui/dialog';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';

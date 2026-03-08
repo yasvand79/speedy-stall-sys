@@ -266,6 +266,7 @@ export function useThermalPrinter() {
   const [printerName, setPrinterName] = useState<string | null>(null);
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [printerError, setPrinterError] = useState<{ title: string; message: string } | null>(null);
   const connectingRef = useRef(false);
 
   const savedPrinterName = (() => {

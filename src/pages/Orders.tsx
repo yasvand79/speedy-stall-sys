@@ -94,17 +94,17 @@ export default function Orders() {
           doc.write(data.html);
           doc.close();
 
-          // Wait for content to render, then print
-          setTimeout(() => {
+          // Wait for fonts and content to fully load before printing
+          const triggerPrint = () => {
             const onAfterPrint = () => {
               iframe.contentWindow?.removeEventListener('afterprint', onAfterPrint);
-              document.body.removeChild(iframe);
+              if (document.body.contains(iframe)) document.body.removeChild(iframe);
               setPrintStatus('success');
               setTimeout(() => setPrintStatus('idle'), 2000);
             };
             iframe.contentWindow?.addEventListener('afterprint', onAfterPrint);
             
-            // Fallback: if afterprint doesn't fire (some browsers), auto-succeed after 5s
+            // Fallback: if afterprint doesn't fire, auto-succeed after 10s
             setTimeout(() => {
               if (document.body.contains(iframe)) {
                 document.body.removeChild(iframe);
@@ -115,7 +115,26 @@ export default function Orders() {
 
             iframe.contentWindow?.focus();
             iframe.contentWindow?.print();
-          }, 500);
+          };
+
+          // Use iframe onload + document.fonts.ready for reliable rendering
+          iframe.onload = () => {
+            const iframeDoc = iframe.contentDocument;
+            if (iframeDoc && (iframeDoc as any).fonts?.ready) {
+              (iframeDoc as any).fonts.ready.then(() => {
+                setTimeout(triggerPrint, 300);
+              });
+            } else {
+              setTimeout(triggerPrint, 1500);
+            }
+          };
+
+          // Fallback if onload doesn't fire (already loaded)
+          setTimeout(() => {
+            if (document.body.contains(iframe) && printStatus === 'printing') {
+              triggerPrint();
+            }
+          }, 3000);
         }
       }
     } catch {

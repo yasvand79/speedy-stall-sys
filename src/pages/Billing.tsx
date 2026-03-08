@@ -9,6 +9,7 @@ import { IndianRupee, Receipt, CreditCard, Smartphone, Banknote, Printer, Loader
 import { formatDistanceToNow } from 'date-fns';
 import { PaymentDialog } from '@/components/billing/PaymentDialog';
 import { useState } from 'react';
+import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 
 export default function Billing() {
   const { data: orders, isLoading: ordersLoading } = useOrders();
@@ -16,6 +17,33 @@ export default function Billing() {
   const { data: dailySales } = useDailySales();
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const { printBill, isPrinting: isThermalPrinting } = useThermalPrinter();
+
+  const handlePrintReceipt = async (order: OrderWithItems) => {
+    const orderPayments = (payments || []).filter(p => p.order_id === order.id);
+    const latestPayment = orderPayments[0];
+
+    const thermalOrder = {
+      orderNumber: order.order_number,
+      type: order.type,
+      tableNumber: order.table_number,
+      customerName: order.customer_name,
+      staffName: order.staff_name,
+      items: order.order_items.map(i => ({
+        name: i.menu_items?.name || 'Item',
+        quantity: i.quantity,
+        price: Number(i.price),
+      })),
+      subtotal: Number(order.subtotal),
+      gst: Number(order.gst),
+      discount: Number(order.discount),
+      total: Number(order.total),
+      paymentMethod: latestPayment?.method || undefined,
+      paidAmount: Number(order.total),
+    };
+
+    await printBill(thermalOrder);
+  };
 
   if (ordersLoading || paymentsLoading) {
     return (
@@ -178,8 +206,8 @@ export default function Billing() {
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="font-display font-bold text-success">₹{Number(order.total).toFixed(0)}</p>
-                        <Button variant="ghost" size="icon" onClick={() => window.print()}>
-                          <Printer className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" onClick={() => handlePrintReceipt(order)} disabled={isThermalPrinting}>
+                          {isThermalPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>

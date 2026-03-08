@@ -500,10 +500,6 @@ export default function Menu() {
                           <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
                         )}
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {item.preparation_time} min
-                          </div>
                           <Badge variant="secondary" className="text-xs capitalize">
                             {item.category}
                           </Badge>

@@ -66,7 +66,7 @@ export default function Staff() {
   
   const { staff, isLoading, updateRole, updateStatus, updateBranch, removeStaff, isUpdating } = useStaff({ branchId: branchFilterId });
   const { branches } = useBranches();
-  const { createCode, isCreating } = useInviteCodes();
+  const { createInvitation, isCreating } = useStaffInvitations();
 
   // Only developers and central admins can manage staff
   const canManageStaff = isDeveloper || isCentralAdmin;

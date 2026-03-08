@@ -18,7 +18,7 @@ export default function Settings() {
   const { settings, isLoading, updateSettings, updateSetting, isSaving } = useShopSettings();
   const { role } = useAuth();
   
-  const canEdit = role === 'developer' || role === 'central_admin';
+  const canEdit = role === 'admin';
 
   const [shopDetails, setShopDetails] = useState({
     shop_name: '',

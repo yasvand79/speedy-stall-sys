@@ -210,7 +210,7 @@ export default function Staff() {
                     )}
                   </div>
                   
-                  {(newStaffRole === 'billing' || newStaffRole === 'branch_admin') && (
+                  {isAdmin && (newStaffRole === 'billing' || newStaffRole === 'branch_admin') && (
                     <div className="space-y-2">
                       <Label>Branch Assignment</Label>
                       <Select value={newStaffBranch} onValueChange={setNewStaffBranch}>
@@ -226,6 +226,12 @@ export default function Staff() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+                  {isBranchAdmin && !isAdmin && profile?.branch_id && (
+                    <div className="space-y-2">
+                      <Label>Branch</Label>
+                      <Input value={branches.find(b => b.id === profile.branch_id)?.name || 'Your Branch'} disabled />
                     </div>
                   )}
                 </div>

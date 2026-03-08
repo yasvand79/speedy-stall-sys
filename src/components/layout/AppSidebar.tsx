@@ -41,7 +41,7 @@ const navigation = [
   { name: 'Staff', href: '/staff', icon: Users, roles: ['admin', 'branch_admin'] },
   { name: 'Performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
   { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['admin'] },
-  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'branch_admin'] },
+  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin'] },
   { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
 ];
 

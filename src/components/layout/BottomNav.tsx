@@ -28,7 +28,7 @@ const bottomNavItems = [
   { name: 'Home', href: '/', icon: LayoutDashboard },
   { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['branch_admin', 'billing'] },
   { name: 'Billing', href: '/billing', icon: Receipt, roles: ['branch_admin', 'billing'] },
-  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'branch_admin'] },
+  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin'] },
 ];
 
 const moreMenuItems = [

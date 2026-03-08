@@ -337,7 +337,16 @@ function InsightsSection({ metrics, peakHour, busiestDay, repeatRate, totalCusto
 
 export default function Reports() {
   const [range, setRange] = useState<DateRange>('7d');
-  const { start, end } = useDateRange(range);
+  const [customStart, setCustomStart] = useState<Date | undefined>();
+  const [customEnd, setCustomEnd] = useState<Date | undefined>();
+  const [filterBranch, setFilterBranch] = useState<string>('all');
+  const [filterStaff, setFilterStaff] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterOrderType, setFilterOrderType] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
+
+  const { start, end } = useDateRange(range, customStart, customEnd);
+  const { branches } = useBranches();
 
   // Calculate previous period for comparison
   const prevPeriod = useMemo(() => {
@@ -352,7 +361,7 @@ export default function Reports() {
   const { data: dailySales } = useDailySales();
   const { data: topItems } = useTopSellingItems(range === 'today' ? 1 : range === '7d' ? 7 : range === '30d' ? 30 : range === '6m' ? 180 : 3650);
   const { data: weeklyRevenue, isLoading: weeklyLoading } = useWeeklyRevenue();
-  const { data: orders, isLoading: ordersLoading } = useOrdersAnalytics(start, end);
+  const { data: rawOrders, isLoading: ordersLoading } = useOrdersAnalytics(start, end);
   const { data: prevOrders } = useOrdersAnalytics(prevPeriod.start, prevPeriod.end);
   const { data: payments } = usePaymentAnalytics(start, end);
   const { data: categorySales } = useCategorySales(start, end);
@@ -361,6 +370,37 @@ export default function Reports() {
   const { settings: shopSettings } = useShopSettings();
 
   const isLoading = weeklyLoading || ordersLoading;
+
+  // ─── Extract unique staff names and apply filters ───
+  const staffNames = useMemo(() => {
+    if (!rawOrders) return [];
+    const names = new Set<string>();
+    rawOrders.forEach(o => { if (o.staff_name) names.add(o.staff_name); });
+    return Array.from(names).sort();
+  }, [rawOrders]);
+
+  const activeFiltersCount = [filterBranch, filterStaff, filterCategory, filterOrderType].filter(f => f !== 'all').length + (range === 'custom' ? 1 : 0);
+
+  // ─── Apply client-side filters ───
+  const orders = useMemo(() => {
+    if (!rawOrders) return null;
+    return rawOrders.filter(o => {
+      if (filterBranch !== 'all' && o.branch_id !== filterBranch) return false;
+      if (filterStaff !== 'all' && o.staff_name !== filterStaff) return false;
+      if (filterOrderType !== 'all' && o.type !== filterOrderType) return false;
+      return true;
+    });
+  }, [rawOrders, filterBranch, filterStaff, filterOrderType]);
+
+  const clearAllFilters = () => {
+    setFilterBranch('all');
+    setFilterStaff('all');
+    setFilterCategory('all');
+    setFilterOrderType('all');
+    setRange('7d');
+    setCustomStart(undefined);
+    setCustomEnd(undefined);
+  };
 
   // ─── Computed Metrics ───
   const metrics = useMemo(() => {

@@ -374,7 +374,7 @@ export default function Orders() {
                           )}
 
                           {/* Payment button for cashier */}
-                          {(isDeveloper || isAdmin || isBilling) && order.status !== 'cancelled' && order.payment_status !== 'completed' && (
+                          {(isAdmin || isBilling) && order.status !== 'cancelled' && order.payment_status !== 'completed' && (
                             <Button 
                               size="sm" 
                               variant="default"

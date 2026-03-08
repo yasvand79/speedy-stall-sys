@@ -513,8 +513,8 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
       </CardHeader>
       <CardContent className="space-y-6">
 
-        {/* QZ Tray Status Section */}
-        <div className="rounded-lg border-2 border-dashed border-border p-4 space-y-3">
+        {/* QZ Tray Status Section — Desktop only */}
+        {!isNative && <div className="rounded-lg border-2 border-dashed border-border p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`h-10 w-10 rounded-full flex items-center justify-center ${

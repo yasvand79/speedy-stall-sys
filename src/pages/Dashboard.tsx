@@ -236,56 +236,22 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Recent Orders */}
+          {/* Live Order Tracking */}
           <div className="lg:col-span-2">
             <Card>
-              <CardHeader>
-                <CardTitle className="font-display">Recent Orders</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {recentOrders.length === 0 ? (
-                  <p className="text-center py-8 text-muted-foreground">No orders yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {recentOrders.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between p-4 rounded-lg border border-border">
-                        <div className="flex items-center gap-4">
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-display font-semibold">{order.order_number}</span>
-                              <Badge variant="outline" className={STATUS_CONFIG[order.status]?.color}>
-                                {STATUS_CONFIG[order.status]?.label || order.status}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                {order.type}
-                              </Badge>
-                              {order.payment_status === 'completed' ? (
-                                <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 border">
-                                  <CheckCircle2 className="h-3 w-3 mr-0.5" /> Paid
-                                </Badge>
-                              ) : order.payment_status === 'partial' ? (
-                                <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-200 border">Partial</Badge>
-                              ) : (
-                                <Badge className="text-[10px] bg-red-100 text-red-700 border-red-200 border">Unpaid</Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {order.type === 'dine-in' ? `Table ${order.table_number}` : order.customer_name || 'Takeaway'} • {order.order_items.length} items
-                              {order.staff_name && <span> • by {order.staff_name}</span>}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-display font-bold">₹{Number(order.total).toFixed(0)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(order.created_at!), { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="font-display">Live Orders</CardTitle>
+                    <span className="flex items-center gap-1 text-[10px] font-medium text-success">
+                      <Radio className="h-3 w-3 animate-pulse" /> Auto-updating
+                    </span>
                   </div>
-                )}
-              </CardContent>
+                  <Badge variant="secondary" className="text-[10px]">{recentOrders.length} orders</Badge>
+                </div>
+                {/* Status Filter Tabs */}
+                <LiveOrderTabs orders={orders || []} recentOrders={recentOrders} />
+              </CardHeader>
             </Card>
           </div>
 

@@ -721,7 +721,188 @@ export default function Reports() {
           </Card>
         </div>
 
-        {/* ═══════ ROW 5: FINANCIAL SUMMARY STRIP ═══════ */}
+        {/* ═══════ ROW 5: ORDER FUNNEL + PERIOD COMPARISON ═══════ */}
+        <div className="grid gap-3 lg:grid-cols-12">
+          {/* Order Status Funnel */}
+          <Card className="lg:col-span-5">
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="font-display text-sm flex items-center gap-2">
+                <GitBranch className="h-4 w-4 text-info" /> Order Status Funnel
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              <div className="space-y-2">
+                {orderFunnel.map((step, i) => {
+                  const Icon = step.icon;
+                  const maxCount = Math.max(...orderFunnel.map(s => s.count), 1);
+                  const barWidth = (step.count / maxCount) * 100;
+                  return (
+                    <div key={step.stage} className="flex items-center gap-3">
+                      <div className="w-20 flex items-center gap-1.5 shrink-0">
+                        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: step.color }} />
+                        <span className="text-[11px] font-medium text-foreground">{step.stage}</span>
+                      </div>
+                      <div className="flex-1 h-6 bg-muted/50 rounded-md overflow-hidden relative">
+                        <div
+                          className="h-full rounded-md transition-all duration-500 flex items-center justify-end pr-2"
+                          style={{ width: `${Math.max(barWidth, 2)}%`, backgroundColor: step.color }}
+                        >
+                          {step.count > 0 && <span className="text-[10px] font-bold text-white">{step.count}</span>}
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground w-10 text-right shrink-0">{step.pct.toFixed(0)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Conversion rate */}
+              {metrics && metrics.totalOrders > 0 && (
+                <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                  <span className="text-[11px] text-muted-foreground">Completion Rate</span>
+                  <Badge variant="secondary" className="text-[10px] font-display font-bold">
+                    {((metrics.completedOrders / metrics.totalOrders) * 100).toFixed(1)}%
+                  </Badge>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Period Comparison */}
+          <Card className="lg:col-span-4">
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="font-display text-sm flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-success" /> Period Comparison
+              </CardTitle>
+              <p className="text-[10px] text-muted-foreground">Current vs Previous {range === 'today' ? 'day' : range === '7d' ? 'week' : range === '30d' ? 'month' : range === '6m' ? '6 months' : 'period'}</p>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              {periodComparison ? (
+                <div className="space-y-3">
+                  {[
+                    { label: 'Revenue', current: `₹${periodComparison.current.revenue.toLocaleString()}`, previous: `₹${periodComparison.previous.revenue.toLocaleString()}`, change: periodComparison.changes.revenue },
+                    { label: 'Orders', current: `${periodComparison.current.orders}`, previous: `${periodComparison.previous.orders}`, change: periodComparison.changes.orders },
+                    { label: 'Avg Order', current: `₹${Math.round(periodComparison.current.avg)}`, previous: `₹${Math.round(periodComparison.previous.avg)}`, change: periodComparison.changes.avg },
+                  ].map(metric => (
+                    <div key={metric.label} className="p-2.5 rounded-lg bg-muted/30">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-medium text-foreground">{metric.label}</span>
+                        <div className={`flex items-center gap-0.5 text-[11px] font-bold ${metric.change >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          {metric.change >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                          {Math.abs(metric.change).toFixed(1)}%
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <p className="text-[10px] text-muted-foreground mb-0.5">Current</p>
+                          <p className="font-display text-sm font-bold">{metric.current}</p>
+                        </div>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <div className="flex-1 text-right">
+                          <p className="text-[10px] text-muted-foreground mb-0.5">Previous</p>
+                          <p className="font-display text-sm font-semibold text-muted-foreground">{metric.previous}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <div className="flex items-center justify-center h-[180px] text-muted-foreground text-xs">Loading comparison...</div>}
+            </CardContent>
+          </Card>
+
+          {/* Busiest Day */}
+          <Card className="lg:col-span-3">
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="font-display text-sm flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-warning" /> Busiest Days
+              </CardTitle>
+              <p className="text-[10px] text-muted-foreground">Peak: <span className="font-semibold text-foreground">{busiestDay}</span></p>
+            </CardHeader>
+            <CardContent className="px-3 pb-3">
+              <div className="space-y-1.5">
+                {weekdayAnalytics.map(d => {
+                  const max = Math.max(...weekdayAnalytics.map(w => w.orders), 1);
+                  const barWidth = (d.orders / max) * 100;
+                  const isBusiest = d.day === busiestDay && d.orders > 0;
+                  return (
+                    <div key={d.day} className="flex items-center gap-2">
+                      <span className={`text-[11px] w-7 shrink-0 font-medium ${isBusiest ? 'text-warning font-bold' : 'text-muted-foreground'}`}>{d.day}</span>
+                      <div className="flex-1 h-5 bg-muted/50 rounded overflow-hidden relative">
+                        <div
+                          className="h-full rounded transition-all"
+                          style={{
+                            width: `${Math.max(barWidth, 2)}%`,
+                            backgroundColor: isBusiest ? 'hsl(45,93%,47%)' : 'hsl(var(--primary))',
+                            opacity: isBusiest ? 1 : 0.6,
+                          }}
+                        />
+                        {d.orders > 0 && (
+                          <span className="absolute inset-y-0 left-2 flex items-center text-[9px] font-bold text-white">{d.orders}</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground w-14 text-right shrink-0">₹{d.revenue >= 1000 ? `${(d.revenue / 1000).toFixed(1)}k` : d.revenue}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ═══════ ROW 6: TABLE-WISE ANALYTICS ═══════ */}
+        {tableAnalytics.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2 pt-4 px-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-display text-sm flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-info" /> Table-wise Revenue (Dine-in)
+                </CardTitle>
+                <Badge variant="outline" className="text-[10px]">{tableAnalytics.length} tables</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="px-3 pb-3">
+              <div className="grid gap-3 lg:grid-cols-2">
+                {/* Table Bar Chart */}
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={tableAnalytics.slice(0, 12)}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.5} />
+                      <XAxis dataKey="table" className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} tickFormatter={v => `T${v}`} />
+                      <YAxis className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
+                      <Tooltip contentStyle={tooltipStyle} formatter={(value: number, name: string) => [name === 'revenue' ? `₹${value.toLocaleString()}` : value, name === 'revenue' ? 'Revenue' : name === 'orders' ? 'Orders' : 'Avg']} />
+                      <Bar dataKey="revenue" fill="hsl(217,91%,60%)" radius={[4, 4, 0, 0]} name="Revenue" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Table Details */}
+                <ScrollArea className="h-[200px]">
+                  <div className="space-y-1.5 pr-2">
+                    {tableAnalytics.map((t, i) => (
+                      <div key={t.table} className="flex items-center gap-2.5 p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
+                        <span className={`flex h-7 w-7 items-center justify-center rounded-lg font-display font-bold text-xs shrink-0 ${
+                          i < 3 ? 'bg-info text-info-foreground' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          T{t.table}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium">Table {t.table}</span>
+                            <span className="font-display text-xs font-bold">₹{t.revenue.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground">{t.orders} orders</span>
+                            <span className="text-[10px] text-muted-foreground">Avg ₹{Math.round(t.avg)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+
         <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
             <Banknote className="h-4 w-4 text-muted-foreground shrink-0" />

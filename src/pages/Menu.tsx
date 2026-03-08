@@ -284,12 +284,6 @@ export default function Menu() {
             <h1 className="font-display text-2xl font-bold text-foreground">Menu Management</h1>
             <p className="text-muted-foreground">
               {menuItems?.length || 0} items • {menuItems?.filter(i => i.is_available).length || 0} available
-              {isBranchAdmin && (
-                <span className="ml-2 text-primary flex items-center gap-1 inline-flex">
-                  <Building2 className="h-3 w-3" />
-                  Branch prices enabled
-                </span>
-              )}
             </p>
           </div>
           {canManageBaseMenu && (
@@ -560,7 +554,7 @@ export default function Menu() {
                           </div>
                         )}
 
-                        {/* Branch admin controls - availability toggle + price editing */}
+                        {/* Branch admin controls - availability toggle only */}
                         {canEditBranchPrices && (
                           <div className="flex items-center justify-between pt-2 border-t">
                             <div className="flex items-center gap-2">
@@ -570,14 +564,6 @@ export default function Menu() {
                               />
                               <span className="text-sm">{item.is_available ? 'Available' : 'Unavailable'}</span>
                             </div>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleEditBranchPrice(item)}
-                            >
-                              <DollarSign className="h-3 w-3 mr-1" />
-                              Set Price
-                            </Button>
                           </div>
                         )}
                       </CardContent>

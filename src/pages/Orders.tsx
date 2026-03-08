@@ -387,7 +387,7 @@ export default function Orders() {
                           size="sm"
                           variant="ghost"
                           className="h-8 w-8 p-0"
-                          onClick={() => handlePrintInvoice(order.id)}
+                          onClick={() => handlePrintClick(order.id)}
                           disabled={printingOrderId === order.id}
                         >
                           <Printer className="h-3.5 w-3.5" />

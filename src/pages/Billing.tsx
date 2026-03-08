@@ -133,7 +133,7 @@ export default function Billing() {
               </CardContent>
             </Card>
           </div>
-        )
+        )}
 
         {/* Pending Payments */}
         <Card>

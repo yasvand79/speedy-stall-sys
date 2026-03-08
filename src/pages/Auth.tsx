@@ -110,7 +110,7 @@ export default function Auth() {
         toast.error(error.message);
       }
     } else {
-      toast.success('Account created! Please check your email to verify, then login.', { duration: 5000 });
+      toast.success('Account created! You can now login.', { duration: 5000 });
       setSignupEmail('');
       setSignupPassword('');
       setSignupName('');

@@ -31,7 +31,7 @@ export default function Menu() {
   const createItem = useCreateMenuItem();
   const updateItem = useUpdateMenuItem();
   const deleteItem = useDeleteMenuItem();
-  const { profile, isDeveloper, isCentralAdmin, isBranchAdmin, isAdmin } = useAuth();
+  const { profile, isAdmin, isBranchAdmin } = useAuth();
 
   // Get branch prices if user is branch admin
   const { prices: branchPrices, upsertPrice, isUpdating: isPriceUpdating } = useBranchMenuPrices(

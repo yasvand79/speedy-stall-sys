@@ -166,10 +166,10 @@ export default function InviteCodes() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              Staff Invitations
+              Authorized Staff
             </CardTitle>
             <CardDescription>
-              Staff members invited by email. They'll be auto-approved when they sign up with the invited email.
+              Staff emails added here can sign up and login directly without admin approval.
             </CardDescription>
           </CardHeader>
           <CardContent>

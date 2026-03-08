@@ -279,24 +279,27 @@ export default function Menu() {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">Menu Management</h1>
-            <p className="text-muted-foreground">
-              {menuItems?.length || 0} items • {menuItems?.filter(i => i.is_available).length || 0} available
-            </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-bold text-foreground">Menu Management</h1>
+              <p className="text-sm text-muted-foreground">
+                {menuItems?.length || 0} items • {menuItems?.filter(i => i.is_available).length || 0} available
+              </p>
+            </div>
           </div>
           {canManageBaseMenu && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={handleGenerateAllImages}
                 disabled={isGeneratingImages}
               >
                 {isGeneratingImages ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating {generatingProgress.current}/{generatingProgress.total}
+                    {generatingProgress.current}/{generatingProgress.total}
                   </>
                 ) : (
                   <>
@@ -307,7 +310,7 @@ export default function Menu() {
               </Button>
               <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) resetForm(); }}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => resetForm()}>
+                  <Button size="sm" onClick={() => resetForm()}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Item
                   </Button>
@@ -456,7 +459,7 @@ export default function Menu() {
         </Dialog>
 
         {/* Search */}
-        <div className="relative max-w-md">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search menu..."
@@ -468,15 +471,17 @@ export default function Menu() {
 
         {/* Tabs */}
         <Tabs defaultValue="all" className="space-y-4">
-          <TabsList>
-            {categories.map((cat) => (
-              <TabsTrigger key={cat.value} value={cat.value} className="gap-1">
-                <span>{cat.icon}</span>
-                {cat.label}
-                <span className="text-xs text-muted-foreground">({filterItems(cat.value).length})</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="overflow-x-auto -mx-1 px-1">
+            <TabsList className="w-max">
+              {categories.map((cat) => (
+                <TabsTrigger key={cat.value} value={cat.value} className="gap-1 text-xs sm:text-sm">
+                  <span>{cat.icon}</span>
+                  {cat.label}
+                  <span className="text-xs text-muted-foreground">({filterItems(cat.value).length})</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
           {categories.map((cat) => (
             <TabsContent key={cat.value} value={cat.value}>

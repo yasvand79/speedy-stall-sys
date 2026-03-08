@@ -46,12 +46,12 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
   const { settings } = useShopSettings();
   const createOrder = useCreateOrder();
 
-  // Auto-select branch for non-developer/central-admin users
+  // Auto-select branch for non-admin users
   useEffect(() => {
-    if (profile?.branch_id && !isDeveloper && !isCentralAdmin) {
+    if (profile?.branch_id && !isAdmin) {
       setSelectedBranchId(profile.branch_id);
     }
-  }, [profile, isDeveloper, isCentralAdmin]);
+  }, [profile, isAdmin]);
 
   const canSelectBranch = isDeveloper || isCentralAdmin;
 

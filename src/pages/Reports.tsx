@@ -828,8 +828,10 @@ export default function Reports() {
           )}
         </div>
 
+        {/* ═══════ REPORT CONTENT (for PDF export) ═══════ */}
+        <div ref={reportRef}>
         {/* ═══════ ROW 1: KPI CARDS ═══════ */}
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-4">
           <KpiCard title="Revenue" value={`₹${(metrics?.totalRevenue || 0).toLocaleString()}`} icon={IndianRupee} color="primary" subtitle={`${metrics?.completedOrders || 0} completed`} />
           <KpiCard title="Orders" value={`${metrics?.totalOrders || 0}`} icon={ShoppingCart} color="success" subtitle={`${metrics?.cancelledOrders || 0} cancelled`} />
           <KpiCard title="Avg Order" value={`₹${Math.round(metrics?.avgOrderValue || 0)}`} icon={TrendingUp} color="info" />

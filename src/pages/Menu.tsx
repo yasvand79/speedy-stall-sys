@@ -400,6 +400,7 @@ export default function Menu() {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           )}
         </div>
 

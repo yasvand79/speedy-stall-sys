@@ -532,7 +532,7 @@ export default function Menu() {
                               <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id, item.name)}>
+                              <Button size="icon" variant="ghost" onClick={() => handleDeleteClick(item.id, item.name)}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </div>

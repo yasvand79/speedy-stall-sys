@@ -6,8 +6,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -16,60 +25,43 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-    // Get authorization header from request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('Missing authorization header');
       return new Response(
         JSON.stringify({ error: 'Unauthorized - missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create client with user's token - RLS will apply
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
+      global: { headers: { Authorization: authHeader } },
     });
 
-    // Verify the user is authenticated
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error('Invalid or expired token:', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized - invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Authenticated user:', user.id);
-
     const { orderId } = await req.json();
 
     if (!orderId) {
-      console.error('Missing orderId in request');
       return new Response(
         JSON.stringify({ error: 'Order ID is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate orderId format (UUID)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(orderId)) {
-      console.error('Invalid orderId format:', orderId);
       return new Response(
         JSON.stringify({ error: 'Invalid order ID format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Generating invoice for order:', orderId);
-
-    // Fetch order with items and branch - RLS will automatically filter based on user's permissions
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
@@ -84,35 +76,27 @@ serve(async (req) => {
       .single();
 
     if (orderError || !order) {
-      console.error('Order not found or access denied:', orderError);
       return new Response(
         JSON.stringify({ error: 'Order not found or access denied' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Order fetched successfully:', order.order_number);
-
-    // Generate HTML for PDF
     const invoiceDate = new Date(order.created_at).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
-    const branchName = order.branches?.name || 'Main Branch';
-    const branchLocation = order.branches?.location || '';
-    const branchPhone = order.branches?.phone || '';
-    const branchEmail = order.branches?.email || '';
+    const branchName = escapeHtml(order.branches?.name || 'Main Branch');
+    const branchLocation = escapeHtml(order.branches?.location || '');
+    const branchPhone = escapeHtml(order.branches?.phone || '');
+    const branchEmail = escapeHtml(order.branches?.email || '');
 
     const itemsHtml = order.order_items.map((item: any) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.menu_items?.name || 'Unknown Item'}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${escapeHtml(item.menu_items?.name) || 'Unknown Item'}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${Number(item.quantity)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${Number(item.price).toFixed(2)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${(Number(item.price) * item.quantity).toFixed(2)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${(Number(item.price) * Number(item.quantity)).toFixed(2)}</td>
       </tr>
     `).join('');
 
@@ -121,7 +105,7 @@ serve(async (req) => {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Invoice - ${order.order_number}</title>
+  <title>Invoice - ${escapeHtml(order.order_number)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background: #fff; color: #333; }
@@ -164,7 +148,7 @@ serve(async (req) => {
       </div>
       <div class="invoice-details">
         <h2>INVOICE</h2>
-        <p class="invoice-number">${order.order_number}</p>
+        <p class="invoice-number">${escapeHtml(order.order_number)}</p>
         <p>${invoiceDate}</p>
         <p style="margin-top: 10px;">
           <span class="payment-badge ${order.payment_status === 'completed' ? 'payment-paid' : 'payment-pending'}">
@@ -178,18 +162,18 @@ serve(async (req) => {
       <div class="info-box">
         <h3>Order Details</h3>
         <p><strong>Type:</strong> ${order.type === 'dine-in' ? 'Dine-In' : 'Takeaway'}</p>
-        ${order.table_number ? `<p><strong>Table:</strong> ${order.table_number}</p>` : ''}
-        <p><strong>Status:</strong> ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</p>
+        ${order.table_number ? `<p><strong>Table:</strong> ${Number(order.table_number)}</p>` : ''}
+        <p><strong>Status:</strong> ${escapeHtml(order.status.charAt(0).toUpperCase() + order.status.slice(1))}</p>
       </div>
       <div class="info-box">
         <h3>Customer Details</h3>
-        <p><strong>Name:</strong> ${order.customer_name || 'Walk-in Customer'}</p>
-        ${order.customer_phone ? `<p><strong>Phone:</strong> ${order.customer_phone}</p>` : ''}
+        <p><strong>Name:</strong> ${escapeHtml(order.customer_name) || 'Walk-in Customer'}</p>
+        ${order.customer_phone ? `<p><strong>Phone:</strong> ${escapeHtml(order.customer_phone)}</p>` : ''}
       </div>
     </div>
 
     <div class="staff-info">
-      <p><strong>Served by:</strong> ${order.staff_name || 'Staff'} | <strong>Branch:</strong> ${branchName}</p>
+      <p><strong>Served by:</strong> ${escapeHtml(order.staff_name) || 'Staff'} | <strong>Branch:</strong> ${branchName}</p>
     </div>
 
     <table class="items-table">
@@ -215,7 +199,7 @@ serve(async (req) => {
         <span>GST (5%)</span>
         <span>₹${Number(order.gst).toFixed(2)}</span>
       </div>
-      ${order.discount > 0 ? `
+      ${Number(order.discount) > 0 ? `
       <div class="totals-row">
         <span>Discount</span>
         <span>-₹${Number(order.discount).toFixed(2)}</span>
@@ -236,8 +220,6 @@ serve(async (req) => {
 </html>
     `;
 
-    console.log('Invoice HTML generated successfully');
-
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -245,13 +227,10 @@ serve(async (req) => {
         order: {
           order_number: order.order_number,
           total: order.total,
-          branch_name: branchName
+          branch_name: order.branches?.name || 'Main Branch'
         }
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: unknown) {

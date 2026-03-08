@@ -959,6 +959,10 @@ export type Database = {
         Args: { remarks_text?: string; target_user_id: string }
         Returns: boolean
       }
+      update_own_profile: {
+        Args: { _full_name: string; _phone: string }
+        Returns: undefined
+      }
       use_invite_code: { Args: { invite_code: string }; Returns: boolean }
       validate_invite_code: { Args: { invite_code: string }; Returns: Json }
     }

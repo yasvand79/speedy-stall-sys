@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,24 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data, error } = await supabase.auth.getClaims(token);
+    if (error || !data?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const RAZORPAY_KEY_ID = Deno.env.get('RAZORPAY_KEY_ID');
     const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -21,42 +40,25 @@ serve(async (req) => {
 
     const { orderId, orderNumber, amount, customerName, customerPhone, shopUpiId } = await req.json();
     
-    console.log('Creating Razorpay payment link for order:', orderNumber);
-
     const auth = btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`);
-    
-    // Build webhook callback URL
     const webhookUrl = `${SUPABASE_URL}/functions/v1/razorpay-webhook`;
     
-    // Create payment link with UPI preferred
     const paymentLinkPayload: Record<string, unknown> = {
-      amount: Math.round(amount * 100), // Convert to paise
+      amount: Math.round(amount * 100),
       currency: 'INR',
       accept_partial: false,
       description: `Order ${orderNumber}`,
       reference_id: orderId,
-      notes: {
-        order_id: orderId,
-        order_number: orderNumber,
-      },
+      notes: { order_id: orderId, order_number: orderNumber },
       callback_url: webhookUrl,
       callback_method: 'get',
-      // Enable only UPI for direct app opening
       options: {
         checkout: {
-          method: {
-            upi: true,
-            card: false,
-            netbanking: false,
-            wallet: false,
-            emi: false,
-            paylater: false,
-          },
+          method: { upi: true, card: false, netbanking: false, wallet: false, emi: false, paylater: false },
         },
       },
     };
 
-    // Add customer details if provided
     if (customerName || customerPhone) {
       paymentLinkPayload.customer = {
         name: customerName || 'Customer',
@@ -73,28 +75,23 @@ serve(async (req) => {
       body: JSON.stringify(paymentLinkPayload),
     });
 
-    const data = await response.json();
-    
-    console.log('Razorpay payment link response:', JSON.stringify(data));
+    const responseData = await response.json();
 
     if (!response.ok) {
-      console.error('Razorpay API error:', data);
-      throw new Error(data.error?.description || 'Failed to create payment link');
+      throw new Error(responseData.error?.description || 'Failed to create payment link');
     }
 
-    // Generate direct UPI intent URL using shop's UPI ID for QR display
-    // This allows scanning to open directly in GPay/PhonePe
     const upiIntentUrl = shopUpiId 
       ? `upi://pay?pa=${encodeURIComponent(shopUpiId)}&pn=${encodeURIComponent(customerName || 'Shop')}&am=${amount.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Order ${orderNumber}`)}`
-      : data.short_url;
+      : responseData.short_url;
 
     return new Response(JSON.stringify({
       success: true,
-      paymentLinkId: data.id,
-      shortUrl: data.short_url,
-      upiIntentUrl: upiIntentUrl,
-      amount: data.amount,
-      currency: data.currency,
+      paymentLinkId: responseData.id,
+      shortUrl: responseData.short_url,
+      upiIntentUrl,
+      amount: responseData.amount,
+      currency: responseData.currency,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -102,10 +99,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error creating payment link:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({
-      success: false,
-      error: errorMessage,
-    }), {
+    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

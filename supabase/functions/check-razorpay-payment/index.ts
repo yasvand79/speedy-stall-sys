@@ -12,6 +12,24 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const RAZORPAY_KEY_ID = Deno.env.get('RAZORPAY_KEY_ID');
     const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -21,48 +39,41 @@ serve(async (req) => {
       throw new Error('Razorpay credentials not configured');
     }
 
-    const { paymentLinkId, orderId, amount } = await req.json();
+    const { paymentLinkId, orderId } = await req.json();
     
-    console.log('Checking payment status for link:', paymentLinkId);
-
     const auth = btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`);
     
-    // Fetch payment link status
+    // Fetch payment link status from Razorpay
     const response = await fetch(`https://api.razorpay.com/v1/payment_links/${paymentLinkId}`, {
       method: 'GET',
-      headers: {
-        'Authorization': `Basic ${auth}`,
-      },
+      headers: { 'Authorization': `Basic ${auth}` },
     });
 
     const data = await response.json();
-    
-    console.log('Payment link status:', JSON.stringify(data));
 
     if (!response.ok) {
-      console.error('Razorpay API error:', data);
       throw new Error(data.error?.description || 'Failed to check payment status');
     }
 
     const isPaid = data.status === 'paid';
     
-    // If paid, record the payment in database
+    // Use Razorpay's verified amount, not client-supplied amount
     if (isPaid && orderId) {
-      const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+      const adminSupabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
       
-      // Check if payment already recorded
-      const { data: existingPayment } = await supabase
+      const { data: existingPayment } = await adminSupabase
         .from('payments')
         .select('id')
         .eq('transaction_id', paymentLinkId)
         .single();
 
       if (!existingPayment) {
-        console.log('Recording payment for order:', orderId);
-        
-        const { error: paymentError } = await supabase.from('payments').insert({
+        // Use amount_paid from Razorpay response (in paise), convert to rupees
+        const verifiedAmount = data.amount_paid / 100;
+
+        const { error: paymentError } = await adminSupabase.from('payments').insert({
           order_id: orderId,
-          amount: amount,
+          amount: verifiedAmount,
           method: 'upi',
           transaction_id: paymentLinkId,
         });
@@ -71,13 +82,13 @@ serve(async (req) => {
           console.error('Error creating payment record:', paymentError);
         }
 
-        // Check if order is fully paid and update status
-        const { data: payments } = await supabase
+        // Check if order is fully paid
+        const { data: payments } = await adminSupabase
           .from('payments')
           .select('amount')
           .eq('order_id', orderId);
 
-        const { data: order } = await supabase
+        const { data: order } = await adminSupabase
           .from('orders')
           .select('total')
           .eq('id', orderId)
@@ -86,16 +97,12 @@ serve(async (req) => {
         if (order && payments) {
           const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
           if (totalPaid >= order.total) {
-            await supabase
+            await adminSupabase
               .from('orders')
-              .update({ 
-                payment_status: 'completed',
-                status: 'completed',
-                completed_at: new Date().toISOString()
-              })
+              .update({ payment_status: 'completed', status: 'completed', completed_at: new Date().toISOString() })
               .eq('id', orderId);
           } else {
-            await supabase
+            await adminSupabase
               .from('orders')
               .update({ payment_status: 'partial' })
               .eq('id', orderId);
@@ -116,10 +123,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error checking payment:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({
-      success: false,
-      error: errorMessage,
-    }), {
+    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

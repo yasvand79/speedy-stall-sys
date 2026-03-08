@@ -257,7 +257,7 @@ function InsightsSection({ metrics, peakHour, busiestDay, repeatRate, totalCusto
   );
 }
 
-
+export default function Reports() {
   const [range, setRange] = useState<DateRange>('7d');
   const { start, end } = useDateRange(range);
 

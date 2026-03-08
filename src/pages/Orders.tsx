@@ -40,6 +40,7 @@ export default function Orders() {
   const [activeTab, setActiveTab] = useState<StatusTab>('active');
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
   const [confirmPrintOrderId, setConfirmPrintOrderId] = useState<string | null>(null);
+  const [printStatus, setPrintStatus] = useState<'idle' | 'generating' | 'printing' | 'success' | 'error'>('idle');
   const printIframeRef = useRef<HTMLIFrameElement>(null);
 
   const { data: orders, isLoading } = useOrders();
@@ -69,12 +70,14 @@ export default function Orders() {
     if (!orderId) return;
     setConfirmPrintOrderId(null);
     setPrintingOrderId(orderId);
+    setPrintStatus('generating');
     try {
       const { data, error } = await supabase.functions.invoke('generate-invoice', {
         body: { orderId }
       });
       if (error) throw error;
       if (data?.html) {
+        setPrintStatus('printing');
         const iframe = printIframeRef.current;
         if (iframe) {
           const doc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -82,15 +85,25 @@ export default function Orders() {
             doc.open();
             doc.write(data.html);
             doc.close();
+
+            // Listen for after print event
+            const onAfterPrint = () => {
+              iframe.contentWindow?.removeEventListener('afterprint', onAfterPrint);
+              setPrintStatus('success');
+              setTimeout(() => setPrintStatus('idle'), 2000);
+            };
+            iframe.contentWindow?.addEventListener('afterprint', onAfterPrint);
+
             setTimeout(() => {
               iframe.contentWindow?.print();
             }, 300);
           }
         }
-        toast.success('Invoice sent to printer');
       }
     } catch {
+      setPrintStatus('error');
       toast.error('Failed to generate invoice');
+      setTimeout(() => setPrintStatus('idle'), 2000);
     } finally {
       setPrintingOrderId(null);
     }

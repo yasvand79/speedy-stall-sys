@@ -1,0 +1,1 @@
+ALTER TABLE public.shop_settings ADD COLUMN IF NOT EXISTS custom_bill_html text DEFAULT NULL;

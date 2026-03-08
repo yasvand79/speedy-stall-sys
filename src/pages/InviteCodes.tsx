@@ -179,7 +179,7 @@ export default function InviteCodes() {
               </div>
             ) : invitations.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No invitations yet. Invite a staff member to get started.
+                No staff added yet. Add a staff email to get started.
               </div>
             ) : (
               <Table>

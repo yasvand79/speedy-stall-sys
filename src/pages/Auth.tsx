@@ -131,37 +131,16 @@ export default function Auth() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center space-y-4">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-amber-500">
-              <Clock className="h-8 w-8 text-white" />
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-destructive">
+              <Clock className="h-8 w-8 text-destructive-foreground" />
             </div>
             <div>
-              <CardTitle className="font-display text-2xl">
-                {profile.status === 'pending' ? 'Approval Pending' : 'Registration Rejected'}
-              </CardTitle>
+              <CardTitle className="font-display text-2xl">Access Not Authorized</CardTitle>
               <CardDescription>
-                {profile.status === 'pending'
-                  ? 'Your registration is waiting for admin approval.'
-                  : 'Your registration was rejected. Please contact an administrator.'}
+                Your email is not authorized to access this system. Please contact your admin.
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground mb-4">
-              {profile.status === 'pending'
-                ? 'You will be able to login once an admin approves your account.'
-                : 'If you believe this was a mistake, please reach out to your organization admin.'}
-            </p>
-            <Button 
-              variant="outline" 
-              onClick={async () => {
-                const { signOut } = useAuth();
-                await signOut();
-                window.location.reload();
-              }}
-            >
-              Sign Out
-            </Button>
-          </CardContent>
         </Card>
       </div>
     );

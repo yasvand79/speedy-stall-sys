@@ -181,7 +181,7 @@ export default function Orders() {
               {activeOrders.length} active orders
             </p>
           </div>
-          {(isDeveloper || isAdmin || isBilling) && <NewOrderDialog />}
+          {(isAdmin || isBilling) && <NewOrderDialog />}
         </div>
 
         {/* Staff Performance Summary */}

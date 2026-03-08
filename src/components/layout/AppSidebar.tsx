@@ -13,9 +13,11 @@ import {
   TrendingUp,
   UserPlus,
   UserCircle,
+  Languages,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { NavLink } from '@/components/NavLink';
 import {
   Sidebar,
@@ -31,18 +33,19 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import type { TranslationKey } from '@/i18n/translations';
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['admin', 'branch_admin', 'billing'] },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['branch_admin', 'billing'] },
-  { name: 'Billing', href: '/billing', icon: Receipt, roles: ['branch_admin', 'billing'] },
-  { name: 'Menu', href: '/menu', icon: UtensilsCrossed, roles: ['admin', 'branch_admin'] },
-  { name: 'Branches', href: '/branches', icon: Building2, roles: ['admin'] },
-  { name: 'Staff', href: '/staff', icon: Users, roles: ['admin', 'branch_admin'] },
-  { name: 'Performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
-  { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['admin'] },
-  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'branch_admin'] },
-  { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
+const navigation: { nameKey: TranslationKey; href: string; icon: any; roles: string[] }[] = [
+  { nameKey: 'nav.dashboard', href: '/', icon: LayoutDashboard, roles: ['admin', 'branch_admin', 'billing'] },
+  { nameKey: 'nav.orders', href: '/orders', icon: ShoppingCart, roles: ['branch_admin', 'billing'] },
+  { nameKey: 'nav.billing', href: '/billing', icon: Receipt, roles: ['branch_admin', 'billing'] },
+  { nameKey: 'nav.menu', href: '/menu', icon: UtensilsCrossed, roles: ['admin', 'branch_admin'] },
+  { nameKey: 'nav.branches', href: '/branches', icon: Building2, roles: ['admin'] },
+  { nameKey: 'nav.staff', href: '/staff', icon: Users, roles: ['admin', 'branch_admin'] },
+  { nameKey: 'nav.performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
+  { nameKey: 'nav.staffAccess', href: '/invite-codes', icon: UserPlus, roles: ['admin'] },
+  { nameKey: 'nav.reports', href: '/reports', icon: BarChart3, roles: ['admin', 'branch_admin'] },
+  { nameKey: 'nav.settings', href: '/settings', icon: Settings, roles: ['admin'] },
 ];
 
 export function AppSidebar() {
@@ -50,6 +53,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { isAdmin, isBranchAdmin, profile, role, signOut } = useAuth();
   const { state, setOpenMobile } = useSidebar();
+  const { t, language, setLanguage } = useLanguage();
   const collapsed = state === 'collapsed';
 
   const filteredNavigation = navigation.filter(item =>
@@ -65,6 +69,10 @@ export function AppSidebar() {
     setOpenMobile(false);
   };
 
+  const toggleLanguage = () => {
+    setLanguage(language === 'en' ? 'ta' : 'en');
+  };
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -75,7 +83,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="min-w-0">
               <h1 className="font-display text-base font-bold text-sidebar-foreground truncate">FoodShop</h1>
-              <p className="text-[10px] text-sidebar-foreground/60">Sales System</p>
+              <p className="text-[10px] text-sidebar-foreground/60">{t('nav.salesSystem')}</p>
             </div>
           )}
         </div>
@@ -83,17 +91,17 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('nav.navigation')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredNavigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
-                  <SidebarMenuItem key={item.name}>
+                  <SidebarMenuItem key={item.nameKey}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      tooltip={item.name}
+                      tooltip={t(item.nameKey)}
                     >
                       <NavLink
                         to={item.href}
@@ -101,7 +109,7 @@ export function AppSidebar() {
                         onClick={handleNavClick}
                       >
                         <item.icon className="h-4 w-4" />
-                        <span>{item.name}</span>
+                        <span>{t(item.nameKey)}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -131,17 +139,23 @@ export function AppSidebar() {
           )}
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Profile">
+              <SidebarMenuButton onClick={toggleLanguage} tooltip={language === 'en' ? 'தமிழ்' : 'English'}>
+                <Languages className="h-4 w-4" />
+                <span>{language === 'en' ? 'தமிழ்' : 'English'}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip={t('nav.profile')}>
                 <NavLink to="/profile" onClick={handleNavClick}>
                   <UserCircle className="h-4 w-4" />
-                  <span>Profile</span>
+                  <span>{t('nav.profile')}</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
+              <SidebarMenuButton onClick={handleLogout} tooltip={t('nav.logout')}>
                 <LogOut className="h-4 w-4" />
-                <span>Logout</span>
+                <span>{t('nav.logout')}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

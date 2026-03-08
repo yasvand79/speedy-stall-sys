@@ -348,7 +348,7 @@ export default function Orders() {
                                   Start
                                 </Button>
                               )}
-                              {(isDeveloper || isAdmin) && order.status === 'preparing' && (
+                              {isAdmin && order.status === 'preparing' && (
                                 <Button 
                                   size="sm" 
                                   variant="outline"

@@ -205,18 +205,6 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
               </TabsList>
             </Tabs>
 
-            {orderType === 'dine-in' && (
-              <div className="mb-4">
-                <Label htmlFor="table">Table Number *</Label>
-                <Input
-                  id="table"
-                  type="number"
-                  placeholder="Enter table number"
-                  value={tableNumber}
-                  onChange={(e) => setTableNumber(e.target.value)}
-                />
-              </div>
-            )}
 
             <div className="grid grid-cols-2 gap-2 mb-4">
               <div>

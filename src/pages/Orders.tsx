@@ -61,76 +61,33 @@ export default function Orders() {
   };
 
   const handlePrintClick = async (orderId: string) => {
-    setPreviewOrderId(orderId);
-    setPreviewLoading(true);
-    setPreviewHtml('');
-    setPreviewOpen(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-invoice', {
-        body: { orderId }
-      });
-      if (error) throw error;
-      if (data?.html) {
-        setPreviewHtml(data.html);
-      }
-    } catch {
-      toast.error('Failed to generate invoice');
-      setPreviewOpen(false);
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
+    const order = orders?.find(o => o.id === orderId);
+    if (!order) return;
 
-  const handlePrintFromPreview = async () => {
-    if (!previewHtml) return;
-    setPreviewOpen(false);
+    setPrintingOrderId(orderId);
+    const orderPayments = (allPayments || []).filter(p => p.order_id === orderId);
+    const latestPayment = orderPayments[0];
 
-    // Try thermal print via QZ Tray first
-    if (qzStatus === 'connected' && previewOrderId) {
-      const order = orders?.find(o => o.id === previewOrderId);
-      if (order) {
-        const thermalOrder = {
-          orderNumber: order.order_number,
-          type: order.type,
-          tableNumber: order.table_number,
-          customerName: order.customer_name,
-          staffName: order.staff_name,
-          items: order.order_items.map((item: any) => ({
-            name: item.menu_items?.name || 'Unknown',
-            quantity: item.quantity,
-            price: Number(item.price),
-          })),
-          subtotal: Number(order.subtotal),
-          gst: Number(order.gst),
-          discount: Number(order.discount),
-          total: Number(order.total),
-          paymentMethod: order.payment_status === 'completed' ? 'Paid' : 'Pending',
-        };
-
-        const success = await printBill(thermalOrder);
-        if (success) return;
-      }
-    }
-
-    // Fallback: Print using hidden iframe with the configured printer
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:80mm;height:0;border:none;visibility:hidden';
-    iframe.srcdoc = previewHtml;
-
-    iframe.onload = () => {
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      }, 300);
-
-      const cleanup = () => {
-        if (document.body.contains(iframe)) document.body.removeChild(iframe);
-      };
-      iframe.contentWindow?.addEventListener('afterprint', cleanup);
-      setTimeout(cleanup, 15000);
+    const thermalOrder = {
+      orderNumber: order.order_number,
+      type: order.type,
+      tableNumber: order.table_number,
+      customerName: order.customer_name,
+      staffName: order.staff_name,
+      items: order.order_items.map((item: any) => ({
+        name: item.menu_items?.name || 'Unknown',
+        quantity: item.quantity,
+        price: Number(item.price),
+      })),
+      subtotal: Number(order.subtotal),
+      gst: Number(order.gst),
+      discount: Number(order.discount),
+      total: Number(order.total),
+      paymentMethod: latestPayment?.method || (order.payment_status === 'completed' ? 'Paid' : undefined),
     };
 
-    document.body.appendChild(iframe);
+    await printBill(thermalOrder);
+    setPrintingOrderId(null);
   };
 
   const getPaidAmount = (orderId: string) => {

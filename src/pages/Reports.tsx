@@ -905,6 +905,20 @@ export default function Reports() {
         )}
 
 
+        {/* ═══════ ROW 7: AI BUSINESS INSIGHTS ═══════ */}
+        <InsightsSection
+          metrics={metrics}
+          peakHour={peakHour}
+          busiestDay={busiestDay}
+          repeatRate={customerData?.repeatRate || 0}
+          totalCustomers={customerData?.totalCustomers || 0}
+          staffCount={staffSales?.length || 0}
+          topCategory={categorySales?.[0]?.category || ''}
+          topItem={topItems?.[0]?.name || ''}
+          activeTables={tableAnalytics.length}
+        />
+
+        {/* ═══════ FINANCIAL SUMMARY STRIP ═══════ */}
         <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
             <Banknote className="h-4 w-4 text-muted-foreground shrink-0" />

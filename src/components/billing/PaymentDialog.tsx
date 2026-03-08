@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useCreatePayment } from '@/hooks/usePayments';
 import { useUpdateOrderStatus } from '@/hooks/useOrders';
 import { useShopSettings } from '@/hooks/useShopSettings';
-import { useThermalPrinter } from '@/hooks/useThermalPrinter';
+import { useThermalPrinter } from '@/contexts/ThermalPrinterContext';
 import { Database } from '@/integrations/supabase/types';
 import { Banknote, Smartphone, CreditCard, CheckCircle, ArrowLeft, Loader2, Printer, Split, Wifi, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';

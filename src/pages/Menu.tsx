@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem } from '@/hooks/useMenuItems';
@@ -29,6 +30,8 @@ export default function Menu() {
   const [newBranchPrice, setNewBranchPrice] = useState('');
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState({ current: 0, total: 0 });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const { data: menuItems, isLoading } = useMenuItems();
   const createItem = useCreateMenuItem();
@@ -190,9 +193,16 @@ export default function Menu() {
     resetForm();
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Delete "${name}"?`)) {
-      await deleteItem.mutateAsync(id);
+  const handleDeleteClick = (id: string, name: string) => {
+    setItemToDelete({ id, name });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteItem.mutateAsync(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -395,6 +405,27 @@ export default function Menu() {
           )}
         </div>
 
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Menu Item</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete <strong>"{itemToDelete?.name}"</strong>? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleConfirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Branch Price Dialog */}
         <Dialog open={priceDialogOpen} onOpenChange={(open) => { setPriceDialogOpen(open); if (!open) { setEditingPrice(null); setNewBranchPrice(''); } }}>
           <DialogContent>
@@ -522,7 +553,7 @@ export default function Menu() {
                               <Button size="icon" variant="ghost" onClick={() => handleEdit(item)}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" onClick={() => handleDelete(item.id, item.name)}>
+                              <Button size="icon" variant="ghost" onClick={() => handleDeleteClick(item.id, item.name)}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </div>

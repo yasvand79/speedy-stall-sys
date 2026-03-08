@@ -23,19 +23,19 @@ import { Button } from '@/components/ui/button';
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isDeveloper, isCentralAdmin, isBranchAdmin, isAdmin, profile, role, signOut } = useAuth();
+  const { isAdmin, isBranchAdmin, profile, role, signOut } = useAuth();
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['developer', 'central_admin', 'branch_admin', 'billing'] },
-    { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['developer', 'central_admin', 'branch_admin', 'billing'] },
-    { name: 'Billing', href: '/billing', icon: Receipt, roles: ['developer', 'central_admin', 'branch_admin', 'billing'] },
-    { name: 'Menu', href: '/menu', icon: UtensilsCrossed, roles: ['developer', 'central_admin', 'branch_admin'] },
-    { name: 'Branches', href: '/branches', icon: Building2, roles: ['developer', 'central_admin'] },
-    { name: 'Staff', href: '/staff', icon: Users, roles: ['developer', 'central_admin', 'branch_admin'] },
-    { name: 'Staff Performance', href: '/staff-performance', icon: TrendingUp, roles: ['developer', 'central_admin', 'branch_admin'] },
-    { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['developer', 'central_admin'] },
-    { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['developer', 'central_admin', 'branch_admin'] },
-    { name: 'Settings', href: '/settings', icon: Settings, roles: ['developer'] },
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['admin', 'branch_admin', 'billing'] },
+    { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['admin', 'branch_admin', 'billing'] },
+    { name: 'Billing', href: '/billing', icon: Receipt, roles: ['admin', 'branch_admin', 'billing'] },
+    { name: 'Menu', href: '/menu', icon: UtensilsCrossed, roles: ['admin', 'branch_admin'] },
+    { name: 'Branches', href: '/branches', icon: Building2, roles: ['admin'] },
+    { name: 'Staff', href: '/staff', icon: Users, roles: ['admin', 'branch_admin'] },
+    { name: 'Staff Performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
+    { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['admin'] },
+    { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'branch_admin'] },
+    { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
   ];
 
   const filteredNavigation = navigation.filter(item => 

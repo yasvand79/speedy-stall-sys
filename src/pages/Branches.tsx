@@ -28,7 +28,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Branches() {
   const { branches, isLoading, createBranch, updateBranch, toggleBranchStatus, isCreating, isUpdating } = useBranches();
-  const { isDeveloper } = useAuth();
+  const { isAdmin } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<typeof branches[0] | null>(null);
   const [formData, setFormData] = useState({
@@ -102,7 +102,7 @@ export default function Branches() {
               {branches.filter(b => b.is_active).length} active branches • {branches.length} total
             </p>
           </div>
-          {isDeveloper && (
+          {isAdmin && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={() => handleOpenDialog()}>
@@ -226,7 +226,7 @@ export default function Branches() {
                   </div>
                 )}
                 
-                {isDeveloper && (
+                {isAdmin && (
                   <div className="flex gap-2 pt-3 border-t">
                     <Button 
                       variant="outline" 

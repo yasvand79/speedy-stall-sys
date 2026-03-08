@@ -42,18 +42,18 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
 
   const { data: menuItems, isLoading } = useMenuItems();
   const { branches, activeBranches } = useBranches();
-  const { profile, isDeveloper, isCentralAdmin } = useAuth();
+  const { profile, isAdmin } = useAuth();
   const { settings } = useShopSettings();
   const createOrder = useCreateOrder();
 
-  // Auto-select branch for non-developer/central-admin users
+  // Auto-select branch for non-admin users
   useEffect(() => {
-    if (profile?.branch_id && !isDeveloper && !isCentralAdmin) {
+    if (profile?.branch_id && !isAdmin) {
       setSelectedBranchId(profile.branch_id);
     }
-  }, [profile, isDeveloper, isCentralAdmin]);
+  }, [profile, isAdmin]);
 
-  const canSelectBranch = isDeveloper || isCentralAdmin;
+  const canSelectBranch = isAdmin;
 
   const availableItems = menuItems?.filter(item => item.is_available) || [];
 

@@ -43,15 +43,14 @@ import { toast } from 'sonner';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
-const roleConfig: Record<AppRole, { label: string; icon: React.ElementType; color: string }> = {
-  developer: { label: 'Developer', icon: Shield, color: 'bg-primary text-primary-foreground' },
-  central_admin: { label: 'Central Admin', icon: Shield, color: 'bg-destructive text-destructive-foreground' },
+const roleConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  admin: { label: 'Admin', icon: Shield, color: 'bg-primary text-primary-foreground' },
   branch_admin: { label: 'Branch Admin', icon: UserCog, color: 'bg-warning text-warning-foreground' },
   billing: { label: 'Billing', icon: Receipt, color: 'bg-info text-info-foreground' },
 };
 
 export default function Staff() {
-  const { profile, role, isDeveloper, isCentralAdmin, isBranchAdmin } = useAuth();
+  const { profile, role, isAdmin, isBranchAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [staffToRemove, setStaffToRemove] = useState<StaffMember | null>(null);
@@ -67,8 +66,8 @@ export default function Staff() {
   const { branches } = useBranches();
   const { createInvitation, isCreating } = useStaffInvitations();
 
-  // Only developers and central admins can manage staff
-  const canManageStaff = isDeveloper || isCentralAdmin;
+  // Only admins can manage staff
+  const canManageStaff = isAdmin;
 
   const filteredStaff = staff.filter(member =>
     member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -195,8 +194,7 @@ export default function Staff() {
                       <SelectContent>
                         <SelectItem value="billing">Billing Staff</SelectItem>
                         <SelectItem value="branch_admin">Branch Admin</SelectItem>
-                        <SelectItem value="central_admin">Central Admin</SelectItem>
-                        {isDeveloper && <SelectItem value="developer">Developer</SelectItem>}
+                        <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -314,8 +312,7 @@ export default function Staff() {
                             <SelectContent>
                               <SelectItem value="billing">Billing</SelectItem>
                               <SelectItem value="branch_admin">Branch Admin</SelectItem>
-                              <SelectItem value="central_admin">Central Admin</SelectItem>
-                              {isDeveloper && <SelectItem value="developer">Developer</SelectItem>}
+                              <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

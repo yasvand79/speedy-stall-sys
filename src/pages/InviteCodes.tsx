@@ -18,9 +18,8 @@ import { format } from 'date-fns';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
-const roleLabels: Record<AppRole, string> = {
-  developer: 'Developer',
-  central_admin: 'Central Admin',
+const roleLabels: Record<string, string> = {
+  admin: 'Admin',
   branch_admin: 'Branch Admin',
   billing: 'Billing',
 };
@@ -28,7 +27,7 @@ const roleLabels: Record<AppRole, string> = {
 const branchRequiredRoles: AppRole[] = ['branch_admin', 'billing'];
 
 export default function InviteCodes() {
-  const { isDeveloper, isCentralAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { invitations, isLoading, createInvitation, revokeInvitation, isCreating } = useStaffInvitations();
   const { branches } = useBranches();
 
@@ -37,12 +36,10 @@ export default function InviteCodes() {
   const [newRole, setNewRole] = useState<AppRole>('billing');
   const [newBranchId, setNewBranchId] = useState<string>('');
 
-  const canManage = isDeveloper || isCentralAdmin;
+  const canManage = isAdmin;
   const requiresBranch = branchRequiredRoles.includes(newRole);
 
-  const availableRoles: AppRole[] = isDeveloper
-    ? ['developer', 'central_admin', 'branch_admin', 'billing']
-    : ['branch_admin', 'billing'];
+  const availableRoles: AppRole[] = ['admin', 'branch_admin', 'billing'];
 
   const handleCreate = async () => {
     if (!newEmail.trim()) {

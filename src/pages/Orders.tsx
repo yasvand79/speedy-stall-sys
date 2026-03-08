@@ -28,7 +28,7 @@ export default function Orders() {
   const { data: allPayments } = usePayments();
   const { branches } = useBranches();
   const updateStatus = useUpdateOrderStatus();
-  const { isDeveloper, isAdmin, isBilling, isCentralAdmin } = useAuth();
+  const { isAdmin, isBilling } = useAuth();
 
   // Calculate staff performance stats
   const staffStats = useMemo(() => {
@@ -158,7 +158,7 @@ export default function Orders() {
   };
 
   const activeOrders = orders?.filter(o => !['completed', 'cancelled'].includes(o.status)) || [];
-  const canSeeBranchFilter = isDeveloper || isCentralAdmin;
+  const canSeeBranchFilter = isAdmin;
 
   if (isLoading) {
     return (
@@ -181,11 +181,11 @@ export default function Orders() {
               {activeOrders.length} active orders
             </p>
           </div>
-          {(isDeveloper || isAdmin || isBilling) && <NewOrderDialog />}
+          {(isAdmin || isBilling) && <NewOrderDialog />}
         </div>
 
         {/* Staff Performance Summary */}
-        {(isDeveloper || isCentralAdmin || isAdmin) && staffStats.length > 0 && (
+        {isAdmin && staffStats.length > 0 && (
           <Card className="bg-muted/30">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -337,7 +337,7 @@ export default function Orders() {
                           {/* Status progression */}
                           {order.status !== 'completed' && order.status !== 'cancelled' && (
                             <>
-                              {(isDeveloper || isAdmin) && order.status === 'placed' && (
+                              {isAdmin && order.status === 'placed' && (
                                 <Button 
                                   size="sm" 
                                   variant="outline"
@@ -348,7 +348,7 @@ export default function Orders() {
                                   Start
                                 </Button>
                               )}
-                              {(isDeveloper || isAdmin) && order.status === 'preparing' && (
+                              {isAdmin && order.status === 'preparing' && (
                                 <Button 
                                   size="sm" 
                                   variant="outline"
@@ -360,7 +360,7 @@ export default function Orders() {
                                   Ready
                                 </Button>
                               )}
-                              {(isDeveloper || isAdmin || isBilling) && order.status === 'ready' && order.payment_status === 'completed' && (
+                              {(isAdmin || isBilling) && order.status === 'ready' && order.payment_status === 'completed' && (
                                 <Button 
                                   size="sm"
                                   onClick={() => handleStatusChange(order.id, 'completed')}
@@ -374,7 +374,7 @@ export default function Orders() {
                           )}
 
                           {/* Payment button for cashier */}
-                          {(isDeveloper || isAdmin || isBilling) && order.status !== 'cancelled' && order.payment_status !== 'completed' && (
+                          {(isAdmin || isBilling) && order.status !== 'cancelled' && order.payment_status !== 'completed' && (
                             <Button 
                               size="sm" 
                               variant="default"
@@ -386,7 +386,7 @@ export default function Orders() {
                           )}
 
                           {/* Cancel button */}
-                          {(isDeveloper || isAdmin) && order.status === 'placed' && (
+                          {isAdmin && order.status === 'placed' && (
                             <Button 
                               size="sm" 
                               variant="destructive"

@@ -26,10 +26,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null; status?: string }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null; autoApproved?: boolean }>;
   signOut: () => Promise<void>;
-  isDeveloper: boolean;
-  isCentralAdmin: boolean;
-  isBranchAdmin: boolean;
   isAdmin: boolean;
+  isBranchAdmin: boolean;
   isBilling: boolean;
   isApproved: boolean;
 }
@@ -170,10 +168,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signUp,
     signOut,
-    isDeveloper: role === 'developer',
-    isCentralAdmin: role === 'central_admin',
+    isAdmin: role === 'admin',
     isBranchAdmin: role === 'branch_admin',
-    isAdmin: role === 'branch_admin' || role === 'central_admin' || role === 'developer',
     isBilling: role === 'billing',
     isApproved,
   };

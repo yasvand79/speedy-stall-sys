@@ -31,15 +31,15 @@ export default function Menu() {
   const createItem = useCreateMenuItem();
   const updateItem = useUpdateMenuItem();
   const deleteItem = useDeleteMenuItem();
-  const { profile, isDeveloper, isCentralAdmin, isBranchAdmin, isAdmin } = useAuth();
+  const { profile, isAdmin, isBranchAdmin } = useAuth();
 
   // Get branch prices if user is branch admin
   const { prices: branchPrices, upsertPrice, isUpdating: isPriceUpdating } = useBranchMenuPrices(
     isBranchAdmin ? profile?.branch_id || undefined : undefined
   );
 
-  // Developers and Central Admins can add/edit/delete base menu items
-  const canManageBaseMenu = isDeveloper || isCentralAdmin;
+  // Admins can add/edit/delete base menu items
+  const canManageBaseMenu = isAdmin;
   
   // Branch admins can only edit prices for their branch
   const canEditBranchPrices = isBranchAdmin && profile?.branch_id;

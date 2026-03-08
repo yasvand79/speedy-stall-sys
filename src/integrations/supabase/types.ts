@@ -963,7 +963,12 @@ export type Database = {
       validate_invite_code: { Args: { invite_code: string }; Returns: Json }
     }
     Enums: {
-      app_role: "developer" | "central_admin" | "branch_admin" | "billing"
+      app_role:
+        | "developer"
+        | "central_admin"
+        | "branch_admin"
+        | "billing"
+        | "admin"
       menu_category: "veg" | "non-veg" | "beverages" | "combos"
       order_status: "placed" | "preparing" | "ready" | "completed" | "cancelled"
       order_type: "dine-in" | "takeaway"
@@ -1097,7 +1102,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["developer", "central_admin", "branch_admin", "billing"],
+      app_role: [
+        "developer",
+        "central_admin",
+        "branch_admin",
+        "billing",
+        "admin",
+      ],
       menu_category: ["veg", "non-veg", "beverages", "combos"],
       order_status: ["placed", "preparing", "ready", "completed", "cancelled"],
       order_type: ["dine-in", "takeaway"],

@@ -18,7 +18,7 @@ export default function Settings() {
   const { settings, isLoading, updateSettings, updateSetting, isSaving } = useShopSettings();
   const { role } = useAuth();
   
-  const canEdit = role === 'developer' || role === 'central_admin';
+  const canEdit = role === 'admin';
 
   const [shopDetails, setShopDetails] = useState({
     shop_name: '',
@@ -90,7 +90,7 @@ export default function Settings() {
           <h1 className="font-display text-2xl font-bold text-foreground">Settings</h1>
           <p className="text-muted-foreground">Manage your shop configuration</p>
           {!canEdit && (
-            <p className="text-sm text-amber-600 mt-1">You have read-only access. Only Developer and Central Admin can modify settings.</p>
+            <p className="text-sm text-amber-600 mt-1">You have read-only access. Only Admins can modify settings.</p>
           )}
         </div>
 

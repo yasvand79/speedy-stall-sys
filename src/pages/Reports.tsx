@@ -676,9 +676,9 @@ export default function Reports() {
                   </span>
                 )}
               </Button>
-              <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => window.print()}>
-                <Download className="mr-1 h-3.5 w-3.5" />
-                Export
+              <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={exportToPDF} disabled={exporting}>
+                {exporting ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
+                {exporting ? 'Exporting...' : 'Export PDF'}
               </Button>
             </div>
           </div>

@@ -66,8 +66,8 @@ export default function Staff() {
   const { branches } = useBranches();
   const { createInvitation, isCreating } = useStaffInvitations();
 
-  // Only developers and central admins can manage staff
-  const canManageStaff = isDeveloper || isCentralAdmin;
+  // Only admins can manage staff
+  const canManageStaff = isAdmin;
 
   const filteredStaff = staff.filter(member =>
     member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||

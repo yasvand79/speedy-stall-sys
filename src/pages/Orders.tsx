@@ -158,7 +158,7 @@ export default function Orders() {
   };
 
   const activeOrders = orders?.filter(o => !['completed', 'cancelled'].includes(o.status)) || [];
-  const canSeeBranchFilter = isDeveloper || isCentralAdmin;
+  const canSeeBranchFilter = isAdmin;
 
   if (isLoading) {
     return (

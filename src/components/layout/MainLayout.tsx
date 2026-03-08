@@ -1,4 +1,5 @@
-import { Sidebar } from './Sidebar';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from './AppSidebar';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
 interface MainLayoutProps {
@@ -9,13 +10,18 @@ export function MainLayout({ children }: MainLayoutProps) {
   useSessionTimeout();
 
   return (
-    <div className="min-h-screen bg-background pb-[env(safe-area-inset-bottom)]">
-      <Sidebar />
-      <main className="pl-64">
-        <div className="p-6 pt-[max(1.5rem,env(safe-area-inset-top))]">
-          {children}
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="sticky top-0 z-30 flex h-12 items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
+            <SidebarTrigger className="-ml-1" />
+          </header>
+          <main className="flex-1 p-4 md:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {children}
+          </main>
         </div>
-      </main>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 }

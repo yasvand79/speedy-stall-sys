@@ -75,8 +75,11 @@ export default function Menu() {
       category: 'veg',
       preparation_time: '15',
       ingredients: '',
+      image_url: '',
     });
     setEditingItem(null);
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const handleEdit = (item: any) => {

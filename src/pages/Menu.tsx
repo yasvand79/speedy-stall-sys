@@ -471,15 +471,17 @@ export default function Menu() {
 
         {/* Tabs */}
         <Tabs defaultValue="all" className="space-y-4">
-          <TabsList>
-            {categories.map((cat) => (
-              <TabsTrigger key={cat.value} value={cat.value} className="gap-1">
-                <span>{cat.icon}</span>
-                {cat.label}
-                <span className="text-xs text-muted-foreground">({filterItems(cat.value).length})</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="overflow-x-auto -mx-1 px-1">
+            <TabsList className="w-max">
+              {categories.map((cat) => (
+                <TabsTrigger key={cat.value} value={cat.value} className="gap-1 text-xs sm:text-sm">
+                  <span>{cat.icon}</span>
+                  {cat.label}
+                  <span className="text-xs text-muted-foreground">({filterItems(cat.value).length})</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
           {categories.map((cat) => (
             <TabsContent key={cat.value} value={cat.value}>

@@ -355,59 +355,114 @@ export default function Settings() {
 
               <Separator />
 
+              {/* Custom Template Status */}
+              {customBillHtml && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50 border border-border">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">✨ Custom Template Active</p>
+                    <p className="text-xs text-muted-foreground">Imported from image — this design will be used for printing</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleResetTemplate} disabled={isSaving}>
+                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" />Reset to Default
+                  </Button>
+                </div>
+              )}
+
               {/* Live Preview */}
               <div>
                 <Label className="text-sm font-semibold mb-2 block">Receipt Preview</Label>
-                <div className="bg-white border border-border rounded-lg p-4 max-w-[320px] mx-auto font-mono text-[10px] leading-relaxed text-black shadow-sm">
-                  <div className="text-center font-bold text-sm uppercase tracking-wide">{shopDetails.shop_name || 'Shop Name'}</div>
-                  {shopDetails.address && <div className="text-center text-[9px] text-gray-500">{shopDetails.address}</div>}
-                  {shopDetails.phone && <div className="text-center text-[9px] text-gray-500">Tel: {shopDetails.phone}</div>}
-                  {billTemplate.bill_header_text && <div className="text-center text-[9px] text-gray-600 mt-0.5">{billTemplate.bill_header_text}</div>}
-                  <div className="border-t border-dashed border-gray-400 my-2" />
-                  <div className="text-center font-bold text-xs tracking-widest">CASH RECEIPT</div>
-                  <div className="border-t border-dashed border-gray-400 my-2" />
-                  <div className="flex justify-between"><span className="text-gray-500">Receipt #</span><span className="font-semibold">20260308-0001</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Date</span><span>08/03/2026</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Time</span><span>02:30 PM</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Type</span><span>Dine-In / Table 3</span></div>
-                  <div className="border-t-2 border-black my-2" />
-                  <div className="flex justify-between font-bold text-[9px] uppercase tracking-wide border-b border-black pb-1 mb-1">
-                    <span>Item</span><span>Qty</span><span>Rate</span><span>Amt</span>
+                {customBillHtml ? (
+                  <div className="border border-border rounded-lg overflow-hidden max-w-[320px] mx-auto shadow-sm">
+                    <iframe
+                      srcDoc={customBillHtml
+                        .replace(/\{\{SHOP_NAME\}\}/g, shopDetails.shop_name || 'Shop Name')
+                        .replace(/\{\{SHOP_ADDRESS\}\}/g, shopDetails.address || '')
+                        .replace(/\{\{SHOP_PHONE\}\}/g, shopDetails.phone || '')
+                        .replace(/\{\{BRANCH_NAME\}\}/g, '')
+                        .replace(/\{\{BILL_HEADER_TEXT\}\}/g, billTemplate.bill_header_text || '')
+                        .replace(/\{\{ORDER_NUMBER\}\}/g, '20260308-0001')
+                        .replace(/\{\{DATE\}\}/g, '08/03/2026')
+                        .replace(/\{\{TIME\}\}/g, '02:30 PM')
+                        .replace(/\{\{ORDER_TYPE\}\}/g, 'Dine-In / Table 3')
+                        .replace(/\{\{CUSTOMER_NAME\}\}/g, '')
+                        .replace(/\{\{CUSTOMER_PHONE\}\}/g, '')
+                        .replace(/\{\{STAFF_NAME\}\}/g, 'Admin')
+                        .replace(/\{\{ITEMS_HTML\}\}/g, '<tr><td class="item-name">Paneer Tikka</td><td class="item-qty">2</td><td class="item-rate">₹180.00</td><td class="item-amt">₹360.00</td></tr><tr><td class="item-name">Butter Naan</td><td class="item-qty">4</td><td class="item-rate">₹40.00</td><td class="item-amt">₹160.00</td></tr><tr><td class="item-name">Lassi</td><td class="item-qty">2</td><td class="item-rate">₹60.00</td><td class="item-amt">₹120.00</td></tr>')
+                        .replace(/\{\{TOTAL_ITEMS\}\}/g, '8')
+                        .replace(/\{\{SUBTOTAL\}\}/g, '640.00')
+                        .replace(/\{\{GST_RATE\}\}/g, String(billingSettings.gst_rate))
+                        .replace(/\{\{GST_AMOUNT\}\}/g, '32.00')
+                        .replace(/\{\{DISCOUNT_HTML\}\}/g, '')
+                        .replace(/\{\{TOTAL\}\}/g, '672.00')
+                        .replace(/\{\{PAYMENT_STATUS_CLASS\}\}/g, 'payment-paid')
+                        .replace(/\{\{PAYMENT_STATUS_TEXT\}\}/g, '✓ PAID')
+                        .replace(/\{\{GSTIN_HTML\}\}/g, billTemplate.bill_show_gstin && shopDetails.gst_number ? `<div class="info-row"><span class="info-label">GSTIN</span><span class="info-value">${shopDetails.gst_number}</span></div>` : '')
+                        .replace(/\{\{FSSAI_HTML\}\}/g, billTemplate.bill_show_fssai && shopDetails.fssai_license ? `<div class="info-row"><span class="info-label">FSSAI</span><span class="info-value">${shopDetails.fssai_license}</span></div>` : '')
+                        .replace(/\{\{GSTIN_FSSAI_SEP\}\}/g, '')
+                        .replace(/\{\{BILL_FOOTER_TEXT\}\}/g, billTemplate.bill_footer_text || 'Thank You!')
+                        .replace(/\{\{BILL_TERMS\}\}/g, billTemplate.bill_terms || '')
+                        .replace(/\{\{UPI_HTML\}\}/g, billTemplate.bill_show_upi && shopDetails.upi_id ? `<div style="text-align:center;font-size:9px;">UPI: ${shopDetails.upi_id}</div>` : '')
+                        .replace(/<!-- IF \w+ -->/g, '').replace(/<!-- ENDIF -->/g, '')
+                      }
+                      className="w-full min-h-[500px] bg-white"
+                      title="Custom Receipt Preview"
+                      sandbox="allow-same-origin"
+                    />
                   </div>
-                  <div className="flex justify-between"><span>Paneer Tikka</span><span>2</span><span>₹180</span><span className="font-semibold">₹360</span></div>
-                  <div className="flex justify-between"><span>Butter Naan</span><span>4</span><span>₹40</span><span className="font-semibold">₹160</span></div>
-                  <div className="flex justify-between"><span>Lassi</span><span>2</span><span>₹60</span><span className="font-semibold">₹120</span></div>
-                  <div className="border-t border-dashed border-gray-400 my-2" />
-                  <div className="flex justify-between"><span>Sub Total</span><span>₹640.00</span></div>
-                  <div className="flex justify-between"><span>GST ({billingSettings.gst_rate}%)</span><span>₹32.00</span></div>
-                  <div className="border-t-2 border-black my-2" />
-                  <div className="flex justify-between font-bold text-sm"><span>TOTAL</span><span>₹672.00</span></div>
-                  <div className="border-t-2 border-black my-2" />
-                  <div className="text-center font-bold text-emerald-600 tracking-widest text-xs">✓ PAID</div>
-                  <div className="border-t border-dashed border-gray-400 my-2" />
-                  {billTemplate.bill_show_gstin && shopDetails.gst_number && (
-                    <div className="flex justify-between text-[9px]"><span className="text-gray-500">GSTIN</span><span>{shopDetails.gst_number}</span></div>
-                  )}
-                  {billTemplate.bill_show_fssai && shopDetails.fssai_license && (
-                    <div className="flex justify-between text-[9px]"><span className="text-gray-500">FSSAI</span><span>{shopDetails.fssai_license}</span></div>
-                  )}
-                  {(billTemplate.bill_show_gstin && shopDetails.gst_number) || (billTemplate.bill_show_fssai && shopDetails.fssai_license) ? <div className="border-t border-dashed border-gray-400 my-2" /> : null}
-                  <div className="text-center font-bold text-xs mt-1">{billTemplate.bill_footer_text || 'Thank You!'}</div>
-                  <div className="text-center text-[8px] text-gray-400 tracking-[3px] my-1">********************************</div>
-                  {billTemplate.bill_terms && <div className="text-center text-[8px] text-gray-500">{billTemplate.bill_terms}</div>}
-                  {billTemplate.bill_show_upi && shopDetails.upi_id && (
-                    <>
-                      <div className="border-t border-dashed border-gray-400 my-2" />
-                      <div className="text-center text-[9px] text-gray-600">UPI: {shopDetails.upi_id}</div>
-                    </>
-                  )}
-                  <div className="text-center text-[7px] text-gray-400 mt-2">Computer generated receipt</div>
-                </div>
+                ) : (
+                  <div className="bg-white border border-border rounded-lg p-4 max-w-[320px] mx-auto font-mono text-[10px] leading-relaxed text-black shadow-sm">
+                    <div className="text-center font-bold text-sm uppercase tracking-wide">{shopDetails.shop_name || 'Shop Name'}</div>
+                    {shopDetails.address && <div className="text-center text-[9px] text-gray-500">{shopDetails.address}</div>}
+                    {shopDetails.phone && <div className="text-center text-[9px] text-gray-500">Tel: {shopDetails.phone}</div>}
+                    {billTemplate.bill_header_text && <div className="text-center text-[9px] text-gray-600 mt-0.5">{billTemplate.bill_header_text}</div>}
+                    <div className="border-t border-dashed border-gray-400 my-2" />
+                    <div className="text-center font-bold text-xs tracking-widest">CASH RECEIPT</div>
+                    <div className="border-t border-dashed border-gray-400 my-2" />
+                    <div className="flex justify-between"><span className="text-gray-500">Receipt #</span><span className="font-semibold">20260308-0001</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Date</span><span>08/03/2026</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Time</span><span>02:30 PM</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Type</span><span>Dine-In / Table 3</span></div>
+                    <div className="border-t-2 border-black my-2" />
+                    <div className="flex justify-between font-bold text-[9px] uppercase tracking-wide border-b border-black pb-1 mb-1">
+                      <span>Item</span><span>Qty</span><span>Rate</span><span>Amt</span>
+                    </div>
+                    <div className="flex justify-between"><span>Paneer Tikka</span><span>2</span><span>₹180</span><span className="font-semibold">₹360</span></div>
+                    <div className="flex justify-between"><span>Butter Naan</span><span>4</span><span>₹40</span><span className="font-semibold">₹160</span></div>
+                    <div className="flex justify-between"><span>Lassi</span><span>2</span><span>₹60</span><span className="font-semibold">₹120</span></div>
+                    <div className="border-t border-dashed border-gray-400 my-2" />
+                    <div className="flex justify-between"><span>Sub Total</span><span>₹640.00</span></div>
+                    <div className="flex justify-between"><span>GST ({billingSettings.gst_rate}%)</span><span>₹32.00</span></div>
+                    <div className="border-t-2 border-black my-2" />
+                    <div className="flex justify-between font-bold text-sm"><span>TOTAL</span><span>₹672.00</span></div>
+                    <div className="border-t-2 border-black my-2" />
+                    <div className="text-center font-bold text-emerald-600 tracking-widest text-xs">✓ PAID</div>
+                    <div className="border-t border-dashed border-gray-400 my-2" />
+                    {billTemplate.bill_show_gstin && shopDetails.gst_number && (
+                      <div className="flex justify-between text-[9px]"><span className="text-gray-500">GSTIN</span><span>{shopDetails.gst_number}</span></div>
+                    )}
+                    {billTemplate.bill_show_fssai && shopDetails.fssai_license && (
+                      <div className="flex justify-between text-[9px]"><span className="text-gray-500">FSSAI</span><span>{shopDetails.fssai_license}</span></div>
+                    )}
+                    {(billTemplate.bill_show_gstin && shopDetails.gst_number) || (billTemplate.bill_show_fssai && shopDetails.fssai_license) ? <div className="border-t border-dashed border-gray-400 my-2" /> : null}
+                    <div className="text-center font-bold text-xs mt-1">{billTemplate.bill_footer_text || 'Thank You!'}</div>
+                    <div className="text-center text-[8px] text-gray-400 tracking-[3px] my-1">********************************</div>
+                    {billTemplate.bill_terms && <div className="text-center text-[8px] text-gray-500">{billTemplate.bill_terms}</div>}
+                    {billTemplate.bill_show_upi && shopDetails.upi_id && (
+                      <>
+                        <div className="border-t border-dashed border-gray-400 my-2" />
+                        <div className="text-center text-[9px] text-gray-600">UPI: {shopDetails.upi_id}</div>
+                      </>
+                    )}
+                    <div className="text-center text-[7px] text-gray-400 mt-2">Computer generated receipt</div>
+                  </div>
+                )}
               </div>
 
-              <Button onClick={handleSaveBillTemplate} disabled={isSaving}>
-                {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Save Bill Template'}
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleSaveBillTemplate} disabled={isSaving}>
+                  {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Save Bill Template'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

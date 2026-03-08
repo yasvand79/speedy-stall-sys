@@ -263,28 +263,28 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
                             <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
                           </div>
                         )}
-                        <div className="flex items-center justify-between gap-1 p-2.5">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1">
-                              <Badge
-                                variant="outline"
-                                className={
-                                  item.category === 'veg'
-                                    ? 'h-3.5 w-3.5 p-0 border-green-500 bg-green-50 flex-shrink-0'
-                                    : item.category === 'non-veg'
-                                    ? 'h-3.5 w-3.5 p-0 border-red-500 bg-red-50 flex-shrink-0'
-                                    : 'hidden'
-                                }
-                              >
-                                <span className={`h-1.5 w-1.5 rounded-full ${item.category === 'veg' ? 'bg-green-500' : 'bg-red-500'}`} />
-                              </Badge>
-                              <span className="font-medium text-sm truncate">{item.name}</span>
-                            </div>
-                            <p className="text-sm font-semibold text-primary mt-0.5">₹{Number(item.price).toFixed(0)}</p>
+                        <div className="p-2.5">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <Badge
+                              variant="outline"
+                              className={
+                                item.category === 'veg'
+                                  ? 'h-3.5 w-3.5 p-0 border-green-500 bg-green-50 flex-shrink-0'
+                                  : item.category === 'non-veg'
+                                  ? 'h-3.5 w-3.5 p-0 border-red-500 bg-red-50 flex-shrink-0'
+                                  : 'hidden'
+                              }
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full ${item.category === 'veg' ? 'bg-green-500' : 'bg-red-500'}`} />
+                            </Badge>
+                            <span className="font-medium text-sm leading-tight line-clamp-2 break-words">{item.name}</span>
                           </div>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0">
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-sm font-semibold text-primary">₹{Number(item.price).toFixed(0)}</p>
+                            <Button size="icon" variant="ghost" className="h-6 w-6 flex-shrink-0">
+                              <Plus className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

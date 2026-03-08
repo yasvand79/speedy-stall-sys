@@ -544,10 +544,16 @@ export default function Menu() {
                           </div>
                         )}
 
-                        {/* Branch admin controls - only price editing */}
+                        {/* Branch admin controls - availability toggle + price editing */}
                         {canEditBranchPrices && (
                           <div className="flex items-center justify-between pt-2 border-t">
-                            <span className="text-sm text-muted-foreground">Branch pricing</span>
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={item.is_available ?? true}
+                                onCheckedChange={() => handleToggleAvailability(item.id, item.is_available ?? true)}
+                              />
+                              <span className="text-sm">{item.is_available ? 'Available' : 'Unavailable'}</span>
+                            </div>
                             <Button 
                               size="sm" 
                               variant="outline" 

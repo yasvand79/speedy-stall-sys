@@ -56,10 +56,9 @@ export default function Staff() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [staffToRemove, setStaffToRemove] = useState<StaffMember | null>(null);
   
-  // Add staff form state
+  const [newStaffEmail, setNewStaffEmail] = useState('');
   const [newStaffRole, setNewStaffRole] = useState<AppRole>('billing');
   const [newStaffBranch, setNewStaffBranch] = useState<string>('');
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
 
   // Branch admins only see their branch's staff
   const branchFilterId = isBranchAdmin ? profile?.branch_id : undefined;

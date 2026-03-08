@@ -42,7 +42,7 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
 
   const { data: menuItems, isLoading } = useMenuItems();
   const { branches, activeBranches } = useBranches();
-  const { profile, isDeveloper, isCentralAdmin } = useAuth();
+  const { profile, isAdmin } = useAuth();
   const { settings } = useShopSettings();
   const createOrder = useCreateOrder();
 

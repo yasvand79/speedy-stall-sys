@@ -88,7 +88,25 @@ export function PaymentDialog({
       await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
     }
 
+    notifyCustomerDisplay();
     setStep('success');
+  };
+
+  const notifyCustomerDisplay = () => {
+    if (customerWindowRef.current && !customerWindowRef.current.closed) {
+      customerWindowRef.current.postMessage({ type: 'PAYMENT_CONFIRMED' }, '*');
+    }
+  };
+
+  const openCustomerDisplay = () => {
+    const params = new URLSearchParams({
+      amount: paymentAmount.toFixed(2),
+      upiUrl,
+      shop: shopName,
+      order: orderNumber,
+    });
+    const url = `/customer-display?${params.toString()}`;
+    customerWindowRef.current = window.open(url, 'customer-display', 'width=600,height=800');
   };
 
   const handleMarkUpiPaid = async () => {

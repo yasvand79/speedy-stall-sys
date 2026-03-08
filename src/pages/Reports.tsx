@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   useDailySales, useTopSellingItems, useWeeklyRevenue,
   useOrdersAnalytics, usePaymentAnalytics, useCategorySales,
-  useStaffSales, useInventoryStatus, useDateRange,
+  useStaffSales, useDateRange,
 } from '@/hooks/useReports';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,

@@ -51,6 +51,14 @@ export function useStaff(options?: UseStaffOptions) {
 
       if (rolesError) throw rolesError;
 
+      // Fetch emails via secure function
+      const userIds = profiles.map(p => p.user_id);
+      const { data: emailData } = await supabase.rpc('get_staff_emails', { user_ids: userIds });
+      const emailMap = new Map<string, string>();
+      if (emailData) {
+        (emailData as { user_id: string; email: string }[]).forEach(e => emailMap.set(e.user_id, e.email));
+      }
+
       // Map profiles with their roles
       const staffMembers: StaffMember[] = profiles.map(profile => {
         const userRole = roles.find(r => r.user_id === profile.user_id);
@@ -58,7 +66,7 @@ export function useStaff(options?: UseStaffOptions) {
           id: profile.id,
           userId: profile.user_id,
           fullName: profile.full_name || 'Unknown',
-          email: `${profile.user_id.substring(0, 8)}...`, // Truncated user ID as placeholder
+          email: emailMap.get(profile.user_id) || 'N/A',
           phone: profile.phone,
           role: userRole?.role || 'billing',
           isActive: profile.is_active ?? true,

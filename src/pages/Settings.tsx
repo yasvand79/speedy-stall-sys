@@ -56,6 +56,15 @@ export default function Settings() {
       setBillingSettings({
         gst_rate: settings.gst_rate || 5,
       });
+      const s = settings as any;
+      setBillTemplate({
+        bill_header_text: s.bill_header_text || '',
+        bill_footer_text: s.bill_footer_text || 'Thank You! Visit us again',
+        bill_terms: s.bill_terms || '',
+        bill_show_gstin: s.bill_show_gstin ?? true,
+        bill_show_fssai: s.bill_show_fssai ?? true,
+        bill_show_upi: s.bill_show_upi ?? true,
+      });
     }
   }, [settings]);
 

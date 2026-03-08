@@ -115,6 +115,7 @@ export default function Auth() {
       setSignupEmail('');
       setSignupPassword('');
       setSignupName('');
+      setSignupPhone('');
     }
     setIsSubmitting(false);
   };

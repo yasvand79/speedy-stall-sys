@@ -102,7 +102,7 @@ export default function Auth() {
       return;
     }
     
-    const { error } = await signUp(signupEmail, signupPassword, signupName);
+    const { error } = await signUp(signupEmail, signupPassword, signupName, signupPhone);
     
     if (error) {
       if (error.message.includes('already registered')) {

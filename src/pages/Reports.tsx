@@ -83,7 +83,7 @@ export default function Reports() {
   const { data: categorySales } = useCategorySales(start, end);
   const { data: staffSales } = useStaffSales(start, end);
   const { data: customerData } = useCustomerAnalytics(start, end);
-  const { data: shopSettings } = useShopSettings();
+  const { settings: shopSettings } = useShopSettings();
 
   const isLoading = dailyLoading || weeklyLoading || ordersLoading;
 

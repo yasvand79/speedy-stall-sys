@@ -1345,6 +1345,80 @@ export default function Reports() {
 
 
 
+        {/* ═══════ ROW 6: BRANCH COMPARISON ═══════ */}
+        {branchComparison.length > 1 && (
+          <Card>
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="font-display text-sm flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" /> Branch Comparison
+              </CardTitle>
+              <p className="text-[10px] text-muted-foreground">Side-by-side performance across all branches</p>
+            </CardHeader>
+            <CardContent className="px-3 pb-4 space-y-4">
+              {/* Revenue Bar Chart */}
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={branchComparison} margin={{ left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.5} />
+                    <XAxis dataKey="name" className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} />
+                    <YAxis className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(value: number, name: string) => [
+                      name === 'revenue' ? `₹${value.toLocaleString()}` : name === 'avgOrder' ? `₹${Math.round(value)}` : value,
+                      name === 'revenue' ? 'Revenue' : name === 'avgOrder' ? 'Avg Order' : name === 'completed' ? 'Completed' : name
+                    ]} />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                    <Bar dataKey="revenue" name="Revenue" fill="hsl(24,95%,53%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="completed" name="Completed" fill="hsl(142,72%,42%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="cancelled" name="Cancelled" fill="hsl(0,84%,60%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Detailed Table */}
+              <ScrollArea className="max-h-[300px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[10px] font-semibold">Branch</TableHead>
+                      <TableHead className="text-[10px] font-semibold text-right">Revenue</TableHead>
+                      <TableHead className="text-[10px] font-semibold text-right">Orders</TableHead>
+                      <TableHead className="text-[10px] font-semibold text-right">Avg Order</TableHead>
+                      <TableHead className="text-[10px] font-semibold text-right">Completion</TableHead>
+                      <TableHead className="text-[10px] font-semibold text-right">Dine-in</TableHead>
+                      <TableHead className="text-[10px] font-semibold text-right">Takeaway</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {branchComparison.map((b, i) => {
+                      const isTop = i === 0;
+                      return (
+                        <TableRow key={b.id} className={isTop ? 'bg-primary/5' : ''}>
+                          <TableCell className="text-xs font-medium">
+                            <div className="flex items-center gap-1.5">
+                              {isTop && <Star className="h-3 w-3 text-warning fill-warning" />}
+                              {b.name}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-right font-display font-bold">₹{b.revenue.toLocaleString()}</TableCell>
+                          <TableCell className="text-xs text-right">{b.orders}</TableCell>
+                          <TableCell className="text-xs text-right">₹{Math.round(b.avgOrder)}</TableCell>
+                          <TableCell className="text-xs text-right">
+                            <Badge variant={b.completionRate >= 80 ? 'default' : b.completionRate >= 50 ? 'secondary' : 'destructive'} className="text-[9px] px-1.5 py-0">
+                              {b.completionRate.toFixed(0)}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-right">{b.dineIn}</TableCell>
+                          <TableCell className="text-xs text-right">{b.takeaway}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
+
         {/* ═══════ ROW 7: AI BUSINESS INSIGHTS ═══════ */}
         <InsightsSection
           metrics={metrics}

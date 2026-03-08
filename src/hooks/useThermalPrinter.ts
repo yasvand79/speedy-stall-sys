@@ -496,7 +496,10 @@ export function useThermalPrinter() {
       return true;
     } catch (e: any) {
       console.error('Print error:', e);
-      toast.error('Print failed: ' + (e.message || 'Unknown error'));
+      setPrinterError({
+        title: '🖨️ Print Failed',
+        message: e.message || 'An unknown error occurred while printing. Please check your printer and try again.',
+      });
       setIsPrinting(false);
       return false;
     }

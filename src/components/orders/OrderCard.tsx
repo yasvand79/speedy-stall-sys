@@ -58,12 +58,6 @@ export function OrderCard({ order, onStatusChange }: OrderCardProps) {
       <CardContent className="space-y-4">
         {/* Customer Info */}
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          {order.tableNumber && (
-            <span className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              Table {order.tableNumber}
-            </span>
-          )}
           {order.customerName && (
             <span className="flex items-center gap-1">
               <Phone className="h-4 w-4" />

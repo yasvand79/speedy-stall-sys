@@ -33,7 +33,7 @@ interface NewOrderDialogProps {
 export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
   const [open, setOpen] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>('dine-in');
-  const [tableNumber, setTableNumber] = useState('');
+  
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -101,16 +101,12 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
       return;
     }
 
-    if (orderType === 'dine-in' && !tableNumber) {
-      toast.error('Please enter table number for dine-in orders');
-      return;
-    }
 
     const selectedBranch = branches?.find(b => b.id === selectedBranchId);
 
     await createOrder.mutateAsync({
       type: orderType,
-      table_number: orderType === 'dine-in' ? parseInt(tableNumber) : undefined,
+      table_number: undefined,
       customer_name: customerName || undefined,
       customer_phone: customerPhone || undefined,
       notes: notes || undefined,
@@ -126,7 +122,7 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
 
     // Reset form
     setCart([]);
-    setTableNumber('');
+    
     setCustomerName('');
     setCustomerPhone('');
     setNotes('');
@@ -144,17 +140,17 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Create New Order</DialogTitle>
         </DialogHeader>
 
-        <div className="flex gap-4 flex-1 min-h-0">
+        <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0 overflow-auto">
           {/* Left: Menu Items */}
           <div className="flex-1 min-h-0 flex flex-col">
             {/* Branch Selection */}
             <div className="mb-4 p-3 bg-muted/50 rounded-lg border">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="branch" className="flex items-center gap-1 mb-1.5">
                     <Building2 className="h-3.5 w-3.5" />
@@ -209,20 +205,8 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
               </TabsList>
             </Tabs>
 
-            {orderType === 'dine-in' && (
-              <div className="mb-4">
-                <Label htmlFor="table">Table Number *</Label>
-                <Input
-                  id="table"
-                  type="number"
-                  placeholder="Enter table number"
-                  value={tableNumber}
-                  onChange={(e) => setTableNumber(e.target.value)}
-                />
-              </div>
-            )}
 
-            <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
               <div>
                 <Label htmlFor="name">Customer Name</Label>
                 <Input
@@ -293,7 +277,7 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
           </div>
 
           {/* Right: Cart */}
-          <div className="w-72 flex flex-col border rounded-lg p-4 bg-muted/30">
+          <div className="w-full md:w-72 flex flex-col border rounded-lg p-4 bg-muted/30">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5" />

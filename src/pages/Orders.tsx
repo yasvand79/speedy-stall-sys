@@ -283,7 +283,7 @@ export default function Orders() {
                     <div className="flex flex-wrap gap-1.5">
                       <Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0.5">
                         {order.type === 'dine-in' ? (
-                          <><UtensilsCrossed className="h-3 w-3" /> Table {order.table_number}</>
+                          <><UtensilsCrossed className="h-3 w-3" /> Dine-in</>
                         ) : (
                           <><Package className="h-3 w-3" /> Takeaway</>
                         )}

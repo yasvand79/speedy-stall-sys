@@ -18,8 +18,8 @@ import {
   Building2, User, UtensilsCrossed, Printer, Package,
   ArrowRight, Hash, CreditCard, Loader2, CheckCircle
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
-import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 

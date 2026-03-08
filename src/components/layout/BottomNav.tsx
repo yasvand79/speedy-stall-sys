@@ -29,6 +29,7 @@ const bottomNavItems = [
   { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['branch_admin', 'billing'] },
   { name: 'Billing', href: '/billing', icon: Receipt, roles: ['branch_admin', 'billing'] },
   { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin'] },
+
 ];
 
 const moreMenuItems = [
@@ -36,7 +37,7 @@ const moreMenuItems = [
   { name: 'Branches', href: '/branches', icon: Building2, roles: ['admin'] },
   { name: 'Staff', href: '/staff', icon: Users, roles: ['admin', 'branch_admin'] },
   { name: 'Performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
-  { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['admin'] },
+  { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['admin', 'branch_admin'] },
   { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
   { name: 'Profile', href: '/profile', icon: UserCircle },
 ];

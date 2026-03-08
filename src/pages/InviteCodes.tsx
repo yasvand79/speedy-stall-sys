@@ -27,19 +27,20 @@ const roleLabels: Record<string, string> = {
 const branchRequiredRoles: AppRole[] = ['branch_admin', 'billing'];
 
 export default function InviteCodes() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isBranchAdmin, profile } = useAuth();
   const { invitations, isLoading, createInvitation, revokeInvitation, isCreating } = useStaffInvitations();
   const { branches } = useBranches();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<AppRole>('billing');
-  const [newBranchId, setNewBranchId] = useState<string>('');
+  const [newBranchId, setNewBranchId] = useState<string>(isBranchAdmin && profile?.branch_id ? profile.branch_id : '');
 
-  const canManage = isAdmin;
+  const canManage = isAdmin || isBranchAdmin;
   const requiresBranch = branchRequiredRoles.includes(newRole);
 
-  const availableRoles: AppRole[] = ['admin', 'branch_admin', 'billing'];
+  // Branch admin can only add billing staff; admin can add any role
+  const availableRoles: AppRole[] = isBranchAdmin ? ['billing'] : ['admin', 'branch_admin', 'billing'];
 
   const handleCreate = async () => {
     if (!newEmail.trim()) {
@@ -52,10 +53,15 @@ export default function InviteCodes() {
     }
 
     try {
+      // Branch admin always assigns to their own branch
+      const branchId = isBranchAdmin && profile?.branch_id
+        ? profile.branch_id
+        : (requiresBranch ? newBranchId : undefined);
+
       await createInvitation({
         email: newEmail,
         role: newRole,
-        branchId: requiresBranch ? newBranchId : undefined,
+        branchId,
       });
       setIsDialogOpen(false);
       setNewEmail('');
@@ -129,7 +135,7 @@ export default function InviteCodes() {
                   </Select>
                 </div>
 
-                {requiresBranch && (
+                {requiresBranch && !isBranchAdmin && (
                   <div className="space-y-2">
                     <Label>Branch</Label>
                     <Select value={newBranchId} onValueChange={setNewBranchId}>

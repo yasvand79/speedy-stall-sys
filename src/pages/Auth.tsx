@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,9 +58,9 @@ export default function Auth() {
         toast.error(error.message);
       }
     } else if (status === 'pending') {
-      toast.info('Your account is pending approval. Please wait for an admin to approve your registration.');
+      toast.error('Your email is not authorized. Please contact your admin to get access.');
     } else if (status === 'rejected') {
-      toast.error('Your registration was rejected. Please contact an administrator.');
+      toast.error('Your access has been revoked. Please contact an administrator.');
     } else {
       toast.success('Welcome back!');
       navigate('/');
@@ -85,8 +86,22 @@ export default function Auth() {
     }
 
     setIsSubmitting(true);
+
+    // Check if email is pre-authorized before signing up
+    const { data: invitation } = await supabase
+      .from('staff_invitations')
+      .select('id')
+      .eq('email', signupEmail.toLowerCase().trim())
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (!invitation) {
+      toast.error('Your email is not authorized. Ask your admin to add your email first.');
+      setIsSubmitting(false);
+      return;
+    }
     
-    const { error, autoApproved } = await signUp(signupEmail, signupPassword, signupName);
+    const { error } = await signUp(signupEmail, signupPassword, signupName);
     
     if (error) {
       if (error.message.includes('already registered')) {
@@ -95,11 +110,7 @@ export default function Auth() {
         toast.error(error.message);
       }
     } else {
-      if (autoApproved) {
-        toast.success('Registration successful! You can now log in.', { duration: 5000 });
-      } else {
-        toast.success('Registration submitted! Waiting for admin approval.', { duration: 5000 });
-      }
+      toast.success('Account created! Please check your email to verify, then login.', { duration: 5000 });
       setSignupEmail('');
       setSignupPassword('');
       setSignupName('');
@@ -120,37 +131,16 @@ export default function Auth() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center space-y-4">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-amber-500">
-              <Clock className="h-8 w-8 text-white" />
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-destructive">
+              <Clock className="h-8 w-8 text-destructive-foreground" />
             </div>
             <div>
-              <CardTitle className="font-display text-2xl">
-                {profile.status === 'pending' ? 'Approval Pending' : 'Registration Rejected'}
-              </CardTitle>
+              <CardTitle className="font-display text-2xl">Access Not Authorized</CardTitle>
               <CardDescription>
-                {profile.status === 'pending'
-                  ? 'Your registration is waiting for admin approval.'
-                  : 'Your registration was rejected. Please contact an administrator.'}
+                Your email is not authorized to access this system. Please contact your admin.
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground mb-4">
-              {profile.status === 'pending'
-                ? 'You will be able to login once an admin approves your account.'
-                : 'If you believe this was a mistake, please reach out to your organization admin.'}
-            </p>
-            <Button 
-              variant="outline" 
-              onClick={async () => {
-                const { signOut } = useAuth();
-                await signOut();
-                window.location.reload();
-              }}
-            >
-              Sign Out
-            </Button>
-          </CardContent>
         </Card>
       </div>
     );
@@ -218,7 +208,7 @@ export default function Auth() {
                 <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
                   <Info className="h-4 w-4 text-blue-600" />
                   <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm">
-                    If your admin has invited you by email, you'll be approved automatically. Otherwise, your registration will require admin approval.
+                    Only pre-authorized emails can sign up. Ask your admin to add your email in Staff Access.
                   </AlertDescription>
                 </Alert>
 

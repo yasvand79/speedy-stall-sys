@@ -27,7 +27,42 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert at analyzing bill/receipt/invoice templates from images. Extract the layout details and text content from the uploaded receipt image. Identify: shop name, address, phone, header tagline text (appears below shop name), footer message (thank you text), terms/notes, GST number, FSSAI license number, and UPI ID. If a field is not visible in the image, return an empty string for text fields. For boolean fields, return true if the element appears to be shown on the receipt, false otherwise.`,
+            content: `You are an expert receipt/bill template designer. Analyze the uploaded bill/receipt image and:
+1. Extract all text fields (shop name, address, phone, header text, footer, terms, GST number, FSSAI license, UPI ID)
+2. Generate a COMPLETE HTML receipt template that visually matches the uploaded image's layout, typography, spacing, and style.
+
+The HTML template MUST use these exact placeholders that will be replaced with real data:
+- {{SHOP_NAME}} - Shop name
+- {{SHOP_ADDRESS}} - Shop address  
+- {{SHOP_PHONE}} - Phone number
+- {{BRANCH_NAME}} - Branch name
+- {{BILL_HEADER_TEXT}} - Header tagline
+- {{ORDER_NUMBER}} - Receipt/order number
+- {{DATE}} - Date string
+- {{TIME}} - Time string
+- {{ORDER_TYPE}} - Dine-In/Takeaway with table number
+- {{CUSTOMER_NAME}} - Customer name (wrap in conditional: <!-- IF CUSTOMER_NAME -->...<!-- ENDIF -->)
+- {{CUSTOMER_PHONE}} - Customer phone (wrap in conditional: <!-- IF CUSTOMER_PHONE -->...<!-- ENDIF -->)
+- {{STAFF_NAME}} - Cashier name (wrap in conditional: <!-- IF STAFF_NAME -->...<!-- ENDIF -->)
+- {{ITEMS_HTML}} - Table rows for items (will be <tr> elements with classes: item-name, item-qty, item-rate, item-amt)
+- {{TOTAL_ITEMS}} - Total item count
+- {{SUBTOTAL}} - Subtotal amount
+- {{GST_RATE}} - GST percentage
+- {{GST_AMOUNT}} - GST amount
+- {{DISCOUNT_HTML}} - Discount row (already wrapped in conditional)
+- {{TOTAL}} - Grand total
+- {{PAYMENT_STATUS_CLASS}} - CSS class: payment-paid or payment-pending
+- {{PAYMENT_STATUS_TEXT}} - Text: ✓ PAID or ⏳ PAYMENT PENDING
+- {{GSTIN_HTML}} - GSTIN display (already wrapped in conditional)
+- {{FSSAI_HTML}} - FSSAI display (already wrapped in conditional)
+- {{GSTIN_FSSAI_SEP}} - Separator after GSTIN/FSSAI (conditional)
+- {{BILL_FOOTER_TEXT}} - Footer message
+- {{BILL_TERMS}} - Terms (wrap in conditional: <!-- IF BILL_TERMS -->...<!-- ENDIF -->)
+- {{UPI_HTML}} - UPI display (already wrapped in conditional)
+
+The template must be a complete HTML document with <html>, <head> with <style>, and <body>.
+Use 80mm thermal printer width. Include @page { size: 80mm auto; margin: 0; }
+Use monospace fonts. Match the visual style of the uploaded image exactly.`,
           },
           {
             role: "user",
@@ -40,7 +75,7 @@ serve(async (req) => {
               },
               {
                 type: "text",
-                text: "Analyze this bill/receipt template and extract all the fields using the tool provided.",
+                text: "Analyze this bill/receipt template. Extract text fields AND generate a complete HTML template matching this exact design. Use the placeholders specified in the system prompt.",
               },
             ],
           },
@@ -50,7 +85,7 @@ serve(async (req) => {
             type: "function",
             function: {
               name: "extract_bill_template",
-              description: "Extract bill/receipt template fields from the analyzed image",
+              description: "Extract bill template fields and generate matching HTML template",
               parameters: {
                 type: "object",
                 properties: {
@@ -60,17 +95,18 @@ serve(async (req) => {
                   gst_number: { type: "string", description: "GST/GSTIN number" },
                   fssai_license: { type: "string", description: "FSSAI license number" },
                   upi_id: { type: "string", description: "UPI payment ID" },
-                  bill_header_text: { type: "string", description: "Tagline or header text below shop name (e.g. Pure Veg | Since 2010)" },
-                  bill_footer_text: { type: "string", description: "Footer/thank you message on the receipt" },
-                  bill_terms: { type: "string", description: "Terms, conditions, or notes on the receipt" },
-                  bill_show_gstin: { type: "boolean", description: "Whether GSTIN is displayed on the receipt" },
-                  bill_show_fssai: { type: "boolean", description: "Whether FSSAI license is displayed on the receipt" },
-                  bill_show_upi: { type: "boolean", description: "Whether UPI ID is displayed on the receipt" },
+                  bill_header_text: { type: "string", description: "Tagline or header text below shop name" },
+                  bill_footer_text: { type: "string", description: "Footer/thank you message" },
+                  bill_terms: { type: "string", description: "Terms, conditions, or notes" },
+                  bill_show_gstin: { type: "boolean", description: "Whether GSTIN is displayed" },
+                  bill_show_fssai: { type: "boolean", description: "Whether FSSAI license is displayed" },
+                  bill_show_upi: { type: "boolean", description: "Whether UPI ID is displayed" },
+                  custom_bill_html: { type: "string", description: "Complete HTML document for the receipt template matching the uploaded image design, using the specified placeholders" },
                 },
                 required: [
                   "shop_name", "address", "phone", "gst_number", "fssai_license",
                   "upi_id", "bill_header_text", "bill_footer_text", "bill_terms",
-                  "bill_show_gstin", "bill_show_fssai", "bill_show_upi",
+                  "bill_show_gstin", "bill_show_fssai", "bill_show_upi", "custom_bill_html",
                 ],
                 additionalProperties: false,
               },

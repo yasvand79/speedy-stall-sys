@@ -228,8 +228,6 @@ export default function Staff() {
                     {isCreating ? 'Inviting...' : 'Send Invitation'}
                   </Button>
                 </DialogFooter>
-                  )}
-                </DialogFooter>
               </DialogContent>
             </Dialog>
           )}

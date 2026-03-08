@@ -26,7 +26,7 @@ import { useShopSettings } from '@/hooks/useShopSettings';
 const COLORS = ['hsl(24,95%,53%)', 'hsl(142,72%,42%)', 'hsl(217,91%,60%)', 'hsl(280,65%,60%)', 'hsl(45,93%,47%)'];
 const HEATMAP_COLORS = ['hsl(var(--muted))', 'hsl(24,95%,90%)', 'hsl(24,95%,75%)', 'hsl(24,95%,60%)', 'hsl(24,95%,45%)'];
 
-type DateRange = 'today' | '7d' | '30d';
+type DateRange = 'today' | '7d' | '30d' | '6m' | 'all';
 
 function useCustomerAnalytics(start: Date, end: Date) {
   return useQuery({

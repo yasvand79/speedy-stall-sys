@@ -492,52 +492,6 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        {/* ─── Inventory Status ─── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-display text-base flex items-center gap-2">
-              <Package className="h-4 w-4" /> Inventory Status
-              {lowStockItems.length > 0 && (
-                <Badge variant="destructive" className="text-xs">{lowStockItems.length} low stock</Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {inventory && inventory.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead className="text-right">Stock</TableHead>
-                      <TableHead className="text-right">Min Qty</TableHead>
-                      <TableHead className="text-right">Cost/Unit</TableHead>
-                      <TableHead className="text-right">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inventory.map(item => {
-                      const isLow = Number(item.quantity) <= Number(item.min_quantity);
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
-                          <TableCell className="text-right">{item.min_quantity}</TableCell>
-                          <TableCell className="text-right">₹{Number(item.cost_per_unit).toLocaleString()}</TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant={isLow ? 'destructive' : 'secondary'} className="text-xs">
-                              {isLow ? 'Low Stock' : 'OK'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : <p className="text-center py-6 text-muted-foreground">No inventory data</p>}
-          </CardContent>
-        </Card>
       </div>
     </MainLayout>
   );

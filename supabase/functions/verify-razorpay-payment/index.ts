@@ -16,11 +16,8 @@ async function verifySignature(
   const data = `${razorpayOrderId}|${razorpayPaymentId}`;
   
   const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
+    'raw', encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );
   
   const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
@@ -37,6 +34,25 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const RAZORPAY_KEY_ID = Deno.env.get('RAZORPAY_KEY_ID');
     const RAZORPAY_KEY_SECRET = Deno.env.get('RAZORPAY_KEY_SECRET');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -45,43 +61,44 @@ serve(async (req) => {
       throw new Error('Razorpay secret not configured');
     }
 
-    const { 
-      razorpayOrderId, 
-      razorpayPaymentId, 
-      razorpaySignature,
-      orderId,
-      amount 
-    } = await req.json();
-
-    console.log('Verifying Razorpay payment:', razorpayPaymentId, 'for order:', orderId);
+    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId } = await req.json();
 
     // Verify signature
-    const isValid = await verifySignature(
-      razorpayOrderId,
-      razorpayPaymentId,
-      razorpaySignature,
-      RAZORPAY_KEY_SECRET
-    );
+    const isValid = await verifySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature, RAZORPAY_KEY_SECRET);
 
     if (!isValid) {
-      console.error('Invalid Razorpay signature');
       throw new Error('Payment verification failed - invalid signature');
     }
 
-    console.log('Signature verified successfully');
+    // Fetch actual payment amount from Razorpay API instead of trusting client
+    const auth = btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`);
+    const paymentResponse = await fetch(`https://api.razorpay.com/v1/payments/${razorpayPaymentId}`, {
+      headers: { 'Authorization': `Basic ${auth}` },
+    });
+    const paymentData = await paymentResponse.json();
+    
+    if (!paymentResponse.ok) {
+      throw new Error('Failed to verify payment amount from Razorpay');
+    }
 
-    // Create payment record
+    // Verify the Razorpay order ID matches
+    if (paymentData.order_id !== razorpayOrderId) {
+      throw new Error('Payment order ID mismatch');
+    }
+
+    const verifiedAmount = paymentData.amount / 100; // Convert paise to rupees
+
+    // Create payment record using verified amount
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
     const { error: paymentError } = await supabase.from('payments').insert({
       order_id: orderId,
-      amount: amount,
+      amount: verifiedAmount,
       method: 'upi',
       transaction_id: razorpayPaymentId,
     });
 
     if (paymentError) {
-      console.error('Error creating payment record:', paymentError);
       throw new Error('Failed to record payment');
     }
 
@@ -102,11 +119,7 @@ serve(async (req) => {
       if (totalPaid >= order.total) {
         await supabase
           .from('orders')
-          .update({ 
-            payment_status: 'completed',
-            status: 'completed',
-            completed_at: new Date().toISOString()
-          })
+          .update({ payment_status: 'completed', status: 'completed', completed_at: new Date().toISOString() })
           .eq('id', orderId);
       } else {
         await supabase
@@ -126,10 +139,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error verifying payment:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({
-      success: false,
-      error: errorMessage,
-    }), {
+    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

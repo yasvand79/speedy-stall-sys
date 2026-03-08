@@ -173,7 +173,6 @@ export default function Menu() {
       description: formData.description || null,
       price: parseFloat(formData.price),
       category: formData.category,
-      preparation_time: parseInt(formData.preparation_time) || 15,
       ingredients: formData.ingredients.split(',').map(s => s.trim()).filter(Boolean),
       is_available: true,
       image_url: imageUrl,

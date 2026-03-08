@@ -43,6 +43,7 @@ const navigation = [
   { name: 'Performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
   
   { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin'] },
+  { name: 'Activity Log', href: '/activity-log', icon: ClipboardList, roles: ['admin'] },
   { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
 ];
 

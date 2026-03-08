@@ -518,14 +518,14 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                qzStatus === 'connected' ? 'bg-emerald-100 dark:bg-emerald-900/30' :
-                qzStatus === 'connecting' ? 'bg-amber-100 dark:bg-amber-900/30' :
+                qzStatus === 'connected' ? 'bg-primary/10' :
+                qzStatus === 'connecting' ? 'bg-accent' :
                 'bg-muted'
               }`}>
                 {qzStatus === 'connected' ? (
-                  <Zap className="h-5 w-5 text-emerald-600" />
+                  <Zap className="h-5 w-5 text-primary" />
                 ) : qzStatus === 'connecting' ? (
-                  <Loader2 className="h-5 w-5 text-amber-600 animate-spin" />
+                  <Loader2 className="h-5 w-5 text-accent-foreground animate-spin" />
                 ) : (
                   <WifiOff className="h-5 w-5 text-muted-foreground" />
                 )}

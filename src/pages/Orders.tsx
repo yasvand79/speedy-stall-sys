@@ -40,11 +40,6 @@ export default function Orders() {
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<StatusTab>('active');
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState<string>('');
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewOrderId, setPreviewOrderId] = useState<string | null>(null);
-  const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
 
   const { data: orders, isLoading } = useOrders();
   const { branches } = useBranches();

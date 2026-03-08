@@ -266,7 +266,6 @@ export function useThermalPrinter() {
   const [printerName, setPrinterName] = useState<string | null>(null);
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [printerError, setPrinterError] = useState<{ title: string; message: string } | null>(null);
   const connectingRef = useRef(false);
 
   const savedPrinterName = (() => {
@@ -332,15 +331,14 @@ export function useThermalPrinter() {
       setQzStatus('error');
 
       if (e.message?.includes('Unable to connect') || e.message?.includes('ECONNREFUSED')) {
-        setPrinterError({
-          title: '🖨️ Printer Software Not Running',
-          message: 'QZ Tray is not running on your computer. Please start QZ Tray application or download it from qz.io to enable thermal printing.',
+        toast.error('QZ Tray is not running. Please start QZ Tray application.', {
+          action: {
+            label: 'Download',
+            onClick: () => window.open('https://qz.io/download/', '_blank'),
+          },
         });
       } else if (e.message?.includes('not available')) {
-        setPrinterError({
-          title: '🖨️ Printer Software Not Found',
-          message: 'QZ Tray library could not be loaded. Please check your internet connection and try again.',
-        });
+        toast.error('QZ Tray library could not be loaded. Check your internet connection.');
       }
     } finally {
       connectingRef.current = false;
@@ -376,14 +374,25 @@ export function useThermalPrinter() {
     }
 
     if (!qz.websocket.isActive()) {
-      toast.info('Connecting to printer software...');
+      toast.info('Connecting to printer software...', {
+        description: 'Make sure QZ Tray is running on your computer.',
+        action: {
+          label: 'Download QZ Tray',
+          onClick: () => window.open('https://qz.io/download/', '_blank'),
+        },
+        duration: 5000,
+      });
       await connectQZ();
     }
 
     if (!window.qz?.websocket.isActive()) {
-      setPrinterError({
-        title: '🖨️ Cannot Connect to Printer',
-        message: 'QZ Tray must be installed and running to detect printers. Please install QZ Tray from qz.io/download and restart your browser.',
+      toast.error('Cannot connect to QZ Tray', {
+        description: 'QZ Tray must be installed and running to detect printers.',
+        action: {
+          label: 'Get QZ Tray',
+          onClick: () => window.open('https://qz.io/download/', '_blank'),
+        },
+        duration: 8000,
       });
       return [];
     }
@@ -394,12 +403,13 @@ export function useThermalPrinter() {
       setAvailablePrinters(printerList);
 
       if (printerList.length === 0) {
-        setPrinterError({
-          title: '🖨️ No Printers Found',
-          message: 'No thermal printers were detected. Please make sure your printer is connected, powered on, and the correct drivers are installed.',
+        toast.warning('No printers found', {
+          description: 'Make sure your thermal printer is connected and powered on.',
         });
       } else {
-        toast.success(`Found ${printerList.length} printer(s)`);
+        toast.success(`Found ${printerList.length} printer(s)`, {
+          description: printerList.slice(0, 3).join(', ') + (printerList.length > 3 ? '...' : ''),
+        });
       }
 
       if (savedPrinterName) {
@@ -413,15 +423,18 @@ export function useThermalPrinter() {
     } catch (e: any) {
       console.error('Printer detection error:', e);
       
+      // More user-friendly error messages
       if (e.message?.includes('sendData is not a function') || e.message?.includes('websocket')) {
-        setPrinterError({
-          title: '🖨️ Printer Connection Lost',
-          message: 'The connection to QZ Tray was interrupted. Please restart QZ Tray and try again.',
+        toast.error('QZ Tray connection lost', {
+          description: 'Please restart QZ Tray and try again.',
+          action: {
+            label: 'Reconnect',
+            onClick: () => connectQZ(),
+          },
         });
       } else {
-        setPrinterError({
-          title: '🖨️ Printer Detection Failed',
-          message: e.message || 'Unable to detect printers. Please check your printer connection and try again.',
+        toast.error('Failed to detect printers', {
+          description: e.message || 'Check if your printer is connected.',
         });
       }
       return [];
@@ -452,10 +465,7 @@ export function useThermalPrinter() {
       }
 
       if (!window.qz?.websocket.isActive()) {
-        setPrinterError({
-          title: '🖨️ Printer Not Connected',
-          message: 'Cannot connect to QZ Tray. Please make sure QZ Tray is running and try printing again.',
-        });
+        toast.error('Cannot connect to QZ Tray. Falling back to browser print.');
         setIsPrinting(false);
         return false;
       }
@@ -464,10 +474,7 @@ export function useThermalPrinter() {
       if (!printer) {
         const detected = await detectPrinters();
         if (detected.length === 0) {
-          setPrinterError({
-            title: '🖨️ No Printer Found',
-            message: 'Please connect your thermal printer, power it on, and try again.',
-          });
+          toast.error('No printer found. Please check printer connection.');
           setIsPrinting(false);
           return false;
         }
@@ -476,10 +483,7 @@ export function useThermalPrinter() {
 
       const finalPrinter = targetPrinter || printerName || availablePrinters[0];
       if (!finalPrinter) {
-        setPrinterError({
-          title: '🖨️ No Printer Selected',
-          message: 'Please go to Settings > Printer Configuration and select a printer.',
-        });
+        toast.error('No printer selected.');
         setIsPrinting(false);
         return false;
       }
@@ -496,10 +500,7 @@ export function useThermalPrinter() {
       return true;
     } catch (e: any) {
       console.error('Print error:', e);
-      setPrinterError({
-        title: '🖨️ Print Failed',
-        message: e.message || 'An unknown error occurred while printing. Please check your printer and try again.',
-      });
+      toast.error('Print failed: ' + (e.message || 'Unknown error'));
       setIsPrinting(false);
       return false;
     }
@@ -544,8 +545,6 @@ export function useThermalPrinter() {
     availablePrinters: isNative ? bluetooth.discoveredDevices.map(d => d.name) : availablePrinters,
     isPrinting: isNative ? bluetooth.status === 'printing' : isPrinting,
     isNative,
-    printerError,
-    clearPrinterError: () => setPrinterError(null),
     connectQZ,
     disconnectQZ,
     detectPrinters,

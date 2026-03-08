@@ -35,10 +35,10 @@ export function useLogAction() {
 
       const { error } = await supabase
         .from('audit_logs')
-        .insert({
+        .insert([{
           ...log,
           user_id: user?.id,
-        });
+        }]);
 
       if (error) throw error;
     },

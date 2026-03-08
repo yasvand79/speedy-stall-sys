@@ -884,8 +884,11 @@ export default function Reports() {
         </div>
 
         {/* ═══════ REPORT CONTENT (for PDF export) ═══════ */}
-        <div ref={reportRef} className="space-y-4">
-        {/* ═══════ ROW 1: KPI CARDS ═══════ */}
+        <div ref={reportRef} className="space-y-2">
+
+        {/* ━━━━━━ SECTION 1: KEY METRICS ━━━━━━ */}
+        <SectionDivider icon={IndianRupee} title="Key Metrics" description="Your top-level business numbers at a glance" />
+
         <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           <KpiCard title="Revenue" value={`₹${(metrics?.totalRevenue || 0).toLocaleString()}`} icon={IndianRupee} color="primary" subtitle={`${metrics?.completedOrders || 0} completed`} />
           <KpiCard title="Orders" value={`${metrics?.totalOrders || 0}`} icon={ShoppingCart} color="success" subtitle={`${metrics?.cancelledOrders || 0} cancelled`} />
@@ -895,11 +898,45 @@ export default function Reports() {
           <KpiCard title="Peak Hour" value={peakHour} icon={Clock} color="info" />
         </div>
 
-        {/* ═══════ ROW 2: REVENUE TREND + ORDER TYPE + PAYMENT PIE ═══════ */}
-        <div className="grid gap-3 lg:grid-cols-12">
+        {/* Financial Summary Strip */}
+        <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
+            <Banknote className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div>
+              <p className="text-[10px] text-muted-foreground">Subtotal</p>
+              <p className="font-display text-sm font-semibold">₹{(metrics?.totalSubtotal || 0).toLocaleString()}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-success/5 border border-success/20">
+            <Receipt className="h-4 w-4 text-success shrink-0" />
+            <div>
+              <p className="text-[10px] text-muted-foreground">Total Tax</p>
+              <p className="font-display text-sm font-semibold text-success">₹{(metrics?.totalGST || 0).toLocaleString()}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-destructive/5 border border-destructive/20">
+            <XCircle className="h-4 w-4 text-destructive shrink-0" />
+            <div>
+              <p className="text-[10px] text-muted-foreground">Discounts</p>
+              <p className="font-display text-sm font-semibold text-destructive">-₹{(metrics?.totalDiscount || 0).toLocaleString()}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
+            <IndianRupee className="h-4 w-4 text-primary shrink-0" />
+            <div>
+              <p className="text-[10px] text-muted-foreground">Net Revenue</p>
+              <p className="font-display text-sm font-semibold text-primary">₹{(metrics?.totalRevenue || 0).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ━━━━━━ SECTION 2: SALES & REVENUE ━━━━━━ */}
+        <SectionDivider icon={Activity} title="Sales & Revenue" description="Revenue trends, order types, and payment breakdown" />
+
+        <div className="grid gap-4 lg:grid-cols-12">
           {/* Revenue Trend - Large */}
-          <Card className="lg:col-span-7">
-            <CardHeader className="pb-2 pt-4 px-4">
+          <Card className="lg:col-span-8 border-border/60">
+            <CardHeader className="pb-2 pt-4 px-5">
               <div className="flex items-center justify-between">
                 <CardTitle className="font-display text-sm flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" /> Revenue & Orders Trend
@@ -907,8 +944,8 @@ export default function Reports() {
                 <Badge variant="outline" className="text-[10px]">{range === 'today' ? 'Hourly' : 'Daily'}</Badge>
               </div>
             </CardHeader>
-            <CardContent className="px-2 pb-3">
-              <div className="h-[220px]">
+            <CardContent className="px-2 pb-4">
+              <div className="h-[240px]">
                 {dailyTrend.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={dailyTrend}>
@@ -932,22 +969,22 @@ export default function Reports() {
             </CardContent>
           </Card>
 
-          {/* Right Column: Order Type + Payment */}
-          <div className="lg:col-span-5 grid gap-3 grid-rows-2">
+          {/* Right: Order Type + Payment stacked */}
+          <div className="lg:col-span-4 grid gap-4">
             {/* Order Type Donut */}
-            <Card>
+            <Card className="border-border/60">
               <CardHeader className="pb-1 pt-3 px-4">
-                <CardTitle className="font-display text-sm flex items-center gap-2">
-                  <Utensils className="h-4 w-4 text-info" /> Order Type Split
+                <CardTitle className="font-display text-xs flex items-center gap-2">
+                  <Utensils className="h-3.5 w-3.5 text-info" /> Order Type Split
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-3">
                 <div className="flex items-center gap-4">
-                  <div className="h-[100px] w-[100px] shrink-0">
+                  <div className="h-[90px] w-[90px] shrink-0">
                     {orderTypeData.some(d => d.value > 0) ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                          <Pie data={orderTypeData} dataKey="value" innerRadius={28} outerRadius={45} paddingAngle={4} strokeWidth={0}>
+                          <Pie data={orderTypeData} dataKey="value" innerRadius={25} outerRadius={42} paddingAngle={4} strokeWidth={0}>
                             <Cell fill="hsl(217,91%,60%)" />
                             <Cell fill="hsl(24,95%,53%)" />
                           </Pie>
@@ -956,22 +993,16 @@ export default function Reports() {
                       </ResponsiveContainer>
                     ) : <div className="flex items-center justify-center h-full text-muted-foreground text-xs">No data</div>}
                   </div>
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2.5 w-2.5 rounded-full bg-info" />
-                        <span className="text-xs">Dine-in</span>
-                      </div>
+                      <div className="flex items-center gap-2"><div className="h-2.5 w-2.5 rounded-full bg-info" /><span className="text-xs">Dine-in</span></div>
                       <div className="text-right">
                         <span className="font-display text-sm font-bold">{metrics?.dineInOrders || 0}</span>
                         <span className="text-[10px] text-muted-foreground ml-1">₹{(metrics?.dineInRevenue || 0).toLocaleString()}</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2.5 w-2.5 rounded-full bg-primary" />
-                        <span className="text-xs">Takeaway</span>
-                      </div>
+                      <div className="flex items-center gap-2"><div className="h-2.5 w-2.5 rounded-full bg-primary" /><span className="text-xs">Takeaway</span></div>
                       <div className="text-right">
                         <span className="font-display text-sm font-bold">{metrics?.takeawayOrders || 0}</span>
                         <span className="text-[10px] text-muted-foreground ml-1">₹{(metrics?.takeawayRevenue || 0).toLocaleString()}</span>
@@ -983,19 +1014,19 @@ export default function Reports() {
             </Card>
 
             {/* Payment Methods */}
-            <Card>
+            <Card className="border-border/60">
               <CardHeader className="pb-1 pt-3 px-4">
-                <CardTitle className="font-display text-sm flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-success" /> Payments
+                <CardTitle className="font-display text-xs flex items-center gap-2">
+                  <CreditCard className="h-3.5 w-3.5 text-success" /> Payment Methods
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-3">
                 <div className="flex items-center gap-4">
-                  <div className="h-[100px] w-[100px] shrink-0">
+                  <div className="h-[90px] w-[90px] shrink-0">
                     {paymentBreakdown.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                          <Pie data={paymentBreakdown} dataKey="total" nameKey="method" innerRadius={28} outerRadius={45} paddingAngle={4} strokeWidth={0}>
+                          <Pie data={paymentBreakdown} dataKey="total" nameKey="method" innerRadius={25} outerRadius={42} paddingAngle={4} strokeWidth={0}>
                             {paymentBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                           </Pie>
                           <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => `₹${value.toLocaleString()}`} />
@@ -1024,24 +1055,27 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* ═══════ ROW 3: HOURLY HEATMAP + CATEGORY SALES + GST ═══════ */}
-        <div className="grid gap-3 lg:grid-cols-12">
+        {/* ━━━━━━ SECTION 3: TIME & CATEGORY ANALYSIS ━━━━━━ */}
+        <SectionDivider icon={Clock} title="Time & Category Analysis" description="When sales happen and what sells most" />
+
+        <div className="grid gap-4 lg:grid-cols-2">
           {/* Hourly Heatmap */}
-          <Card className="lg:col-span-5">
-            <CardHeader className="pb-2 pt-4 px-4">
+          <Card className="border-border/60">
+            <CardHeader className="pb-2 pt-4 px-5">
               <CardTitle className="font-display text-sm flex items-center gap-2">
                 <Clock className="h-4 w-4 text-warning" /> Hourly Sales Heatmap
               </CardTitle>
+              <p className="text-[10px] text-muted-foreground">Hover for details · Peak: <span className="font-semibold text-foreground">{peakHour}</span></p>
             </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="grid grid-cols-6 gap-1.5 mb-3">
+            <CardContent className="px-4 pb-4">
+              <div className="grid grid-cols-6 gap-2 mb-3">
                 {hourlyHeatmap.data.filter(h => h.hour >= 6 && h.hour <= 23).map(h => {
                   const intensity = hourlyHeatmap.maxOrders > 0 ? h.orders / hourlyHeatmap.maxOrders : 0;
                   const colorIndex = Math.min(Math.floor(intensity * (HEATMAP_COLORS.length - 1)), HEATMAP_COLORS.length - 1);
                   return (
                     <div
                       key={h.hour}
-                      className="flex flex-col items-center gap-0.5 p-1.5 rounded-md border border-border/50 transition-all hover:scale-105 cursor-default"
+                      className="flex flex-col items-center gap-0.5 p-2 rounded-lg border border-border/50 transition-all hover:scale-105 cursor-default"
                       style={{ backgroundColor: HEATMAP_COLORS[colorIndex] }}
                       title={`${h.label}: ${h.orders} orders, ₹${h.revenue.toLocaleString()}`}
                     >
@@ -1053,122 +1087,110 @@ export default function Reports() {
               </div>
               <div className="flex items-center gap-1 justify-center">
                 <span className="text-[9px] text-muted-foreground">Low</span>
-                {HEATMAP_COLORS.map((color, i) => <div key={i} className="h-2.5 w-5 rounded-sm" style={{ backgroundColor: color }} />)}
+                {HEATMAP_COLORS.map((color, i) => <div key={i} className="h-3 w-6 rounded-sm" style={{ backgroundColor: color }} />)}
                 <span className="text-[9px] text-muted-foreground">High</span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Category Sales */}
-          <Card className="lg:col-span-4">
-            <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="font-display text-sm flex items-center gap-2">
-                <PieChartIcon className="h-4 w-4 text-primary" /> Category Sales
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="h-[160px]">
-                {categorySales && categorySales.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={categorySales} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.5} />
-                      <XAxis type="number" className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
-                      <YAxis type="category" dataKey="category" className="text-[10px] fill-muted-foreground capitalize" width={70} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => `₹${value.toLocaleString()}`} />
-                      <Bar dataKey="revenue" radius={[0, 4, 4, 0]} name="Revenue">
-                        {categorySales.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : <div className="flex items-center justify-center h-full text-muted-foreground text-xs">No data</div>}
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {categorySales?.map((cat, i) => (
-                  <Badge key={cat.category} variant="outline" className="text-[10px] gap-1 capitalize">
-                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    {cat.category}: {cat.count}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Category Sales + GST side by side inside one card-like container */}
+          <div className="grid gap-4 grid-rows-[1fr_auto]">
+            {/* Category Sales */}
+            <Card className="border-border/60">
+              <CardHeader className="pb-2 pt-4 px-5">
+                <CardTitle className="font-display text-sm flex items-center gap-2">
+                  <PieChartIcon className="h-4 w-4 text-primary" /> Category Sales
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-3">
+                <div className="h-[140px]">
+                  {categorySales && categorySales.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={categorySales} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.5} />
+                        <XAxis type="number" className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
+                        <YAxis type="category" dataKey="category" className="text-[10px] fill-muted-foreground capitalize" width={70} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                        <Bar dataKey="revenue" radius={[0, 4, 4, 0]} name="Revenue">
+                          {categorySales.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : <div className="flex items-center justify-center h-full text-muted-foreground text-xs">No data</div>}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {categorySales?.map((cat, i) => (
+                    <Badge key={cat.category} variant="outline" className="text-[10px] gap-1 capitalize">
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      {cat.category}: {cat.count}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* GST Summary */}
-          <Card className="lg:col-span-3">
-            <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="font-display text-sm flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-success" /> GST Breakdown
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-3">
-              <div className="space-y-2.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] text-muted-foreground">Taxable Amount</span>
-                  <span className="font-display text-xs font-bold">₹{(gstBreakdown?.taxableAmount || 0).toLocaleString()}</span>
-                </div>
-                <div className="h-px bg-border" />
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] text-muted-foreground">CGST ({(gstBreakdown?.gstRate || 0) / 2}%)</span>
-                  <span className="font-display text-xs font-semibold text-success">₹{(gstBreakdown?.cgst || 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] text-muted-foreground">SGST ({(gstBreakdown?.gstRate || 0) / 2}%)</span>
-                  <span className="font-display text-xs font-semibold text-success">₹{(gstBreakdown?.sgst || 0).toLocaleString()}</span>
-                </div>
-                <div className="h-px bg-border" />
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-medium">Total GST</span>
-                  <span className="font-display text-sm font-bold text-success">₹{(gstBreakdown?.totalGST || 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-medium">Effective Rate</span>
-                  <Badge variant="secondary" className="text-[10px]">{(gstBreakdown?.effectiveRate || 0).toFixed(2)}%</Badge>
-                </div>
-                <div className="h-px bg-border" />
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="p-2 rounded-md bg-info/5 border border-info/20 text-center">
-                    <p className="text-[9px] text-muted-foreground">Dine-in</p>
-                    <p className="font-display text-xs font-bold text-info">₹{(gstBreakdown?.dineInGST || 0).toLocaleString()}</p>
+            {/* GST Breakdown - compact */}
+            <Card className="border-border/60">
+              <CardHeader className="pb-1 pt-3 px-5">
+                <CardTitle className="font-display text-xs flex items-center gap-2">
+                  <Receipt className="h-3.5 w-3.5 text-success" /> GST Breakdown
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-5 pb-3">
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="text-center p-2 rounded-lg bg-muted/30">
+                    <p className="text-[9px] text-muted-foreground">Taxable</p>
+                    <p className="font-display text-xs font-bold">₹{(gstBreakdown?.taxableAmount || 0).toLocaleString()}</p>
                   </div>
-                  <div className="p-2 rounded-md bg-primary/5 border border-primary/20 text-center">
-                    <p className="text-[9px] text-muted-foreground">Takeaway</p>
-                    <p className="font-display text-xs font-bold text-primary">₹{(gstBreakdown?.takeawayGST || 0).toLocaleString()}</p>
+                  <div className="text-center p-2 rounded-lg bg-success/5">
+                    <p className="text-[9px] text-muted-foreground">CGST</p>
+                    <p className="font-display text-xs font-bold text-success">₹{(gstBreakdown?.cgst || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-success/5">
+                    <p className="text-[9px] text-muted-foreground">SGST</p>
+                    <p className="font-display text-xs font-bold text-success">₹{(gstBreakdown?.sgst || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-primary/5">
+                    <p className="text-[9px] text-muted-foreground">Total GST</p>
+                    <p className="font-display text-xs font-bold text-primary">₹{(gstBreakdown?.totalGST || 0).toLocaleString()}</p>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* ═══════ ROW 4: TOP ITEMS + STAFF + CUSTOMERS ═══════ */}
-        <div className="grid gap-3 lg:grid-cols-12">
+        {/* ━━━━━━ SECTION 4: PRODUCTS & PEOPLE ━━━━━━ */}
+        <SectionDivider icon={Star} title="Products & People" description="Top selling items, staff performance, and loyal customers" />
+
+        <div className="grid gap-4 lg:grid-cols-3">
           {/* Top Selling Items */}
-          <Card className="lg:col-span-4">
-            <CardHeader className="pb-2 pt-4 px-4">
+          <Card className="border-border/60">
+            <CardHeader className="pb-2 pt-4 px-5">
               <CardTitle className="font-display text-sm flex items-center gap-2">
                 <Star className="h-4 w-4 text-warning" /> Top Selling Items
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-3">
-              <ScrollArea className="h-[260px]">
+            <CardContent className="px-4 pb-4">
+              <ScrollArea className="h-[280px]">
                 {topItems && topItems.length > 0 ? (
-                  <div className="space-y-2.5 pr-2">
+                  <div className="space-y-3 pr-2">
                     {topItems.slice(0, 10).map((item, index) => (
-                      <div key={item.id} className="flex items-center gap-2.5">
-                        <span className={`flex h-6 w-6 items-center justify-center rounded-full font-display font-bold text-[10px] shrink-0 ${
+                      <div key={item.id} className="flex items-center gap-3">
+                        <span className={`flex h-7 w-7 items-center justify-center rounded-full font-display font-bold text-[11px] shrink-0 ${
                           index < 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                         }`}>
                           {index + 1}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-xs truncate">{item.name}</p>
-                          <div className="mt-1 h-1 w-full bg-muted rounded-full overflow-hidden">
+                          <div className="mt-1.5 h-1.5 w-full bg-muted rounded-full overflow-hidden">
                             <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(item.quantity / topItems[0].quantity) * 100}%` }} />
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="font-display font-bold text-xs">{item.quantity}</span>
-                          <p className="text-[9px] text-muted-foreground">₹{item.revenue.toLocaleString()}</p>
+                          <span className="font-display font-bold text-sm">{item.quantity}</span>
+                          <p className="text-[10px] text-muted-foreground">₹{item.revenue.toLocaleString()}</p>
                         </div>
                       </div>
                     ))}
@@ -1179,14 +1201,14 @@ export default function Reports() {
           </Card>
 
           {/* Staff Performance */}
-          <Card className="lg:col-span-4">
-            <CardHeader className="pb-2 pt-4 px-4">
+          <Card className="border-border/60">
+            <CardHeader className="pb-2 pt-4 px-5">
               <CardTitle className="font-display text-sm flex items-center gap-2">
                 <Award className="h-4 w-4 text-primary" /> Staff Performance
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="h-[260px]">
+            <CardContent className="px-3 pb-4">
+              <div className="h-[280px]">
                 {staffSales && staffSales.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={staffSales.slice(0, 6)} layout="vertical" margin={{ left: 0 }}>
@@ -1203,28 +1225,28 @@ export default function Reports() {
           </Card>
 
           {/* Top Customers */}
-          <Card className="lg:col-span-4">
-            <CardHeader className="pb-2 pt-4 px-4">
+          <Card className="border-border/60">
+            <CardHeader className="pb-2 pt-4 px-5">
               <CardTitle className="font-display text-sm flex items-center gap-2">
                 <Users className="h-4 w-4 text-info" /> Top Customers
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-3">
-              <ScrollArea className="h-[260px]">
+            <CardContent className="px-4 pb-4">
+              <ScrollArea className="h-[280px]">
                 {customerData?.topCustomers && customerData.topCustomers.length > 0 ? (
-                  <div className="space-y-2 pr-2">
+                  <div className="space-y-2.5 pr-2">
                     {customerData.topCustomers.map((c, i) => (
-                      <div key={i} className="flex items-center gap-2.5 p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
-                        <span className={`flex h-6 w-6 items-center justify-center rounded-full font-display font-bold text-[10px] shrink-0 ${
+                      <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                        <span className={`flex h-7 w-7 items-center justify-center rounded-full font-display font-bold text-[11px] shrink-0 ${
                           i < 3 ? 'bg-info text-info-foreground' : 'bg-muted text-muted-foreground'
                         }`}>
                           {i + 1}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-xs truncate">{c.name}</p>
-                          <p className="text-[9px] text-muted-foreground">{c.phone || 'No phone'} · {c.orders} orders</p>
+                          <p className="text-[10px] text-muted-foreground">{c.phone || 'No phone'} · {c.orders} orders</p>
                         </div>
-                        <span className="font-display text-xs font-bold shrink-0">₹{c.revenue.toLocaleString()}</span>
+                        <span className="font-display text-sm font-bold shrink-0">₹{c.revenue.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -1234,18 +1256,20 @@ export default function Reports() {
           </Card>
         </div>
 
-        {/* ═══════ ROW 5: ORDER FUNNEL + PERIOD COMPARISON ═══════ */}
-        <div className="grid gap-3 lg:grid-cols-12">
+        {/* ━━━━━━ SECTION 5: OPERATIONS & TRENDS ━━━━━━ */}
+        <SectionDivider icon={GitBranch} title="Operations & Trends" description="Order pipeline, period comparison, and busiest days" />
+
+        <div className="grid gap-4 lg:grid-cols-3">
           {/* Order Status Funnel */}
-          <Card className="lg:col-span-5">
-            <CardHeader className="pb-2 pt-4 px-4">
+          <Card className="border-border/60">
+            <CardHeader className="pb-2 pt-4 px-5">
               <CardTitle className="font-display text-sm flex items-center gap-2">
-                <GitBranch className="h-4 w-4 text-info" /> Order Status Funnel
+                <GitBranch className="h-4 w-4 text-info" /> Order Pipeline
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-3">
-              <div className="space-y-2">
-                {orderFunnel.map((step, i) => {
+            <CardContent className="px-5 pb-4">
+              <div className="space-y-2.5">
+                {orderFunnel.map((step) => {
                   const Icon = step.icon;
                   const maxCount = Math.max(...orderFunnel.map(s => s.count), 1);
                   const barWidth = (step.count / maxCount) * 100;
@@ -1255,9 +1279,9 @@ export default function Reports() {
                         <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: step.color }} />
                         <span className="text-[11px] font-medium text-foreground">{step.stage}</span>
                       </div>
-                      <div className="flex-1 h-6 bg-muted/50 rounded-md overflow-hidden relative">
+                      <div className="flex-1 h-7 bg-muted/50 rounded-lg overflow-hidden relative">
                         <div
-                          className="h-full rounded-md transition-all duration-500 flex items-center justify-end pr-2"
+                          className="h-full rounded-lg transition-all duration-500 flex items-center justify-end pr-2"
                           style={{ width: `${Math.max(barWidth, 2)}%`, backgroundColor: step.color }}
                         >
                           {step.count > 0 && <span className="text-[10px] font-bold text-white">{step.count}</span>}
@@ -1268,10 +1292,9 @@ export default function Reports() {
                   );
                 })}
               </div>
-              {/* Conversion rate */}
               {metrics && metrics.totalOrders > 0 && (
-                <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-                  <span className="text-[11px] text-muted-foreground">Completion Rate</span>
+                <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Completion Rate</span>
                   <Badge variant="secondary" className="text-[10px] font-display font-bold">
                     {((metrics.completedOrders / metrics.totalOrders) * 100).toFixed(1)}%
                   </Badge>
@@ -1281,14 +1304,14 @@ export default function Reports() {
           </Card>
 
           {/* Period Comparison */}
-          <Card className="lg:col-span-4">
-            <CardHeader className="pb-2 pt-4 px-4">
+          <Card className="border-border/60">
+            <CardHeader className="pb-2 pt-4 px-5">
               <CardTitle className="font-display text-sm flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-success" /> Period Comparison
               </CardTitle>
               <p className="text-[10px] text-muted-foreground">Current vs Previous {range === 'today' ? 'day' : range === '7d' ? 'week' : range === '30d' ? 'month' : range === '6m' ? '6 months' : 'period'}</p>
             </CardHeader>
-            <CardContent className="px-4 pb-3">
+            <CardContent className="px-5 pb-4">
               {periodComparison ? (
                 <div className="space-y-3">
                   {[
@@ -1296,9 +1319,9 @@ export default function Reports() {
                     { label: 'Orders', current: `${periodComparison.current.orders}`, previous: `${periodComparison.previous.orders}`, change: periodComparison.changes.orders },
                     { label: 'Avg Order', current: `₹${Math.round(periodComparison.current.avg)}`, previous: `₹${Math.round(periodComparison.previous.avg)}`, change: periodComparison.changes.avg },
                   ].map(metric => (
-                    <div key={metric.label} className="p-2.5 rounded-lg bg-muted/30">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-medium text-foreground">{metric.label}</span>
+                    <div key={metric.label} className="p-3 rounded-xl bg-muted/30">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-foreground">{metric.label}</span>
                         <div className={`flex items-center gap-0.5 text-[11px] font-bold ${metric.change >= 0 ? 'text-success' : 'text-destructive'}`}>
                           {metric.change >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                           {Math.abs(metric.change).toFixed(1)}%
@@ -1318,30 +1341,30 @@ export default function Reports() {
                     </div>
                   ))}
                 </div>
-              ) : <div className="flex items-center justify-center h-[180px] text-muted-foreground text-xs">Loading comparison...</div>}
+              ) : <div className="flex items-center justify-center h-[200px] text-muted-foreground text-xs">Loading comparison...</div>}
             </CardContent>
           </Card>
 
-          {/* Busiest Day */}
-          <Card className="lg:col-span-3">
-            <CardHeader className="pb-2 pt-4 px-4">
+          {/* Busiest Days */}
+          <Card className="border-border/60">
+            <CardHeader className="pb-2 pt-4 px-5">
               <CardTitle className="font-display text-sm flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-warning" /> Busiest Days
               </CardTitle>
-              <p className="text-[10px] text-muted-foreground">Peak: <span className="font-semibold text-foreground">{busiestDay}</span></p>
+              <p className="text-[10px] text-muted-foreground">Peak day: <span className="font-semibold text-foreground">{busiestDay}</span></p>
             </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="space-y-1.5">
+            <CardContent className="px-5 pb-4">
+              <div className="space-y-2">
                 {weekdayAnalytics.map(d => {
                   const max = Math.max(...weekdayAnalytics.map(w => w.orders), 1);
                   const barWidth = (d.orders / max) * 100;
                   const isBusiest = d.day === busiestDay && d.orders > 0;
                   return (
-                    <div key={d.day} className="flex items-center gap-2">
-                      <span className={`text-[11px] w-7 shrink-0 font-medium ${isBusiest ? 'text-warning font-bold' : 'text-muted-foreground'}`}>{d.day}</span>
-                      <div className="flex-1 h-5 bg-muted/50 rounded overflow-hidden relative">
+                    <div key={d.day} className="flex items-center gap-2.5">
+                      <span className={`text-xs w-8 shrink-0 font-medium ${isBusiest ? 'text-warning font-bold' : 'text-muted-foreground'}`}>{d.day}</span>
+                      <div className="flex-1 h-6 bg-muted/50 rounded-lg overflow-hidden relative">
                         <div
-                          className="h-full rounded transition-all"
+                          className="h-full rounded-lg transition-all"
                           style={{
                             width: `${Math.max(barWidth, 2)}%`,
                             backgroundColor: isBusiest ? 'hsl(45,93%,47%)' : 'hsl(var(--primary))',
@@ -1361,83 +1384,81 @@ export default function Reports() {
           </Card>
         </div>
 
-
-
-        {/* ═══════ ROW 6: BRANCH COMPARISON ═══════ */}
+        {/* ━━━━━━ SECTION 6: BRANCH COMPARISON ━━━━━━ */}
         {branchComparison.length > 1 && (
-          <Card>
-            <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="font-display text-sm flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-primary" /> Branch Comparison
-              </CardTitle>
-              <p className="text-[10px] text-muted-foreground">Side-by-side performance across all branches</p>
-            </CardHeader>
-            <CardContent className="px-3 pb-4 space-y-4">
-              {/* Revenue Bar Chart */}
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={branchComparison} margin={{ left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.5} />
-                    <XAxis dataKey="name" className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} />
-                    <YAxis className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(value: number, name: string) => [
-                      name === 'revenue' ? `₹${value.toLocaleString()}` : name === 'avgOrder' ? `₹${Math.round(value)}` : value,
-                      name === 'revenue' ? 'Revenue' : name === 'avgOrder' ? 'Avg Order' : name === 'completed' ? 'Completed' : name
-                    ]} />
-                    <Legend wrapperStyle={{ fontSize: '11px' }} />
-                    <Bar dataKey="revenue" name="Revenue" fill="hsl(24,95%,53%)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="completed" name="Completed" fill="hsl(142,72%,42%)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="cancelled" name="Cancelled" fill="hsl(0,84%,60%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+          <>
+            <SectionDivider icon={Building2} title="Branch Comparison" description="Side-by-side performance across all branches" />
 
-              {/* Detailed Table */}
-              <ScrollArea className="max-h-[300px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-[10px] font-semibold">Branch</TableHead>
-                      <TableHead className="text-[10px] font-semibold text-right">Revenue</TableHead>
-                      <TableHead className="text-[10px] font-semibold text-right">Orders</TableHead>
-                      <TableHead className="text-[10px] font-semibold text-right">Avg Order</TableHead>
-                      <TableHead className="text-[10px] font-semibold text-right">Completion</TableHead>
-                      <TableHead className="text-[10px] font-semibold text-right">Dine-in</TableHead>
-                      <TableHead className="text-[10px] font-semibold text-right">Takeaway</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {branchComparison.map((b, i) => {
-                      const isTop = i === 0;
-                      return (
-                        <TableRow key={b.id} className={isTop ? 'bg-primary/5' : ''}>
-                          <TableCell className="text-xs font-medium">
-                            <div className="flex items-center gap-1.5">
-                              {isTop && <Star className="h-3 w-3 text-warning fill-warning" />}
-                              {b.name}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs text-right font-display font-bold">₹{b.revenue.toLocaleString()}</TableCell>
-                          <TableCell className="text-xs text-right">{b.orders}</TableCell>
-                          <TableCell className="text-xs text-right">₹{Math.round(b.avgOrder)}</TableCell>
-                          <TableCell className="text-xs text-right">
-                            <Badge variant={b.completionRate >= 80 ? 'default' : b.completionRate >= 50 ? 'secondary' : 'destructive'} className="text-[9px] px-1.5 py-0">
-                              {b.completionRate.toFixed(0)}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-right">{b.dineIn}</TableCell>
-                          <TableCell className="text-xs text-right">{b.takeaway}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+            <Card className="border-border/60">
+              <CardContent className="px-3 pt-4 pb-4 space-y-4">
+                {/* Revenue Bar Chart */}
+                <div className="h-[220px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={branchComparison} margin={{ left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.5} />
+                      <XAxis dataKey="name" className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} />
+                      <YAxis className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
+                      <Tooltip contentStyle={tooltipStyle} formatter={(value: number, name: string) => [
+                        name === 'revenue' ? `₹${value.toLocaleString()}` : name === 'avgOrder' ? `₹${Math.round(value)}` : value,
+                        name === 'revenue' ? 'Revenue' : name === 'avgOrder' ? 'Avg Order' : name === 'completed' ? 'Completed' : name
+                      ]} />
+                      <Legend wrapperStyle={{ fontSize: '11px' }} />
+                      <Bar dataKey="revenue" name="Revenue" fill="hsl(24,95%,53%)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="completed" name="Completed" fill="hsl(142,72%,42%)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="cancelled" name="Cancelled" fill="hsl(0,84%,60%)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Detailed Table */}
+                <ScrollArea className="max-h-[300px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-[10px] font-semibold">Branch</TableHead>
+                        <TableHead className="text-[10px] font-semibold text-right">Revenue</TableHead>
+                        <TableHead className="text-[10px] font-semibold text-right">Orders</TableHead>
+                        <TableHead className="text-[10px] font-semibold text-right">Avg Order</TableHead>
+                        <TableHead className="text-[10px] font-semibold text-right">Completion</TableHead>
+                        <TableHead className="text-[10px] font-semibold text-right">Dine-in</TableHead>
+                        <TableHead className="text-[10px] font-semibold text-right">Takeaway</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {branchComparison.map((b, i) => {
+                        const isTop = i === 0;
+                        return (
+                          <TableRow key={b.id} className={isTop ? 'bg-primary/5' : ''}>
+                            <TableCell className="text-xs font-medium">
+                              <div className="flex items-center gap-1.5">
+                                {isTop && <Star className="h-3 w-3 text-warning fill-warning" />}
+                                {b.name}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-right font-display font-bold">₹{b.revenue.toLocaleString()}</TableCell>
+                            <TableCell className="text-xs text-right">{b.orders}</TableCell>
+                            <TableCell className="text-xs text-right">₹{Math.round(b.avgOrder)}</TableCell>
+                            <TableCell className="text-xs text-right">
+                              <Badge variant={b.completionRate >= 80 ? 'default' : b.completionRate >= 50 ? 'secondary' : 'destructive'} className="text-[9px] px-1.5 py-0">
+                                {b.completionRate.toFixed(0)}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-right">{b.dineIn}</TableCell>
+                            <TableCell className="text-xs text-right">{b.takeaway}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </>
         )}
 
-        {/* ═══════ ROW 7: AI BUSINESS INSIGHTS ═══════ */}
+        {/* ━━━━━━ SECTION 7: AI BUSINESS INSIGHTS ━━━━━━ */}
+        <SectionDivider icon={Lightbulb} title="AI Business Insights" description="AI-powered analysis and actionable recommendations" />
+
         <InsightsSection
           metrics={metrics}
           peakHour={peakHour}
@@ -1450,37 +1471,6 @@ export default function Reports() {
           activeTables={tableAnalytics.length}
         />
 
-        {/* ═══════ FINANCIAL SUMMARY STRIP ═══════ */}
-        <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-            <Banknote className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div>
-              <p className="text-[10px] text-muted-foreground">Subtotal</p>
-              <p className="font-display text-sm font-semibold">₹{(metrics?.totalSubtotal || 0).toLocaleString()}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-success/5 border border-success/20">
-            <Receipt className="h-4 w-4 text-success shrink-0" />
-            <div>
-              <p className="text-[10px] text-muted-foreground">Total Tax</p>
-              <p className="font-display text-sm font-semibold text-success">₹{(metrics?.totalGST || 0).toLocaleString()}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-            <XCircle className="h-4 w-4 text-destructive shrink-0" />
-            <div>
-              <p className="text-[10px] text-muted-foreground">Discounts</p>
-              <p className="font-display text-sm font-semibold text-destructive">-₹{(metrics?.totalDiscount || 0).toLocaleString()}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-            <IndianRupee className="h-4 w-4 text-primary shrink-0" />
-            <div>
-              <p className="text-[10px] text-muted-foreground">Net Revenue</p>
-              <p className="font-display text-sm font-semibold text-primary">₹{(metrics?.totalRevenue || 0).toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
         </div> {/* close reportRef */}
       </div>
     </MainLayout>

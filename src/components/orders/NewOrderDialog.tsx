@@ -150,7 +150,7 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
           <div className="flex-1 min-h-0 flex flex-col">
             {/* Branch Selection */}
             <div className="mb-4 p-3 bg-muted/50 rounded-lg border">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="branch" className="flex items-center gap-1 mb-1.5">
                     <Building2 className="h-3.5 w-3.5" />

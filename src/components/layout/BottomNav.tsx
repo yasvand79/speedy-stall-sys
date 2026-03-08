@@ -11,6 +11,7 @@ import {
   TrendingUp,
   UserPlus,
   Settings,
+  UserCircle,
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

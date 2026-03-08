@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -9,7 +9,7 @@ import { useCreatePayment } from '@/hooks/usePayments';
 import { useUpdateOrderStatus } from '@/hooks/useOrders';
 import { useShopSettings } from '@/hooks/useShopSettings';
 import { Database } from '@/integrations/supabase/types';
-import { Banknote, Smartphone, CreditCard, CheckCircle, ArrowLeft, Loader2, Printer, Monitor } from 'lucide-react';
+import { Banknote, Smartphone, CreditCard, CheckCircle, ArrowLeft, Loader2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 
 type PaymentMethod = Database['public']['Enums']['payment_method'];
@@ -38,7 +38,6 @@ export function PaymentDialog({
   const [step, setStep] = useState<Step>('method');
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [amount, setAmount] = useState('');
-  const customerWindowRef = useRef<Window | null>(null);
   const navigate = useNavigate();
 
   const createPayment = useCreatePayment();
@@ -88,25 +87,7 @@ export function PaymentDialog({
       await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
     }
 
-    notifyCustomerDisplay();
     setStep('success');
-  };
-
-  const notifyCustomerDisplay = () => {
-    if (customerWindowRef.current && !customerWindowRef.current.closed) {
-      customerWindowRef.current.postMessage({ type: 'PAYMENT_CONFIRMED' }, '*');
-    }
-  };
-
-  const openCustomerDisplay = () => {
-    const params = new URLSearchParams({
-      amount: paymentAmount.toFixed(2),
-      upiUrl,
-      shop: shopName,
-      order: orderNumber,
-    });
-    const url = `/customer-display?${params.toString()}`;
-    customerWindowRef.current = window.open(url, 'customer-display', 'width=600,height=800');
   };
 
   const handleMarkUpiPaid = async () => {
@@ -122,7 +103,6 @@ export function PaymentDialog({
       await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
     }
 
-    notifyCustomerDisplay();
     setStep('success');
   };
 
@@ -299,15 +279,6 @@ export function PaymentDialog({
                     Payment Received
                   </>
                 )}
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={openCustomerDisplay}
-                className="w-full"
-              >
-                <Monitor className="mr-2 h-4 w-4" />
-                Show to Customer
               </Button>
             </div>
           </div>

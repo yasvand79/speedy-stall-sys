@@ -51,6 +51,7 @@ export default function Orders() {
   const updateStatus = useUpdateOrderStatus();
   const { data: allPayments } = usePayments();
   const { role } = useAuth();
+  const { printBill, qzStatus, isPrinting: isThermalPrinting } = useThermalPrinter();
 
   const isAdmin = role === 'admin' || role === 'branch_admin';
   const isBilling = role === 'billing';

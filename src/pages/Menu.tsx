@@ -201,6 +201,36 @@ export default function Menu() {
     await updateItem.mutateAsync({ id, is_available: !currentlyAvailable });
   };
 
+  const handleGenerateAllImages = async () => {
+    const itemsWithoutImages = (menuItems || []).filter(item => !item.image_url);
+    if (itemsWithoutImages.length === 0) {
+      toast.info('All items already have images');
+      return;
+    }
+    
+    setIsGeneratingImages(true);
+    setGeneratingProgress({ current: 0, total: itemsWithoutImages.length });
+    let successCount = 0;
+
+    for (const item of itemsWithoutImages) {
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-food-image', {
+          body: { itemId: item.id, itemName: item.name, category: item.category },
+        });
+        if (error) throw error;
+        successCount++;
+      } catch (err) {
+        console.error(`Failed to generate image for ${item.name}:`, err);
+      }
+      setGeneratingProgress(prev => ({ ...prev, current: prev.current + 1 }));
+    }
+
+    setIsGeneratingImages(false);
+    toast.success(`Generated images for ${successCount}/${itemsWithoutImages.length} items`);
+    // Refresh menu items
+    window.location.reload();
+  };
+
   const filterItems = (category: string) => {
     let filtered = menuItems || [];
     

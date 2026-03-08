@@ -158,7 +158,12 @@ export default function Settings() {
         upi_id: extracted.upi_id || prev.upi_id,
       }));
 
-      toast.success('Template analyzed! Review the extracted fields and save.');
+      // Set custom HTML template if generated
+      if (extracted.custom_bill_html) {
+        setCustomBillHtml(extracted.custom_bill_html);
+      }
+
+      toast.success('Template imported! Review the fields, check the preview, and save.');
     } catch (err: any) {
       console.error('Import error:', err);
       toast.error(err?.message || 'Failed to analyze template');

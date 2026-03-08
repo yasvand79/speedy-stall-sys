@@ -588,35 +588,195 @@ export default function Reports() {
     <MainLayout>
       <div className="space-y-4">
         {/* ═══════ HEADER BAR ═══════ */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-2 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <BarChart3 className="h-5 w-5 text-primary" />
+        <div className="flex flex-col gap-3 pb-2 border-b border-border">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="font-display text-xl font-bold text-foreground leading-tight">Business Intelligence</h1>
+                <p className="text-xs text-muted-foreground">Real-time analytics dashboard</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-display text-xl font-bold text-foreground leading-tight">Business Intelligence</h1>
-              <p className="text-xs text-muted-foreground">Real-time analytics dashboard</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex rounded-lg border bg-card p-0.5 shadow-sm">
+                {(['today', '7d', '30d', '6m', 'all', 'custom'] as const).map(r => (
+                  <Button
+                    key={r}
+                    variant={range === r ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setRange(r)}
+                    className={`text-[11px] h-7 px-2.5 ${range === r ? '' : 'text-muted-foreground'}`}
+                  >
+                    {r === 'today' ? 'Today' : r === '7d' ? '7D' : r === '30d' ? '30D' : r === '6m' ? '6M' : r === 'all' ? 'All' : '📅 Custom'}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant={showFilters ? 'default' : 'outline'}
+                size="sm"
+                className="h-7 text-[11px] relative"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="mr-1 h-3.5 w-3.5" />
+                Filters
+                {activeFiltersCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => window.print()}>
+                <Download className="mr-1 h-3.5 w-3.5" />
+                Export
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex rounded-lg border bg-card p-0.5 shadow-sm">
-              {(['today', '7d', '30d', '6m', 'all'] as const).map(r => (
-                <Button
-                  key={r}
-                  variant={range === r ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setRange(r)}
-                  className={`text-[11px] h-7 px-2.5 ${range === r ? '' : 'text-muted-foreground'}`}
-                >
-                  {r === 'today' ? 'Today' : r === '7d' ? '7D' : r === '30d' ? '30D' : r === '6m' ? '6M' : 'All'}
+
+          {/* ─── Custom Date Range ─── */}
+          {range === 'custom' && (
+            <div className="flex items-center gap-2 flex-wrap p-2 rounded-lg bg-muted/30 border border-border/50">
+              <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-[11px] text-muted-foreground">From:</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("h-7 text-[11px] w-[130px] justify-start font-normal", !customStart && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-1 h-3 w-3" />
+                    {customStart ? format(customStart, "dd MMM yyyy") : "Start date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={customStart} onSelect={setCustomStart} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+              <span className="text-[11px] text-muted-foreground">To:</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("h-7 text-[11px] w-[130px] justify-start font-normal", !customEnd && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-1 h-3 w-3" />
+                    {customEnd ? format(customEnd, "dd MMM yyyy") : "End date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={customEnd} onSelect={setCustomEnd} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
+          {/* ─── Filter Bar ─── */}
+          {showFilters && (
+            <div className="flex items-end gap-3 flex-wrap p-3 rounded-lg bg-muted/30 border border-border/50">
+              {/* Branch Filter */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Branch</label>
+                <Select value={filterBranch} onValueChange={setFilterBranch}>
+                  <SelectTrigger className="h-8 w-[150px] text-[11px]">
+                    <Building2 className="h-3 w-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="All Branches" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Branches</SelectItem>
+                    {branches.map(b => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Staff Filter */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Staff</label>
+                <Select value={filterStaff} onValueChange={setFilterStaff}>
+                  <SelectTrigger className="h-8 w-[150px] text-[11px]">
+                    <Users className="h-3 w-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="All Staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Staff</SelectItem>
+                    {staffNames.map(name => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Order Type Filter */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Order Type</label>
+                <Select value={filterOrderType} onValueChange={setFilterOrderType}>
+                  <SelectTrigger className="h-8 w-[140px] text-[11px]">
+                    <Utensils className="h-3 w-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="dine-in">Dine-in</SelectItem>
+                    <SelectItem value="takeaway">Takeaway</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Category Filter */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Category</label>
+                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                  <SelectTrigger className="h-8 w-[140px] text-[11px]">
+                    <Package className="h-3 w-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="veg">Veg</SelectItem>
+                    <SelectItem value="non-veg">Non-Veg</SelectItem>
+                    <SelectItem value="beverages">Beverages</SelectItem>
+                    <SelectItem value="combos">Combos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Clear Filters */}
+              {activeFiltersCount > 0 && (
+                <Button variant="ghost" size="sm" className="h-8 text-[11px] text-destructive hover:text-destructive" onClick={clearAllFilters}>
+                  <X className="mr-1 h-3 w-3" />
+                  Clear All
                 </Button>
-              ))}
+              )}
             </div>
-            <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => window.print()}>
-              <Download className="mr-1 h-3.5 w-3.5" />
-              Export
-            </Button>
-          </div>
+          )}
+
+          {/* Active Filters Badges */}
+          {activeFiltersCount > 0 && !showFilters && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-muted-foreground">Active filters:</span>
+              {filterBranch !== 'all' && (
+                <Badge variant="secondary" className="text-[10px] gap-1 pr-1">
+                  <Building2 className="h-2.5 w-2.5" /> {branches.find(b => b.id === filterBranch)?.name || 'Branch'}
+                  <button onClick={() => setFilterBranch('all')} className="ml-0.5 hover:text-destructive"><X className="h-2.5 w-2.5" /></button>
+                </Badge>
+              )}
+              {filterStaff !== 'all' && (
+                <Badge variant="secondary" className="text-[10px] gap-1 pr-1">
+                  <Users className="h-2.5 w-2.5" /> {filterStaff}
+                  <button onClick={() => setFilterStaff('all')} className="ml-0.5 hover:text-destructive"><X className="h-2.5 w-2.5" /></button>
+                </Badge>
+              )}
+              {filterOrderType !== 'all' && (
+                <Badge variant="secondary" className="text-[10px] gap-1 pr-1 capitalize">
+                  <Utensils className="h-2.5 w-2.5" /> {filterOrderType}
+                  <button onClick={() => setFilterOrderType('all')} className="ml-0.5 hover:text-destructive"><X className="h-2.5 w-2.5" /></button>
+                </Badge>
+              )}
+              {filterCategory !== 'all' && (
+                <Badge variant="secondary" className="text-[10px] gap-1 pr-1 capitalize">
+                  <Package className="h-2.5 w-2.5" /> {filterCategory}
+                  <button onClick={() => setFilterCategory('all')} className="ml-0.5 hover:text-destructive"><X className="h-2.5 w-2.5" /></button>
+                </Badge>
+              )}
+              <button onClick={clearAllFilters} className="text-[10px] text-destructive hover:underline">Clear all</button>
+            </div>
+          )}
         </div>
 
         {/* ═══════ ROW 1: KPI CARDS ═══════ */}

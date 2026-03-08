@@ -41,7 +41,6 @@ export default function Orders() {
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
   const [confirmPrintOrderId, setConfirmPrintOrderId] = useState<string | null>(null);
   const [printStatus, setPrintStatus] = useState<'idle' | 'generating' | 'printing' | 'success' | 'error'>('idle');
-  const printIframeRef = useRef<HTMLIFrameElement>(null);
 
   const { data: orders, isLoading } = useOrders();
   const { branches } = useBranches();

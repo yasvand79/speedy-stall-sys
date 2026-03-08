@@ -84,21 +84,21 @@ export default function InviteCodes() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold">Staff Invitations</h1>
-            <p className="text-muted-foreground">Invite staff by email — they'll be auto-approved on signup</p>
+            <h1 className="font-display text-3xl font-bold">Staff Access</h1>
+            <p className="text-muted-foreground">Add staff emails — they can sign up and login directly</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                Invite Staff
+                Add Staff
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Invite Staff Member</DialogTitle>
+                <DialogTitle>Add Staff Member</DialogTitle>
                 <DialogDescription>
-                  Enter their email and assign a role. They'll be auto-approved when they sign up.
+                  Enter their email and assign a role. They can sign up and login directly — no approval needed.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">

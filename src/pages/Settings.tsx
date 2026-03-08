@@ -69,6 +69,7 @@ export default function Settings() {
         bill_show_fssai: s.bill_show_fssai ?? true,
         bill_show_upi: s.bill_show_upi ?? true,
       });
+      setCustomBillHtml(s.custom_bill_html || null);
     }
   }, [settings]);
 

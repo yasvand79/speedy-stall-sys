@@ -11,7 +11,7 @@ import {
   LogOut,
   Building2,
   TrendingUp,
-  Ticket,
+  UserPlus,
   UserCheck,
   CookingPot,
   Heart,

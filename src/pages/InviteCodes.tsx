@@ -153,12 +153,12 @@ export default function InviteCodes() {
                   </div>
                 )}
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
+              <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button className="w-full sm:w-auto" onClick={handleCreate} disabled={isCreating}>
+                  {isCreating ? 'Saving...' : 'Send Invitation'}
                 </Button>
-                <Button onClick={handleCreate} disabled={isCreating}>
-                  {isCreating ? 'Saving...' : 'Save'}
+                <Button className="w-full sm:w-auto" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
                 </Button>
               </DialogFooter>
             </DialogContent>

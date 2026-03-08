@@ -16,6 +16,10 @@ import Branches from "./pages/Branches";
 import StaffPerformance from "./pages/StaffPerformance";
 import InviteCodes from "./pages/InviteCodes";
 import UserApprovals from "./pages/UserApprovals";
+import Kitchen from "./pages/Kitchen";
+import Customers from "./pages/Customers";
+import Refunds from "./pages/Refunds";
+import PublicMenu from "./pages/PublicMenu";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +34,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/menu/:branchCode" element={<PublicMenu />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/menu" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><Menu /></ProtectedRoute>} />
@@ -40,6 +45,9 @@ const App = () => (
             <Route path="/reports" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><Reports /></ProtectedRoute>} />
             <Route path="/invite-codes" element={<ProtectedRoute allowedRoles={['developer', 'central_admin']}><InviteCodes /></ProtectedRoute>} />
             <Route path="/user-approvals" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><UserApprovals /></ProtectedRoute>} />
+            <Route path="/kitchen" element={<ProtectedRoute><Kitchen /></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><Customers /></ProtectedRoute>} />
+            <Route path="/refunds" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin', 'billing']}><Refunds /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['developer']}><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

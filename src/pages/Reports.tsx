@@ -27,9 +27,11 @@ import {
   Lightbulb, Zap, Target, RefreshCw, TrendingDown as TrendDown,
   Megaphone, UtensilsCrossed, UserCheck, CalendarIcon, X, Building2,
 } from 'lucide-react';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useShopSettings } from '@/hooks/useShopSettings';

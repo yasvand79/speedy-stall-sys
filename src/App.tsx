@@ -16,6 +16,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Branches from "./pages/Branches";
 import StaffPerformance from "./pages/StaffPerformance";
+import ActivityLog from "./pages/ActivityLog";
 
 import Profile from "./pages/Profile";
 import PrinterSetup from "./pages/PrinterSetup";

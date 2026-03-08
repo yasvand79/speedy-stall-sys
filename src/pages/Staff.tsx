@@ -292,7 +292,17 @@ export default function Staff() {
                   <div className="mt-4 space-y-2">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Mail className="h-4 w-4" />
-                      <span className="truncate font-mono text-xs">{member.userId}</span>
+                      <button
+                        type="button"
+                        className="truncate hover:text-foreground hover:underline cursor-pointer transition-colors text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(member.email);
+                          toast.success('Email copied!');
+                        }}
+                        title="Click to copy"
+                      >
+                        {member.email}
+                      </button>
                     </div>
                     {member.phone && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">

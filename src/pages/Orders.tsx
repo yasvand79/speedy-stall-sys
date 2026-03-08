@@ -15,7 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle,
   Building2, User, UtensilsCrossed, Printer, Package,
-  ArrowRight, Hash, CreditCard
+  ArrowRight, Hash, CreditCard, Loader2, CheckCircle
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';

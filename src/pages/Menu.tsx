@@ -323,8 +323,31 @@ export default function Menu() {
                       placeholder="Rice, Chicken, Spices..."
                     />
                   </div>
-                  <Button onClick={handleSubmit} className="w-full" disabled={createItem.isPending || updateItem.isPending}>
-                    {editingItem ? 'Update Item' : 'Add Item'}
+                  <div>
+                    <Label>Food Image</Label>
+                    <div className="mt-1.5 flex items-center gap-3">
+                      {imagePreview ? (
+                        <div className="relative h-20 w-20 rounded-lg overflow-hidden border">
+                          <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => { setImageFile(null); setImagePreview(null); setFormData(p => ({ ...p, image_url: '' })); }}
+                            className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary transition-colors">
+                          <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                          <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+                        </label>
+                      )}
+                      <p className="text-xs text-muted-foreground">Upload image (max 2MB)</p>
+                    </div>
+                  </div>
+                  <Button onClick={handleSubmit} className="w-full" disabled={createItem.isPending || updateItem.isPending || isUploading}>
+                    {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</> : editingItem ? 'Update Item' : 'Add Item'}
                   </Button>
                 </div>
               </DialogContent>

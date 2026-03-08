@@ -1,7 +1,9 @@
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { BottomNav } from './BottomNav';
+import { PrinterAlertDialog } from './PrinterAlertDialog';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
+import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -9,6 +11,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   useSessionTimeout();
+  const { printerError, clearPrinterError } = useThermalPrinter();
 
   return (
     <SidebarProvider>
@@ -24,6 +27,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </div>
       <BottomNav />
+      <PrinterAlertDialog error={printerError} onClose={clearPrinterError} />
     </SidebarProvider>
   );
 }

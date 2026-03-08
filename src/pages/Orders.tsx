@@ -117,22 +117,27 @@ export default function Orders() {
             iframe.contentWindow?.print();
           };
 
-          // Use iframe onload + document.fonts.ready for reliable rendering
+          // Fallback if onload doesn't fire (already loaded)
+          let printTriggered = false;
+          const safeTrigger = () => {
+            if (!printTriggered) {
+              printTriggered = true;
+              triggerPrint();
+            }
+          };
           iframe.onload = () => {
             const iframeDoc = iframe.contentDocument;
             if (iframeDoc && (iframeDoc as any).fonts?.ready) {
               (iframeDoc as any).fonts.ready.then(() => {
-                setTimeout(triggerPrint, 300);
+                setTimeout(safeTrigger, 300);
               });
             } else {
-              setTimeout(triggerPrint, 1500);
+              setTimeout(safeTrigger, 1500);
             }
           };
-
-          // Fallback if onload doesn't fire (already loaded)
           setTimeout(() => {
-            if (document.body.contains(iframe) && printStatus === 'printing') {
-              triggerPrint();
+            if (document.body.contains(iframe)) {
+              safeTrigger();
             }
           }, 3000);
         }

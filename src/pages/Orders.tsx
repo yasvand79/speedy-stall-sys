@@ -459,6 +459,46 @@ export default function Orders() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Print Status Overlay */}
+      {printStatus !== 'idle' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border border-border shadow-2xl max-w-xs w-full text-center">
+            {printStatus === 'generating' && (
+              <>
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="text-lg font-semibold text-foreground">Generating Invoice...</p>
+                <p className="text-sm text-muted-foreground">Preparing your receipt</p>
+              </>
+            )}
+            {printStatus === 'printing' && (
+              <>
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="text-lg font-semibold text-foreground">Printing...</p>
+                <p className="text-sm text-muted-foreground">Sending to printer</p>
+              </>
+            )}
+            {printStatus === 'success' && (
+              <>
+                <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <CheckCircle className="h-8 w-8 text-emerald-600" />
+                </div>
+                <p className="text-lg font-semibold text-foreground">Successfully Printed!</p>
+                <p className="text-sm text-muted-foreground">Invoice has been sent to printer</p>
+              </>
+            )}
+            {printStatus === 'error' && (
+              <>
+                <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <XCircle className="h-8 w-8 text-destructive" />
+                </div>
+                <p className="text-lg font-semibold text-foreground">Print Failed</p>
+                <p className="text-sm text-muted-foreground">Could not generate the invoice</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Hidden iframe for printing */}
       <iframe
         ref={printIframeRef}

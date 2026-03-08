@@ -102,7 +102,7 @@ export default function Branches() {
               {branches.filter(b => b.is_active).length} active branches • {branches.length} total
             </p>
           </div>
-          {isDeveloper && (
+          {isAdmin && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={() => handleOpenDialog()}>

@@ -96,13 +96,13 @@ function KpiCard({ title, value, subtitle, icon: Icon, trend, color = 'primary' 
     destructive: 'bg-destructive/10 text-destructive',
   };
   return (
-    <Card className="overflow-hidden relative group hover:shadow-md transition-shadow">
+    <Card className="overflow-hidden relative group hover:shadow-md transition-shadow border-border/60">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
-            <p className="font-display text-xl font-bold text-foreground leading-none">{value}</p>
-            {subtitle && <p className="text-[10px] text-muted-foreground">{subtitle}</p>}
+            <p className="font-display text-2xl font-bold text-foreground leading-none">{value}</p>
+            {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
             {trend && (
               <div className={`flex items-center gap-0.5 text-[11px] font-semibold ${trend.isPositive ? 'text-success' : 'text-destructive'}`}>
                 {trend.isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
@@ -110,17 +110,35 @@ function KpiCard({ title, value, subtitle, icon: Icon, trend, color = 'primary' 
               </div>
             )}
           </div>
-          <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${colorMap[color] || colorMap.primary}`}>
-            <Icon className="h-4.5 w-4.5" />
+          <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${colorMap[color] || colorMap.primary}`}>
+            <Icon className="h-5 w-5" />
           </div>
         </div>
       </CardContent>
-      <div className={`absolute bottom-0 left-0 right-0 h-[2px] ${color === 'success' ? 'bg-success' : color === 'info' ? 'bg-info' : color === 'warning' ? 'bg-warning' : color === 'destructive' ? 'bg-destructive' : 'bg-primary'} opacity-60`} />
     </Card>
   );
 }
 
-// ─── Section Header ───
+// ─── Section Divider ───
+function SectionDivider({ icon: Icon, title, description, badge }: { icon: React.ElementType; title: string; description?: string; badge?: string }) {
+  return (
+    <div className="flex items-center gap-3 pt-6 pb-2">
+      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+        <Icon className="h-4 w-4 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h2 className="font-display text-base font-bold text-foreground">{title}</h2>
+          {badge && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{badge}</Badge>}
+        </div>
+        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+      </div>
+      <div className="flex-1 h-px bg-border/60" />
+    </div>
+  );
+}
+
+// ─── Section Header (small) ───
 function SectionTitle({ icon: Icon, title, badge }: { icon: React.ElementType; title: string; badge?: string }) {
   return (
     <div className="flex items-center gap-2 mb-3">

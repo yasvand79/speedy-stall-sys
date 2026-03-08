@@ -421,7 +421,12 @@ export default function Menu() {
                   const hasBranchPrice = isBranchAdmin && branchPrices?.some(p => p.menu_item_id === item.id);
                   
                   return (
-                    <Card key={item.id} className={!item.is_available ? 'opacity-60' : ''}>
+                    <Card key={item.id} className={`overflow-hidden ${!item.is_available ? 'opacity-60' : ''}`}>
+                      {item.image_url && (
+                        <div className="h-36 w-full overflow-hidden">
+                          <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+                        </div>
+                      )}
                       <CardHeader className="pb-2">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">

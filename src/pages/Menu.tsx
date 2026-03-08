@@ -284,13 +284,31 @@ export default function Menu() {
             </p>
           </div>
           {canManageBaseMenu && (
-            <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button onClick={() => resetForm()}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Item
-                </Button>
-              </DialogTrigger>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleGenerateAllImages}
+                disabled={isGeneratingImages}
+              >
+                {isGeneratingImages ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating {generatingProgress.current}/{generatingProgress.total}
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus className="mr-2 h-4 w-4" />
+                    Auto Generate Images
+                  </>
+                )}
+              </Button>
+              <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) resetForm(); }}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => resetForm()}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Item
+                  </Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>{editingItem ? 'Edit Menu Item' : 'Add Menu Item'}</DialogTitle>

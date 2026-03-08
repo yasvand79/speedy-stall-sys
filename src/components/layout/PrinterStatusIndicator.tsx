@@ -184,6 +184,16 @@ export function PrinterStatusIndicator() {
             variant="ghost"
             size="sm"
             className="w-full justify-start gap-2 h-8 text-xs text-muted-foreground"
+            onClick={() => navigate('/printer-setup')}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Setup guide
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 h-8 text-xs text-muted-foreground"
             onClick={() => navigate('/settings')}
           >
             <Settings className="h-3.5 w-3.5" />

@@ -2,12 +2,14 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useOrders } from '@/hooks/useOrders';
 import { usePayments } from '@/hooks/usePayments';
 import { useDailySales, useTopSellingItems, useWeeklyRevenue, useInventoryStatus } from '@/hooks/useReports';
-import { IndianRupee, ShoppingCart, TrendingUp, Clock, CreditCard, AlertTriangle, UtensilsCrossed, Package, Banknote, Smartphone, CheckCircle2, ChefHat, XCircle } from 'lucide-react';
+import { IndianRupee, ShoppingCart, TrendingUp, Clock, CreditCard, AlertTriangle, UtensilsCrossed, Package, Banknote, Smartphone, CheckCircle2, ChefHat, XCircle, Radio, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useState } from 'react';
 
 const REFETCH_INTERVAL = 5000;
 const PIE_COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))'];

@@ -773,6 +773,7 @@ export type Database = {
           bill_show_upi: boolean | null
           bill_terms: string | null
           created_at: string
+          custom_bill_html: string | null
           daily_summary_email: boolean
           fssai_license: string | null
           gst_number: string | null
@@ -799,6 +800,7 @@ export type Database = {
           bill_show_upi?: boolean | null
           bill_terms?: string | null
           created_at?: string
+          custom_bill_html?: string | null
           daily_summary_email?: boolean
           fssai_license?: string | null
           gst_number?: string | null
@@ -825,6 +827,7 @@ export type Database = {
           bill_show_upi?: boolean | null
           bill_terms?: string | null
           created_at?: string
+          custom_bill_html?: string | null
           daily_summary_email?: boolean
           fssai_license?: string | null
           gst_number?: string | null

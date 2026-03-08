@@ -24,7 +24,7 @@ export default function CustomerDisplay() {
 
   if (paid) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col items-center justify-center p-8">
+      <div className="min-h-screen bg-gradient-to-b from-success/5 to-background flex flex-col items-center justify-center p-8">
         <div className="animate-in fade-in zoom-in duration-500 flex flex-col items-center gap-6">
           <div className="h-24 w-24 rounded-full bg-success/10 flex items-center justify-center">
             <CheckCircle className="h-14 w-14 text-success" />

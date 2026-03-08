@@ -43,9 +43,8 @@ import { toast } from 'sonner';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
-const roleConfig: Record<AppRole, { label: string; icon: React.ElementType; color: string }> = {
-  developer: { label: 'Developer', icon: Shield, color: 'bg-primary text-primary-foreground' },
-  central_admin: { label: 'Central Admin', icon: Shield, color: 'bg-destructive text-destructive-foreground' },
+const roleConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  admin: { label: 'Admin', icon: Shield, color: 'bg-primary text-primary-foreground' },
   branch_admin: { label: 'Branch Admin', icon: UserCog, color: 'bg-warning text-warning-foreground' },
   billing: { label: 'Billing', icon: Receipt, color: 'bg-info text-info-foreground' },
 };

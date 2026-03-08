@@ -9,7 +9,7 @@ type PaymentMethod = Database['public']['Enums']['payment_method'];
 export function usePayments(orderId?: string) {
   return useQuery({
     queryKey: ['payments', orderId],
-    queryFn: async () => {
+    refetchInterval: 5000,
       let query = supabase
         .from('payments')
         .select('*')

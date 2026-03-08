@@ -247,7 +247,7 @@ export function useStaffSales(startDate: Date, endDate: Date) {
 export function useInventoryStatus() {
   return useQuery({
     queryKey: ['reports', 'inventory-status'],
-    queryFn: async () => {
+    refetchInterval: 5000,
       const { data, error } = await supabase
         .from('inventory')
         .select('*')

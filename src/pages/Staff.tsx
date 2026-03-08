@@ -60,6 +60,8 @@ const roleLabels: Record<string, string> = {
 export default function Staff() {
   const { profile, role, isAdmin, isBranchAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterBranch, setFilterBranch] = useState<string>('all');
+  const [filterRole, setFilterRole] = useState<string>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [staffToRemove, setStaffToRemove] = useState<StaffMember | null>(null);
   

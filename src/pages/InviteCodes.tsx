@@ -135,7 +135,7 @@ export default function InviteCodes() {
                   </Select>
                 </div>
 
-                {requiresBranch && (
+                {requiresBranch && !isBranchAdmin && (
                   <div className="space-y-2">
                     <Label>Branch</Label>
                     <Select value={newBranchId} onValueChange={setNewBranchId}>

@@ -37,7 +37,7 @@ const moreMenuItems = [
   { name: 'Branches', href: '/branches', icon: Building2, roles: ['admin'] },
   { name: 'Staff', href: '/staff', icon: Users, roles: ['admin', 'branch_admin'] },
   { name: 'Performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
-  { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['admin'] },
+  { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['admin', 'branch_admin'] },
   { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
   { name: 'Profile', href: '/profile', icon: UserCircle },
 ];

@@ -188,16 +188,20 @@ export default function Staff() {
 
                   <div className="space-y-2">
                     <Label>Role</Label>
-                    <Select value={newStaffRole} onValueChange={(v: AppRole) => setNewStaffRole(v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="billing">Billing Staff</SelectItem>
-                        <SelectItem value="branch_admin">Branch Admin</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {isBranchAdmin && !isAdmin ? (
+                      <Input value="Billing Staff" disabled />
+                    ) : (
+                      <Select value={newStaffRole} onValueChange={(v: AppRole) => setNewStaffRole(v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="billing">Billing Staff</SelectItem>
+                          <SelectItem value="branch_admin">Branch Admin</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   
                   {(newStaffRole === 'billing' || newStaffRole === 'branch_admin') && (

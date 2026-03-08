@@ -15,7 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle,
   Building2, User, UtensilsCrossed, Printer, Package,
-  ArrowRight, Hash, CreditCard
+  ArrowRight, Hash, CreditCard, Loader2, CheckCircle
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -40,6 +40,7 @@ export default function Orders() {
   const [activeTab, setActiveTab] = useState<StatusTab>('active');
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
   const [confirmPrintOrderId, setConfirmPrintOrderId] = useState<string | null>(null);
+  const [printStatus, setPrintStatus] = useState<'idle' | 'generating' | 'printing' | 'success' | 'error'>('idle');
   const printIframeRef = useRef<HTMLIFrameElement>(null);
 
   const { data: orders, isLoading } = useOrders();
@@ -69,12 +70,14 @@ export default function Orders() {
     if (!orderId) return;
     setConfirmPrintOrderId(null);
     setPrintingOrderId(orderId);
+    setPrintStatus('generating');
     try {
       const { data, error } = await supabase.functions.invoke('generate-invoice', {
         body: { orderId }
       });
       if (error) throw error;
       if (data?.html) {
+        setPrintStatus('printing');
         const iframe = printIframeRef.current;
         if (iframe) {
           const doc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -82,15 +85,25 @@ export default function Orders() {
             doc.open();
             doc.write(data.html);
             doc.close();
+
+            // Listen for after print event
+            const onAfterPrint = () => {
+              iframe.contentWindow?.removeEventListener('afterprint', onAfterPrint);
+              setPrintStatus('success');
+              setTimeout(() => setPrintStatus('idle'), 2000);
+            };
+            iframe.contentWindow?.addEventListener('afterprint', onAfterPrint);
+
             setTimeout(() => {
               iframe.contentWindow?.print();
             }, 300);
           }
         }
-        toast.success('Invoice sent to printer');
       }
     } catch {
+      setPrintStatus('error');
       toast.error('Failed to generate invoice');
+      setTimeout(() => setPrintStatus('idle'), 2000);
     } finally {
       setPrintingOrderId(null);
     }
@@ -445,6 +458,46 @@ export default function Orders() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Print Status Overlay */}
+      {printStatus !== 'idle' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border border-border shadow-2xl max-w-xs w-full text-center">
+            {printStatus === 'generating' && (
+              <>
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="text-lg font-semibold text-foreground">Generating Invoice...</p>
+                <p className="text-sm text-muted-foreground">Preparing your receipt</p>
+              </>
+            )}
+            {printStatus === 'printing' && (
+              <>
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="text-lg font-semibold text-foreground">Printing...</p>
+                <p className="text-sm text-muted-foreground">Sending to printer</p>
+              </>
+            )}
+            {printStatus === 'success' && (
+              <>
+                <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <CheckCircle className="h-8 w-8 text-emerald-600" />
+                </div>
+                <p className="text-lg font-semibold text-foreground">Successfully Printed!</p>
+                <p className="text-sm text-muted-foreground">Invoice has been sent to printer</p>
+              </>
+            )}
+            {printStatus === 'error' && (
+              <>
+                <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <XCircle className="h-8 w-8 text-destructive" />
+                </div>
+                <p className="text-lg font-semibold text-foreground">Print Failed</p>
+                <p className="text-sm text-muted-foreground">Could not generate the invoice</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Hidden iframe for printing */}
       <iframe

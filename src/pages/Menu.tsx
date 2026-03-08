@@ -89,7 +89,6 @@ export default function Menu() {
       description: item.description || '',
       price: String(item.price),
       category: item.category,
-      preparation_time: String(item.preparation_time || 15),
       ingredients: (item.ingredients || []).join(', '),
       image_url: item.image_url || '',
     });

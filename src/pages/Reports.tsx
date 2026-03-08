@@ -76,7 +76,7 @@ export default function Reports() {
   const { start, end } = useDateRange(range);
 
   const { data: dailySales, isLoading: dailyLoading } = useDailySales();
-  const { data: topItems } = useTopSellingItems(range === 'today' ? 1 : range === '7d' ? 7 : 30);
+  const { data: topItems } = useTopSellingItems(range === 'today' ? 1 : range === '7d' ? 7 : range === '30d' ? 30 : range === '6m' ? 180 : 3650);
   const { data: weeklyRevenue, isLoading: weeklyLoading } = useWeeklyRevenue();
   const { data: orders, isLoading: ordersLoading } = useOrdersAnalytics(start, end);
   const { data: payments } = usePaymentAnalytics(start, end);

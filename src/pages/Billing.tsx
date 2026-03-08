@@ -183,46 +183,48 @@ export default function Billing() {
           </CardContent>
         </Card>
 
-        {/* Recent Transactions */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="font-display">Recent Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentTransactions.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">No completed transactions</p>
-            ) : (
-              <div className="space-y-3">
-                {recentTransactions.map((order) => {
-                  const orderPayments = (payments || []).filter(p => p.order_id === order.id);
-                  const latestPayment = orderPayments[0];
-                  
-                  return (
-                    <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-                          <IndianRupee className="h-5 w-5 text-success" />
+        {/* Recent Transactions - hidden for billing role */}
+        {!isBillingRole && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="font-display">Recent Transactions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentTransactions.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">No completed transactions</p>
+              ) : (
+                <div className="space-y-3">
+                  {recentTransactions.map((order) => {
+                    const orderPayments = (payments || []).filter(p => p.order_id === order.id);
+                    const latestPayment = orderPayments[0];
+                    
+                    return (
+                      <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                            <IndianRupee className="h-5 w-5 text-success" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{order.order_number}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {latestPayment?.method?.toUpperCase() || 'N/A'} • {formatDistanceToNow(new Date(order.created_at || ''), { addSuffix: true })}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{order.order_number}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {latestPayment?.method?.toUpperCase() || 'N/A'} • {formatDistanceToNow(new Date(order.created_at || ''), { addSuffix: true })}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <p className="font-display font-bold text-success">₹{Number(order.total).toFixed(0)}</p>
+                          <Button variant="ghost" size="icon" onClick={() => handlePrintReceipt(order)} disabled={isThermalPrinting}>
+                            {isThermalPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <p className="font-display font-bold text-success">₹{Number(order.total).toFixed(0)}</p>
-                        <Button variant="ghost" size="icon" onClick={() => handlePrintReceipt(order)} disabled={isThermalPrinting}>
-                          {isThermalPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Payment Dialog */}

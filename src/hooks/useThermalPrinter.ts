@@ -9,7 +9,6 @@ type QZStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 interface OrderForPrint {
   orderNumber: string;
   type: string;
-  tableNumber?: number | null;
   customerName?: string | null;
   staffName?: string | null;
   items: {

@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { BottomNav } from './BottomNav';
+import { PrinterStatusIndicator } from './PrinterStatusIndicator';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
 interface MainLayoutProps {

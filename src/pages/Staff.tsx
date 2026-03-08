@@ -66,8 +66,9 @@ export default function Staff() {
   const { branches } = useBranches();
   const { createInvitation, isCreating } = useStaffInvitations();
 
-  // Only admins can manage staff
+  // Admins can fully manage staff, branch admins can invite billing staff
   const canManageStaff = isAdmin;
+  const canInviteStaff = isAdmin || isBranchAdmin;
 
   const filteredStaff = staff.filter(member =>
     member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||

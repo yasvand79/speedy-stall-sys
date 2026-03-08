@@ -26,6 +26,7 @@ export default function Auth() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
 
   useEffect(() => {
     if (!loading && user && profile) {

@@ -13,6 +13,7 @@ import {
   TrendingUp,
   UserPlus,
   UserCircle,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,6 +43,7 @@ const navigation = [
   { name: 'Performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
   
   { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin'] },
+  { name: 'Activity Log', href: '/activity-log', icon: ClipboardList, roles: ['admin'] },
   { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
 ];
 

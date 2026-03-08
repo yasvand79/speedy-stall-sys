@@ -12,6 +12,7 @@ import {
   UserPlus,
   Settings,
   UserCircle,
+  ClipboardList,
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -37,7 +38,7 @@ const moreMenuItems = [
   { name: 'Branches', href: '/branches', icon: Building2, roles: ['admin'] },
   { name: 'Staff', href: '/staff', icon: Users, roles: ['admin', 'branch_admin'] },
   { name: 'Performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
-  
+  { name: 'Activity Log', href: '/activity-log', icon: ClipboardList, roles: ['admin'] },
   { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
   { name: 'Profile', href: '/profile', icon: UserCircle },
 ];

@@ -12,6 +12,7 @@ import {
   UserPlus,
   Settings,
   UserCircle,
+  ClipboardList,
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

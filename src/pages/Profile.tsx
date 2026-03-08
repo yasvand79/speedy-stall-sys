@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { User, Phone, Mail, Shield, Building2, Loader2, KeyRound } from 'lucide-react';
+import DisplaySettings from '@/components/profile/DisplaySettings';
 
 export default function Profile() {
   const { user, profile, role, signOut } = useAuth();

@@ -23,10 +23,9 @@ function buildDefaultTemplate(vars: Record<string, string>): string {
   <meta charset="UTF-8">
   <title>Receipt - ${vars.ORDER_NUMBER}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
     @page { size: 80mm auto; margin: 0; }
-    body { font-family: 'JetBrains Mono', 'Courier New', monospace; width: 80mm; margin: 0 auto; padding: 8mm 5mm; background: #fff; color: #000; font-size: 11px; line-height: 1.4; }
+    body { font-family: 'Courier New', 'Courier', monospace; width: 80mm; margin: 0 auto; padding: 8mm 5mm; background: #fff; color: #000; font-size: 11px; line-height: 1.4; }
     .receipt { width: 100%; }
     .sep { border: none; border-top: 1px dashed #000; margin: 6px 0; }
     .sep-double { border: none; border-top: 2px solid #000; margin: 6px 0; }

@@ -160,7 +160,7 @@ export function useOrdersAnalytics(startDate: Date, endDate: Date) {
     queryFn: async () => {
       const { data: orders, error } = await supabase
         .from('orders')
-        .select('id, total, subtotal, gst, discount, status, type, payment_status, created_at, completed_at, staff_name, branch_id, created_by, order_number, customer_name')
+        .select('id, total, subtotal, gst, discount, status, type, payment_status, created_at, completed_at, staff_name, branch_id, created_by, order_number, customer_name, table_number')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
         .order('created_at', { ascending: false });

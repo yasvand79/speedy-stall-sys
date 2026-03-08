@@ -483,35 +483,43 @@ export default function Orders() {
         />
       )}
 
-      {/* Print Confirmation Dialog */}
-      <AlertDialog open={!!confirmPrintOrderId} onOpenChange={(open) => !open && setConfirmPrintOrderId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Print Invoice</AlertDialogTitle>
-            <AlertDialogDescription>
-              Do you want to print the invoice for this order?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmPrint}>
+      {/* Print Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0">
+          <DialogHeader className="p-4 pb-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Receipt Preview
+            </DialogTitle>
+            <DialogDescription>Review the receipt before printing</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto border-y border-border bg-white">
+            {previewLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Generating receipt...</p>
+              </div>
+            ) : previewHtml ? (
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full min-h-[400px] h-[60vh] border-0"
+                title="Receipt Preview"
+              />
+            ) : null}
+          </div>
+          <DialogFooter className="p-4 pt-2 gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>Cancel</Button>
+            <Button onClick={handlePrintFromPreview} disabled={!previewHtml || previewLoading}>
               <Printer className="mr-2 h-4 w-4" />Print
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Print Status Overlay */}
       {printStatus !== 'idle' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border border-border shadow-2xl max-w-xs w-full text-center">
-            {printStatus === 'generating' && (
-              <>
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-lg font-semibold text-foreground">Generating Invoice...</p>
-                <p className="text-sm text-muted-foreground">Preparing your receipt</p>
-              </>
-            )}
             {printStatus === 'printing' && (
               <>
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />

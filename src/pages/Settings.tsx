@@ -484,6 +484,9 @@ export default function Settings() {
           canEdit={canEdit}
           isSaving={isSaving}
         />
+
+        {/* Display Settings */}
+        <DisplaySettings />
       </div>
     </MainLayout>
   );

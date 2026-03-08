@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+
 import { NewOrderDialog } from '@/components/orders/NewOrderDialog';
 import { PaymentDialog } from '@/components/billing/PaymentDialog';
 import { useOrders, useUpdateOrderStatus, OrderWithItems } from '@/hooks/useOrders';
@@ -16,11 +16,9 @@ import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 import {
   Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle,
   Building2, User, UtensilsCrossed, Printer, Package,
-  ArrowRight, Hash, CreditCard, Loader2, CheckCircle, Eye, Wifi, WifiOff
+  ArrowRight, Hash, CreditCard, Loader2, CheckCircle
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 type StatusTab = 'active' | 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
@@ -40,18 +38,13 @@ export default function Orders() {
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<StatusTab>('active');
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState<string>('');
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewOrderId, setPreviewOrderId] = useState<string | null>(null);
-  const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
 
   const { data: orders, isLoading } = useOrders();
   const { branches } = useBranches();
   const updateStatus = useUpdateOrderStatus();
   const { data: allPayments } = usePayments();
   const { role } = useAuth();
-  const { printBill, qzStatus, isPrinting: isThermalPrinting } = useThermalPrinter();
+  const { printBill, isPrinting: isThermalPrinting } = useThermalPrinter();
 
   const isAdmin = role === 'admin' || role === 'branch_admin';
   const isBilling = role === 'billing';
@@ -66,76 +59,33 @@ export default function Orders() {
   };
 
   const handlePrintClick = async (orderId: string) => {
-    setPreviewOrderId(orderId);
-    setPreviewLoading(true);
-    setPreviewHtml('');
-    setPreviewOpen(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-invoice', {
-        body: { orderId }
-      });
-      if (error) throw error;
-      if (data?.html) {
-        setPreviewHtml(data.html);
-      }
-    } catch {
-      toast.error('Failed to generate invoice');
-      setPreviewOpen(false);
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
+    const order = orders?.find(o => o.id === orderId);
+    if (!order) return;
 
-  const handlePrintFromPreview = async () => {
-    if (!previewHtml) return;
-    setPreviewOpen(false);
+    setPrintingOrderId(orderId);
+    const orderPayments = (allPayments || []).filter(p => p.order_id === orderId);
+    const latestPayment = orderPayments[0];
 
-    // Try thermal print via QZ Tray first
-    if (qzStatus === 'connected' && previewOrderId) {
-      const order = orders?.find(o => o.id === previewOrderId);
-      if (order) {
-        const thermalOrder = {
-          orderNumber: order.order_number,
-          type: order.type,
-          tableNumber: order.table_number,
-          customerName: order.customer_name,
-          staffName: order.staff_name,
-          items: order.order_items.map((item: any) => ({
-            name: item.menu_items?.name || 'Unknown',
-            quantity: item.quantity,
-            price: Number(item.price),
-          })),
-          subtotal: Number(order.subtotal),
-          gst: Number(order.gst),
-          discount: Number(order.discount),
-          total: Number(order.total),
-          paymentMethod: order.payment_status === 'completed' ? 'Paid' : 'Pending',
-        };
-
-        const success = await printBill(thermalOrder);
-        if (success) return;
-      }
-    }
-
-    // Fallback: Print using hidden iframe with the configured printer
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:80mm;height:0;border:none;visibility:hidden';
-    iframe.srcdoc = previewHtml;
-
-    iframe.onload = () => {
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      }, 300);
-
-      const cleanup = () => {
-        if (document.body.contains(iframe)) document.body.removeChild(iframe);
-      };
-      iframe.contentWindow?.addEventListener('afterprint', cleanup);
-      setTimeout(cleanup, 15000);
+    const thermalOrder = {
+      orderNumber: order.order_number,
+      type: order.type,
+      tableNumber: order.table_number,
+      customerName: order.customer_name,
+      staffName: order.staff_name,
+      items: order.order_items.map((item: any) => ({
+        name: item.menu_items?.name || 'Unknown',
+        quantity: item.quantity,
+        price: Number(item.price),
+      })),
+      subtotal: Number(order.subtotal),
+      gst: Number(order.gst),
+      discount: Number(order.discount),
+      total: Number(order.total),
+      paymentMethod: latestPayment?.method || (order.payment_status === 'completed' ? 'Paid' : undefined),
     };
 
-    document.body.appendChild(iframe);
+    await printBill(thermalOrder);
+    setPrintingOrderId(null);
   };
 
   const getPaidAmount = (orderId: string) => {
@@ -431,9 +381,13 @@ export default function Orders() {
                           variant="ghost"
                           className="h-8 w-8 p-0"
                           onClick={() => handlePrintClick(order.id)}
-                          disabled={printingOrderId === order.id}
+                          disabled={printingOrderId === order.id || isThermalPrinting}
                         >
-                          <Printer className="h-3.5 w-3.5" />
+                          {printingOrderId === order.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Printer className="h-3.5 w-3.5" />
+                          )}
                         </Button>
                       )}
 
@@ -468,79 +422,6 @@ export default function Orders() {
           total={Number(selectedOrder.total)}
           paidAmount={getPaidAmount(selectedOrder.id)}
         />
-      )}
-
-      {/* Print Preview Dialog */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0">
-          <DialogHeader className="p-4 pb-2">
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
-              Receipt Preview
-            </DialogTitle>
-            <DialogDescription>Review the receipt before printing</DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto border-y border-border bg-white">
-            {previewLoading ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Generating receipt...</p>
-              </div>
-            ) : previewHtml ? (
-              <iframe
-                srcDoc={previewHtml}
-                className="w-full min-h-[400px] h-[60vh] border-0"
-                title="Receipt Preview"
-              />
-            ) : null}
-          </div>
-          <DialogFooter className="p-4 pt-2 gap-2 sm:gap-2">
-            <div className="flex items-center gap-1.5 mr-auto">
-              {qzStatus === 'connected' ? (
-                <><Wifi className="h-3.5 w-3.5 text-emerald-500" /><span className="text-xs text-emerald-600">Thermal printer ready</span></>
-              ) : (
-                <><WifiOff className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">Browser print</span></>
-              )}
-            </div>
-            <Button variant="outline" onClick={() => setPreviewOpen(false)}>Cancel</Button>
-            <Button onClick={handlePrintFromPreview} disabled={!previewHtml || previewLoading || isThermalPrinting}>
-              <Printer className="mr-2 h-4 w-4" />{isThermalPrinting ? 'Printing...' : 'Print'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Print Status Overlay */}
-      {printStatus !== 'idle' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border border-border shadow-2xl max-w-xs w-full text-center">
-            {printStatus === 'printing' && (
-              <>
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-lg font-semibold text-foreground">Printing...</p>
-                <p className="text-sm text-muted-foreground">Sending to printer</p>
-              </>
-            )}
-            {printStatus === 'success' && (
-              <>
-                <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <CheckCircle className="h-8 w-8 text-emerald-600" />
-                </div>
-                <p className="text-lg font-semibold text-foreground">Successfully Printed!</p>
-                <p className="text-sm text-muted-foreground">Invoice has been sent to printer</p>
-              </>
-            )}
-            {printStatus === 'error' && (
-              <>
-                <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
-                  <XCircle className="h-8 w-8 text-destructive" />
-                </div>
-                <p className="text-lg font-semibold text-foreground">Print Failed</p>
-                <p className="text-sm text-muted-foreground">Could not generate the invoice</p>
-              </>
-            )}
-          </div>
-        </div>
       )}
 
     </MainLayout>

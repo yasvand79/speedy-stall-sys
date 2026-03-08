@@ -62,6 +62,7 @@ serve(async (req) => {
       );
     }
 
+    // Fetch order
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
@@ -82,107 +83,293 @@ serve(async (req) => {
       );
     }
 
-    const invoiceDate = new Date(order.created_at).toLocaleDateString('en-IN', {
-      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    // Fetch shop settings for GST/FSSAI info
+    const { data: shopSettings } = await supabase
+      .from('shop_settings')
+      .select('shop_name, phone, address, gst_number, fssai_license, upi_id, gst_rate')
+      .limit(1)
+      .maybeSingle();
 
-    const branchName = escapeHtml(order.branches?.name || 'Main Branch');
-    const branchLocation = escapeHtml(order.branches?.location || '');
-    const branchPhone = escapeHtml(order.branches?.phone || '');
-    const branchEmail = escapeHtml(order.branches?.email || '');
+    const shopName = escapeHtml(shopSettings?.shop_name || order.branches?.name || 'Restaurant');
+    const shopAddress = escapeHtml(shopSettings?.address || order.branches?.location || '');
+    const shopPhone = escapeHtml(shopSettings?.phone || order.branches?.phone || '');
+    const gstNumber = escapeHtml(shopSettings?.gst_number || '');
+    const fssaiLicense = escapeHtml(shopSettings?.fssai_license || '');
+    const upiId = escapeHtml(shopSettings?.upi_id || '');
+    const branchName = escapeHtml(order.branches?.name || '');
 
-    const itemsHtml = order.order_items.map((item: any) => `
-      <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee;">${escapeHtml(item.menu_items?.name) || 'Unknown Item'}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${Number(item.quantity)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${Number(item.price).toFixed(2)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">₹${(Number(item.price) * Number(item.quantity)).toFixed(2)}</td>
-      </tr>
-    `).join('');
+    const orderDate = new Date(order.created_at);
+    const dateStr = orderDate.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const timeStr = orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    // Build items rows
+    const itemsHtml = order.order_items.map((item: any, idx: number) => {
+      const name = escapeHtml(item.menu_items?.name) || 'Item';
+      const qty = Number(item.quantity);
+      const price = Number(item.price);
+      const total = qty * price;
+      return `
+        <tr>
+          <td class="item-name">${name}</td>
+          <td class="item-qty">${qty}</td>
+          <td class="item-rate">₹${price.toFixed(2)}</td>
+          <td class="item-amt">₹${total.toFixed(2)}</td>
+        </tr>`;
+    }).join('');
+
+    const totalItems = order.order_items.reduce((s: number, i: any) => s + Number(i.quantity), 0);
 
     const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Invoice - ${escapeHtml(order.order_number)}</title>
+  <title>Receipt - ${escapeHtml(order.order_number)}</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background: #fff; color: #333; }
-    .invoice-container { max-width: 800px; margin: 0 auto; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 3px solid #3b82f6; }
-    .company-info h1 { color: #3b82f6; font-size: 28px; margin-bottom: 5px; }
-    .company-info p { color: #666; font-size: 14px; line-height: 1.6; }
-    .invoice-details { text-align: right; }
-    .invoice-details h2 { font-size: 24px; color: #333; margin-bottom: 10px; }
-    .invoice-details p { font-size: 14px; color: #666; }
-    .invoice-number { font-size: 18px; font-weight: bold; color: #3b82f6; }
-    .info-section { display: flex; justify-content: space-between; margin-bottom: 30px; }
-    .info-box { flex: 1; padding: 20px; background: #f8fafc; border-radius: 8px; margin-right: 20px; }
-    .info-box:last-child { margin-right: 0; }
-    .info-box h3 { font-size: 12px; text-transform: uppercase; color: #666; margin-bottom: 10px; letter-spacing: 1px; }
-    .info-box p { font-size: 14px; line-height: 1.6; }
-    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-    .items-table th { background: #3b82f6; color: white; padding: 12px; text-align: left; font-size: 14px; }
-    .items-table th:nth-child(2), .items-table th:nth-child(3), .items-table th:nth-child(4) { text-align: center; }
-    .items-table th:last-child { text-align: right; }
-    .totals { margin-left: auto; width: 300px; }
-    .totals-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-    .totals-row.grand-total { border-bottom: none; border-top: 2px solid #3b82f6; padding-top: 15px; margin-top: 10px; font-size: 18px; font-weight: bold; color: #3b82f6; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #999; font-size: 12px; }
-    .payment-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
-    .payment-paid { background: #dcfce7; color: #16a34a; }
-    .payment-pending { background: #fef3c7; color: #d97706; }
-    .staff-info { background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 30px; }
-    .staff-info p { font-size: 14px; color: #0369a1; }
+
+    @page {
+      size: 80mm auto;
+      margin: 0;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      width: 80mm;
+      margin: 0 auto;
+      padding: 8mm 5mm;
+      background: #fff;
+      color: #000;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .receipt {
+      width: 100%;
+    }
+
+    /* Dashed separators */
+    .sep {
+      border: none;
+      border-top: 1px dashed #000;
+      margin: 6px 0;
+    }
+    .sep-double {
+      border: none;
+      border-top: 2px solid #000;
+      margin: 6px 0;
+    }
+    .sep-stars {
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 2px;
+      margin: 4px 0;
+    }
+
+    /* Header */
+    .shop-name {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .shop-detail {
+      text-align: center;
+      font-size: 9px;
+      color: #333;
+      line-height: 1.5;
+    }
+    .branch-name {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* Receipt title */
+    .receipt-title {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin: 4px 0;
+    }
+
+    /* Info rows */
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      line-height: 1.6;
+    }
+    .info-label {
+      color: #555;
+    }
+    .info-value {
+      font-weight: 600;
+      text-align: right;
+    }
+
+    /* Items table */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 4px 0;
+    }
+    .items-table th {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 0;
+      border-bottom: 1px solid #000;
+      text-align: left;
+    }
+    .items-table th:nth-child(2) { text-align: center; }
+    .items-table th:nth-child(3),
+    .items-table th:nth-child(4) { text-align: right; }
+
+    .item-name {
+      padding: 3px 0;
+      font-size: 10px;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .item-qty {
+      text-align: center;
+      padding: 3px 0;
+      font-size: 10px;
+    }
+    .item-rate {
+      text-align: right;
+      padding: 3px 0;
+      font-size: 10px;
+      color: #555;
+    }
+    .item-amt {
+      text-align: right;
+      padding: 3px 0;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    /* Totals */
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      padding: 2px 0;
+    }
+    .total-row.discount {
+      color: #16a34a;
+    }
+    .grand-total {
+      display: flex;
+      justify-content: space-between;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 6px 0;
+      letter-spacing: 0.5px;
+    }
+
+    /* Payment info */
+    .payment-status {
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 0;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .payment-paid { color: #16a34a; }
+    .payment-pending { color: #d97706; }
+
+    /* Footer */
+    .footer-msg {
+      text-align: center;
+      font-size: 10px;
+      margin: 2px 0;
+    }
+    .footer-msg.big {
+      font-size: 12px;
+      font-weight: 700;
+      margin: 6px 0 2px 0;
+    }
+    .footer-small {
+      text-align: center;
+      font-size: 8px;
+      color: #888;
+      margin: 2px 0;
+    }
+
+    @media print {
+      body { padding: 2mm 3mm; }
+    }
   </style>
 </head>
 <body>
-  <div class="invoice-container">
-    <div class="header">
-      <div class="company-info">
-        <h1>${branchName}</h1>
-        <p>${branchLocation}</p>
-        ${branchPhone ? `<p>Phone: ${branchPhone}</p>` : ''}
-        ${branchEmail ? `<p>Email: ${branchEmail}</p>` : ''}
-      </div>
-      <div class="invoice-details">
-        <h2>INVOICE</h2>
-        <p class="invoice-number">${escapeHtml(order.order_number)}</p>
-        <p>${invoiceDate}</p>
-        <p style="margin-top: 10px;">
-          <span class="payment-badge ${order.payment_status === 'completed' ? 'payment-paid' : 'payment-pending'}">
-            ${order.payment_status === 'completed' ? 'PAID' : 'PENDING'}
-          </span>
-        </p>
-      </div>
-    </div>
+  <div class="receipt">
+    <!-- Shop Header -->
+    <div class="shop-name">${shopName}</div>
+    ${shopAddress ? `<div class="shop-detail">${shopAddress}</div>` : ''}
+    ${shopPhone ? `<div class="shop-detail">Tel: ${shopPhone}</div>` : ''}
+    ${branchName ? `<div class="branch-name">Branch: ${branchName}</div>` : ''}
 
-    <div class="info-section">
-      <div class="info-box">
-        <h3>Order Details</h3>
-        <p><strong>Type:</strong> ${order.type === 'dine-in' ? 'Dine-In' : 'Takeaway'}</p>
-        ${order.table_number ? `<p><strong>Table:</strong> ${Number(order.table_number)}</p>` : ''}
-        <p><strong>Status:</strong> ${escapeHtml(order.status.charAt(0).toUpperCase() + order.status.slice(1))}</p>
-      </div>
-      <div class="info-box">
-        <h3>Customer Details</h3>
-        <p><strong>Name:</strong> ${escapeHtml(order.customer_name) || 'Walk-in Customer'}</p>
-        ${order.customer_phone ? `<p><strong>Phone:</strong> ${escapeHtml(order.customer_phone)}</p>` : ''}
-      </div>
-    </div>
+    <hr class="sep" />
 
-    <div class="staff-info">
-      <p><strong>Served by:</strong> ${escapeHtml(order.staff_name) || 'Staff'} | <strong>Branch:</strong> ${branchName}</p>
-    </div>
+    <div class="receipt-title">Cash Receipt</div>
 
+    <hr class="sep" />
+
+    <!-- Order Info -->
+    <div class="info-row">
+      <span class="info-label">Receipt #</span>
+      <span class="info-value">${escapeHtml(order.order_number)}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Date</span>
+      <span class="info-value">${dateStr}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Time</span>
+      <span class="info-value">${timeStr}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Type</span>
+      <span class="info-value">${order.type === 'dine-in' ? `Dine-In / Table ${Number(order.table_number) || '-'}` : 'Takeaway'}</span>
+    </div>
+    ${order.customer_name ? `
+    <div class="info-row">
+      <span class="info-label">Customer</span>
+      <span class="info-value">${escapeHtml(order.customer_name)}</span>
+    </div>` : ''}
+    ${order.customer_phone ? `
+    <div class="info-row">
+      <span class="info-label">Phone</span>
+      <span class="info-value">${escapeHtml(order.customer_phone)}</span>
+    </div>` : ''}
+    ${order.staff_name ? `
+    <div class="info-row">
+      <span class="info-label">Cashier</span>
+      <span class="info-value">${escapeHtml(order.staff_name)}</span>
+    </div>` : ''}
+
+    <hr class="sep-double" />
+
+    <!-- Items -->
     <table class="items-table">
       <thead>
         <tr>
           <th>Item</th>
           <th>Qty</th>
-          <th>Price</th>
-          <th>Total</th>
+          <th>Rate</th>
+          <th>Amt</th>
         </tr>
       </thead>
       <tbody>
@@ -190,35 +377,77 @@ serve(async (req) => {
       </tbody>
     </table>
 
-    <div class="totals">
-      <div class="totals-row">
-        <span>Subtotal</span>
-        <span>₹${Number(order.subtotal).toFixed(2)}</span>
-      </div>
-      <div class="totals-row">
-        <span>GST (5%)</span>
-        <span>₹${Number(order.gst).toFixed(2)}</span>
-      </div>
-      ${Number(order.discount) > 0 ? `
-      <div class="totals-row">
-        <span>Discount</span>
-        <span>-₹${Number(order.discount).toFixed(2)}</span>
-      </div>
-      ` : ''}
-      <div class="totals-row grand-total">
-        <span>Grand Total</span>
-        <span>₹${Number(order.total).toFixed(2)}</span>
-      </div>
+    <hr class="sep" />
+
+    <!-- Item count -->
+    <div class="total-row">
+      <span>Total Items</span>
+      <span style="font-weight:600">${totalItems}</span>
     </div>
 
-    <div class="footer">
-      <p>Thank you for your visit!</p>
-      <p style="margin-top: 5px;">This is a computer-generated invoice.</p>
+    <hr class="sep" />
+
+    <!-- Totals -->
+    <div class="total-row">
+      <span>Sub Total</span>
+      <span>₹${Number(order.subtotal).toFixed(2)}</span>
     </div>
+    <div class="total-row">
+      <span>GST (${shopSettings?.gst_rate || 5}%)</span>
+      <span>₹${Number(order.gst).toFixed(2)}</span>
+    </div>
+    ${Number(order.discount) > 0 ? `
+    <div class="total-row discount">
+      <span>Discount</span>
+      <span>-₹${Number(order.discount).toFixed(2)}</span>
+    </div>` : ''}
+
+    <hr class="sep-double" />
+
+    <div class="grand-total">
+      <span>TOTAL</span>
+      <span>₹${Number(order.total).toFixed(2)}</span>
+    </div>
+
+    <hr class="sep-double" />
+
+    <!-- Payment Status -->
+    <div class="payment-status ${order.payment_status === 'completed' ? 'payment-paid' : 'payment-pending'}">
+      ${order.payment_status === 'completed' ? '✓ PAID' : '⏳ PAYMENT PENDING'}
+    </div>
+
+    <hr class="sep" />
+
+    ${gstNumber ? `
+    <div class="info-row">
+      <span class="info-label">GSTIN</span>
+      <span class="info-value">${gstNumber}</span>
+    </div>` : ''}
+    ${fssaiLicense ? `
+    <div class="info-row">
+      <span class="info-label">FSSAI</span>
+      <span class="info-value">${fssaiLicense}</span>
+    </div>` : ''}
+
+    ${gstNumber || fssaiLicense ? '<hr class="sep" />' : ''}
+
+    <!-- Footer -->
+    <div class="footer-msg big">Thank You!</div>
+    <div class="footer-msg">Visit us again</div>
+
+    <div class="sep-stars">********************************</div>
+
+    <div class="footer-small">This is a computer-generated receipt</div>
+    <div class="footer-small">No signature required</div>
+
+    ${upiId ? `
+    <hr class="sep" />
+    <div class="footer-small" style="font-size:9px; color:#333;">
+      UPI: ${upiId}
+    </div>` : ''}
   </div>
 </body>
-</html>
-    `;
+</html>`;
 
     return new Response(
       JSON.stringify({ 

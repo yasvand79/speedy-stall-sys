@@ -26,10 +26,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null; status?: string }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null; autoApproved?: boolean }>;
   signOut: () => Promise<void>;
-  isDeveloper: boolean;
-  isCentralAdmin: boolean;
-  isBranchAdmin: boolean;
   isAdmin: boolean;
+  isBranchAdmin: boolean;
   isBilling: boolean;
   isApproved: boolean;
 }

@@ -48,7 +48,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
+          </ThermalPrinterProvider>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>

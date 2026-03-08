@@ -376,14 +376,7 @@ export function useThermalPrinter() {
     }
 
     if (!qz.websocket.isActive()) {
-      toast.info('Connecting to printer software...', {
-        description: 'Make sure QZ Tray is running on your computer.',
-        action: {
-          label: 'Download QZ Tray',
-          onClick: () => window.open('https://qz.io/download/', '_blank'),
-        },
-        duration: 5000,
-      });
+      toast.info('Connecting to printer software...');
       await connectQZ();
     }
 

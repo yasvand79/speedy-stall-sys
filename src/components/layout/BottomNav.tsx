@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useState } from 'react';
 import {
   Sheet,
@@ -23,28 +24,30 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import type { TranslationKey } from '@/i18n/translations';
 
-const bottomNavItems = [
-  { name: 'Home', href: '/', icon: LayoutDashboard },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['branch_admin', 'billing'] },
-  { name: 'Billing', href: '/billing', icon: Receipt, roles: ['branch_admin', 'billing'] },
-  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'branch_admin'] },
+const bottomNavItems: { nameKey: TranslationKey; href: string; icon: any; roles?: string[] }[] = [
+  { nameKey: 'nav.home', href: '/', icon: LayoutDashboard },
+  { nameKey: 'nav.orders', href: '/orders', icon: ShoppingCart, roles: ['branch_admin', 'billing'] },
+  { nameKey: 'nav.billing', href: '/billing', icon: Receipt, roles: ['branch_admin', 'billing'] },
+  { nameKey: 'nav.reports', href: '/reports', icon: BarChart3, roles: ['admin', 'branch_admin'] },
 ];
 
-const moreMenuItems = [
-  { name: 'Menu', href: '/menu', icon: UtensilsCrossed, roles: ['admin', 'branch_admin'] },
-  { name: 'Branches', href: '/branches', icon: Building2, roles: ['admin'] },
-  { name: 'Staff', href: '/staff', icon: Users, roles: ['admin', 'branch_admin'] },
-  { name: 'Performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
-  { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['admin'] },
-  { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
-  { name: 'Profile', href: '/profile', icon: UserCircle },
+const moreMenuItems: { nameKey: TranslationKey; href: string; icon: any; roles?: string[] }[] = [
+  { nameKey: 'nav.menu', href: '/menu', icon: UtensilsCrossed, roles: ['admin', 'branch_admin'] },
+  { nameKey: 'nav.branches', href: '/branches', icon: Building2, roles: ['admin'] },
+  { nameKey: 'nav.staff', href: '/staff', icon: Users, roles: ['admin', 'branch_admin'] },
+  { nameKey: 'nav.performance', href: '/staff-performance', icon: TrendingUp, roles: ['admin', 'branch_admin'] },
+  { nameKey: 'nav.staffAccess', href: '/invite-codes', icon: UserPlus, roles: ['admin'] },
+  { nameKey: 'nav.settings', href: '/settings', icon: Settings, roles: ['admin'] },
+  { nameKey: 'nav.profile', href: '/profile', icon: UserCircle },
 ];
 
 export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { role } = useAuth();
+  const { t } = useLanguage();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const morePaths = moreMenuItems.map(i => i.href);
@@ -70,7 +73,7 @@ export function BottomNav() {
 
             return (
               <button
-                key={item.name}
+                key={item.nameKey}
                 onClick={() => navigate(item.href)}
                 className={cn(
                   'flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors',
@@ -80,7 +83,7 @@ export function BottomNav() {
                 )}
               >
                 <Icon className={cn('h-5 w-5', isActive && 'stroke-[2.5]')} />
-                <span className="text-[10px] font-medium">{item.name}</span>
+                <span className="text-[10px] font-medium">{t(item.nameKey)}</span>
               </button>
             );
           })}
@@ -96,7 +99,7 @@ export function BottomNav() {
             )}
           >
             <MenuIcon className={cn('h-5 w-5', isMoreActive && 'stroke-[2.5]')} />
-            <span className="text-[10px] font-medium">More</span>
+            <span className="text-[10px] font-medium">{t('nav.more')}</span>
           </button>
         </div>
       </nav>
@@ -104,7 +107,7 @@ export function BottomNav() {
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
           <SheetHeader>
-            <SheetTitle>More Options</SheetTitle>
+            <SheetTitle>{t('nav.moreOptions')}</SheetTitle>
           </SheetHeader>
           <div className="grid grid-cols-3 gap-4 py-4">
             {filteredMoreItems.map(item => {
@@ -113,7 +116,7 @@ export function BottomNav() {
 
               return (
                 <button
-                  key={item.name}
+                  key={item.nameKey}
                   onClick={() => {
                     navigate(item.href);
                     setMoreOpen(false);
@@ -126,7 +129,7 @@ export function BottomNav() {
                   )}
                 >
                   <Icon className="h-6 w-6" />
-                  <span className="text-xs font-medium">{item.name}</span>
+                  <span className="text-xs font-medium">{t(item.nameKey)}</span>
                 </button>
               );
             })}

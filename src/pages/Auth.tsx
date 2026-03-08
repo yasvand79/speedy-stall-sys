@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChefHat, Mail, Lock, User, Clock, Info } from 'lucide-react';
+import { ChefHat, Mail, Lock, User, Clock, Info, Phone } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -26,6 +26,7 @@ export default function Auth() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
 
   useEffect(() => {
     if (!loading && user && profile) {
@@ -101,7 +102,7 @@ export default function Auth() {
       return;
     }
     
-    const { error } = await signUp(signupEmail, signupPassword, signupName);
+    const { error } = await signUp(signupEmail, signupPassword, signupName, signupPhone);
     
     if (error) {
       if (error.message.includes('already registered')) {
@@ -114,6 +115,7 @@ export default function Auth() {
       setSignupEmail('');
       setSignupPassword('');
       setSignupName('');
+      setSignupPhone('');
     }
     setIsSubmitting(false);
   };
@@ -238,6 +240,22 @@ export default function Auth() {
                       placeholder="you@example.com"
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Mobile Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      placeholder="9876543210"
+                      value={signupPhone}
+                      onChange={(e) => setSignupPhone(e.target.value)}
                       className="pl-10"
                       required
                     />

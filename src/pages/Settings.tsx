@@ -272,10 +272,20 @@ export default function Settings() {
         {/* Bill Template */}
         {canEdit && (
           <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /><CardTitle className="font-display">Bill / Receipt Template</CardTitle></div>
-              <CardDescription>Customize what appears on your printed receipts</CardDescription>
-            </CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /><CardTitle className="font-display">Bill / Receipt Template</CardTitle></div>
+                <CardDescription>Customize what appears on your printed receipts</CardDescription>
+              </div>
+              <div>
+                <input type="file" id="bill-import" accept="image/*,.pdf" className="hidden" onChange={handleImportFromImage} disabled={isAnalyzing} />
+                <Button variant="outline" size="sm" onClick={() => document.getElementById('bill-import')?.click()} disabled={isAnalyzing}>
+                  {isAnalyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</> : <><ImageIcon className="mr-2 h-4 w-4" />Import from Image</>}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="billHeader">Header Text</Label>

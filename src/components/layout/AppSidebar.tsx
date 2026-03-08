@@ -12,6 +12,7 @@ import {
   Building2,
   TrendingUp,
   UserPlus,
+  UserCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';

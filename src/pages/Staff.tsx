@@ -66,8 +66,9 @@ export default function Staff() {
   const { branches } = useBranches();
   const { createInvitation, isCreating } = useStaffInvitations();
 
-  // Only admins can manage staff
+  // Admins can fully manage staff, branch admins can invite billing staff
   const canManageStaff = isAdmin;
+  const canInviteStaff = isAdmin || isBranchAdmin;
 
   const filteredStaff = staff.filter(member =>
     member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -106,11 +107,17 @@ export default function Staff() {
       toast.error('Please enter an email address');
       return;
     }
+    // Branch admins can only add billing staff to their own branch
+    const roleToAssign = (isBranchAdmin && !isAdmin) ? 'billing' as AppRole : newStaffRole;
+    const branchToAssign = (isBranchAdmin && !isAdmin)
+      ? profile?.branch_id || undefined
+      : (newStaffBranch && newStaffBranch !== 'none' ? newStaffBranch : undefined);
+
     try {
       await createInvitation({
         email: newStaffEmail,
-        role: newStaffRole,
-        branchId: newStaffBranch && newStaffBranch !== 'none' ? newStaffBranch : undefined,
+        role: roleToAssign,
+        branchId: branchToAssign,
       });
       resetAddDialog();
     } catch {
@@ -151,7 +158,7 @@ export default function Staff() {
               )}
             </p>
           </div>
-          {canManageStaff && (
+          {canInviteStaff && (
             <Dialog open={showAddDialog} onOpenChange={(open) => {
               if (!open) resetAddDialog();
               else setShowAddDialog(true);
@@ -187,16 +194,20 @@ export default function Staff() {
 
                   <div className="space-y-2">
                     <Label>Role</Label>
-                    <Select value={newStaffRole} onValueChange={(v: AppRole) => setNewStaffRole(v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="billing">Billing Staff</SelectItem>
-                        <SelectItem value="branch_admin">Branch Admin</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {isBranchAdmin && !isAdmin ? (
+                      <Input value="Billing Staff" disabled />
+                    ) : (
+                      <Select value={newStaffRole} onValueChange={(v: AppRole) => setNewStaffRole(v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="billing">Billing Staff</SelectItem>
+                          <SelectItem value="branch_admin">Branch Admin</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   
                   {(newStaffRole === 'billing' || newStaffRole === 'branch_admin') && (

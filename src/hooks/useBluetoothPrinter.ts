@@ -48,7 +48,7 @@ export function useBluetoothPrinter() {
     if (pluginRef.current) return pluginRef.current;
     try {
       const mod = await import('capacitor-thermal-printer');
-      pluginRef.current = mod.ThermalPrinter || mod.default;
+      pluginRef.current = (mod as any).CapacitorThermalPrinter || (mod as any).ThermalPrinter || (mod as any).default;
       return pluginRef.current;
     } catch (e) {
       console.error('Failed to load thermal printer plugin:', e);

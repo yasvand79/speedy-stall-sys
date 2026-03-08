@@ -19,6 +19,7 @@ import {
   CreditCard, Users, XCircle, Utensils, Package,
   Banknote, Smartphone, Receipt, UserPlus, Repeat, Star, Award, Activity,
   ArrowUpRight, ArrowDownRight, BarChart3, PieChart as PieChartIcon, Filter,
+  GitBranch, CalendarDays, Hash, ArrowRight, CheckCircle, ChefHat, Bell, Ban,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';

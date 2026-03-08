@@ -1049,59 +1049,6 @@ export default function Reports() {
           </Card>
         </div>
 
-        {/* ═══════ ROW 6: TABLE-WISE ANALYTICS ═══════ */}
-        {tableAnalytics.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="font-display text-sm flex items-center gap-2">
-                  <Hash className="h-4 w-4 text-info" /> Table-wise Revenue (Dine-in)
-                </CardTitle>
-                <Badge variant="outline" className="text-[10px]">{tableAnalytics.length} tables</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="grid gap-3 lg:grid-cols-2">
-                {/* Table Bar Chart */}
-                <div className="h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={tableAnalytics.slice(0, 12)}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.5} />
-                      <XAxis dataKey="table" className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} tickFormatter={v => `T${v}`} />
-                      <YAxis className="text-[10px] fill-muted-foreground" tickLine={false} axisLine={false} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
-                      <Tooltip contentStyle={tooltipStyle} formatter={(value: number, name: string) => [name === 'revenue' ? `₹${value.toLocaleString()}` : value, name === 'revenue' ? 'Revenue' : name === 'orders' ? 'Orders' : 'Avg']} />
-                      <Bar dataKey="revenue" fill="hsl(217,91%,60%)" radius={[4, 4, 0, 0]} name="Revenue" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                {/* Table Details */}
-                <ScrollArea className="h-[200px]">
-                  <div className="space-y-1.5 pr-2">
-                    {tableAnalytics.map((t, i) => (
-                      <div key={t.table} className="flex items-center gap-2.5 p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
-                        <span className={`flex h-7 w-7 items-center justify-center rounded-lg font-display font-bold text-xs shrink-0 ${
-                          i < 3 ? 'bg-info text-info-foreground' : 'bg-muted text-muted-foreground'
-                        }`}>
-                          T{t.table}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium">Table {t.table}</span>
-                            <span className="font-display text-xs font-bold">₹{t.revenue.toLocaleString()}</span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground">{t.orders} orders</span>
-                            <span className="text-[10px] text-muted-foreground">Avg ₹{Math.round(t.avg)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
 
         {/* ═══════ ROW 7: AI BUSINESS INSIGHTS ═══════ */}

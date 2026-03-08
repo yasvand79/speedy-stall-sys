@@ -10,6 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { PaymentDialog } from '@/components/billing/PaymentDialog';
 import { useState } from 'react';
 import { useThermalPrinter } from '@/contexts/ThermalPrinterContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Billing() {
   const { data: orders, isLoading: ordersLoading } = useOrders();
@@ -18,6 +19,8 @@ export default function Billing() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const { printBill, isPrinting: isThermalPrinting } = useThermalPrinter();
+  const { role } = useAuth();
+  const isBillingRole = role === 'billing';
 
   const handlePrintReceipt = async (order: OrderWithItems) => {
     const orderPayments = (payments || []).filter(p => p.order_id === order.id);
@@ -91,42 +94,46 @@ export default function Billing() {
         {/* Header */}
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Billing</h1>
-          <p className="text-muted-foreground">Manage payments and generate invoices</p>
+          <p className="text-muted-foreground">
+            {isBillingRole ? 'Process pending payments' : 'Manage payments and generate invoices'}
+          </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Today's Collection</CardTitle>
-              <IndianRupee className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <p className="font-display text-2xl font-bold text-success">₹{totalCollectedToday.toFixed(0)}</p>
-              <p className="text-xs text-muted-foreground">{todayPayments.length} transactions</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Payments</CardTitle>
-              <Receipt className="h-4 w-4 text-warning" />
-            </CardHeader>
-            <CardContent>
-              <p className="font-display text-2xl font-bold text-warning">₹{pendingAmount.toFixed(0)}</p>
-              <p className="text-xs text-muted-foreground">{pendingOrders.length} orders pending</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">GST Collected (Today)</CardTitle>
-              <Receipt className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <p className="font-display text-2xl font-bold">₹{gstCollected.toFixed(0)}</p>
-              <p className="text-xs text-muted-foreground">5% GST on all orders</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Stats - hidden for billing role */}
+        {!isBillingRole && (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Today's Collection</CardTitle>
+                <IndianRupee className="h-4 w-4 text-success" />
+              </CardHeader>
+              <CardContent>
+                <p className="font-display text-2xl font-bold text-success">₹{totalCollectedToday.toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">{todayPayments.length} transactions</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Pending Payments</CardTitle>
+                <Receipt className="h-4 w-4 text-warning" />
+              </CardHeader>
+              <CardContent>
+                <p className="font-display text-2xl font-bold text-warning">₹{pendingAmount.toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">{pendingOrders.length} orders pending</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">GST Collected (Today)</CardTitle>
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="font-display text-2xl font-bold">₹{gstCollected.toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">5% GST on all orders</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Pending Payments */}
         <Card>
@@ -176,46 +183,48 @@ export default function Billing() {
           </CardContent>
         </Card>
 
-        {/* Recent Transactions */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="font-display">Recent Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentTransactions.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">No completed transactions</p>
-            ) : (
-              <div className="space-y-3">
-                {recentTransactions.map((order) => {
-                  const orderPayments = (payments || []).filter(p => p.order_id === order.id);
-                  const latestPayment = orderPayments[0];
-                  
-                  return (
-                    <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-                          <IndianRupee className="h-5 w-5 text-success" />
+        {/* Recent Transactions - hidden for billing role */}
+        {!isBillingRole && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="font-display">Recent Transactions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentTransactions.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">No completed transactions</p>
+              ) : (
+                <div className="space-y-3">
+                  {recentTransactions.map((order) => {
+                    const orderPayments = (payments || []).filter(p => p.order_id === order.id);
+                    const latestPayment = orderPayments[0];
+                    
+                    return (
+                      <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                            <IndianRupee className="h-5 w-5 text-success" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{order.order_number}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {latestPayment?.method?.toUpperCase() || 'N/A'} • {formatDistanceToNow(new Date(order.created_at || ''), { addSuffix: true })}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{order.order_number}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {latestPayment?.method?.toUpperCase() || 'N/A'} • {formatDistanceToNow(new Date(order.created_at || ''), { addSuffix: true })}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <p className="font-display font-bold text-success">₹{Number(order.total).toFixed(0)}</p>
+                          <Button variant="ghost" size="icon" onClick={() => handlePrintReceipt(order)} disabled={isThermalPrinting}>
+                            {isThermalPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <p className="font-display font-bold text-success">₹{Number(order.total).toFixed(0)}</p>
-                        <Button variant="ghost" size="icon" onClick={() => handlePrintReceipt(order)} disabled={isThermalPrinting}>
-                          {isThermalPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Payment Dialog */}

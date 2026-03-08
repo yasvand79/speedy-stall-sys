@@ -156,12 +156,24 @@ export function PaymentDialog({
     navigate('/orders');
   };
 
+  const escapeHtml = (str: string | null | undefined): string => {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
   const handlePrintBill = () => {
     const paidInfo = splitCashDone
       ? `₹${split.cashAmount} (Cash) + ₹${split.upiAmount} (UPI)`
       : `₹${paymentAmount.toFixed(2)} (${method.toUpperCase()})`;
+    const safeShopName = escapeHtml(shopName);
+    const safeOrderNumber = escapeHtml(orderNumber);
     const billContent = `
-      <html><head><title>Bill - ${orderNumber}</title>
+      <html><head><title>Bill - ${safeOrderNumber}</title>
       <style>
         body { font-family: Arial, sans-serif; padding: 20px; max-width: 300px; margin: 0 auto; }
         h2 { text-align: center; margin-bottom: 5px; }
@@ -170,13 +182,13 @@ export function PaymentDialog({
         .total { font-weight: bold; font-size: 16px; }
         .footer { text-align: center; margin-top: 20px; font-size: 11px; }
       </style></head><body>
-        <h2>${shopName}</h2>
+        <h2>${safeShopName}</h2>
         <div class="line"></div>
-        <div class="row"><span>Order #</span><span>${orderNumber}</span></div>
+        <div class="row"><span>Order #</span><span>${safeOrderNumber}</span></div>
         <div class="row"><span>Date</span><span>${new Date().toLocaleString()}</span></div>
         <div class="line"></div>
         <div class="row total"><span>Total</span><span>₹${total.toFixed(2)}</span></div>
-        <div class="row"><span>Paid</span><span>${paidInfo}</span></div>
+        <div class="row"><span>Paid</span><span>${escapeHtml(paidInfo)}</span></div>
         <div class="line"></div>
         <p class="footer">Thank you!</p>
       </body></html>

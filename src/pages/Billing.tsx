@@ -99,39 +99,41 @@ export default function Billing() {
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Today's Collection</CardTitle>
-              <IndianRupee className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <p className="font-display text-2xl font-bold text-success">₹{totalCollectedToday.toFixed(0)}</p>
-              <p className="text-xs text-muted-foreground">{todayPayments.length} transactions</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Payments</CardTitle>
-              <Receipt className="h-4 w-4 text-warning" />
-            </CardHeader>
-            <CardContent>
-              <p className="font-display text-2xl font-bold text-warning">₹{pendingAmount.toFixed(0)}</p>
-              <p className="text-xs text-muted-foreground">{pendingOrders.length} orders pending</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">GST Collected (Today)</CardTitle>
-              <Receipt className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <p className="font-display text-2xl font-bold">₹{gstCollected.toFixed(0)}</p>
-              <p className="text-xs text-muted-foreground">5% GST on all orders</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Stats - hidden for billing role */}
+        {!isBillingRole && (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Today's Collection</CardTitle>
+                <IndianRupee className="h-4 w-4 text-success" />
+              </CardHeader>
+              <CardContent>
+                <p className="font-display text-2xl font-bold text-success">₹{totalCollectedToday.toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">{todayPayments.length} transactions</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Pending Payments</CardTitle>
+                <Receipt className="h-4 w-4 text-warning" />
+              </CardHeader>
+              <CardContent>
+                <p className="font-display text-2xl font-bold text-warning">₹{pendingAmount.toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">{pendingOrders.length} orders pending</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">GST Collected (Today)</CardTitle>
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="font-display text-2xl font-bold">₹{gstCollected.toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">5% GST on all orders</p>
+              </CardContent>
+            </Card>
+          </div>
+        )
 
         {/* Pending Payments */}
         <Card>

@@ -68,9 +68,19 @@ export function useCreateOrder() {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Fetch GST settings dynamically
+      const { data: shopSettings } = await supabase
+        .from('shop_settings')
+        .select('gst_rate, include_gst_in_price')
+        .limit(1)
+        .single();
+
+      const gstRate = (shopSettings?.gst_rate ?? 5) / 100;
+      const includeGstInPrice = shopSettings?.include_gst_in_price ?? false;
+
       // Calculate totals
       const subtotal = orderData.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      const gst = subtotal * 0.05; // 5% GST
+      const gst = includeGstInPrice ? 0 : subtotal * gstRate;
       const total = subtotal + gst;
 
       // Create order - need to generate order_number first or let the trigger handle it

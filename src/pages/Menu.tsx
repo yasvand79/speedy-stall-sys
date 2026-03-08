@@ -91,8 +91,34 @@ export default function Menu() {
       category: item.category,
       preparation_time: String(item.preparation_time || 15),
       ingredients: (item.ingredients || []).join(', '),
+      image_url: item.image_url || '',
     });
+    setImagePreview(item.image_url || null);
+    setImageFile(null);
     setEditDialogOpen(true);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be less than 2MB');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    const { error } = await supabase.storage.from('menu-images').upload(fileName, file);
+    if (error) {
+      toast.error('Failed to upload image');
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('menu-images').getPublicUrl(fileName);
+    return urlData.publicUrl;
   };
 
   const handleEditBranchPrice = (item: any) => {

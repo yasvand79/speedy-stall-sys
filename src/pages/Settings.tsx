@@ -8,8 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { Store, Bell, Receipt, Loader2, Smartphone, FileText, ImageIcon, RotateCcw, Languages } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { Store, Bell, Receipt, Loader2, Smartphone, FileText, ImageIcon, RotateCcw } from 'lucide-react';
 import { useShopSettings } from '@/hooks/useShopSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -20,7 +19,6 @@ import { DataExportImport } from '@/components/settings/DataExportImport';
 export default function Settings() {
   const { settings, isLoading, updateSettings, updateSetting, isSaving } = useShopSettings();
   const { role } = useAuth();
-  const { language, setLanguage, t } = useLanguage();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   const canEdit = role === 'admin';
@@ -198,32 +196,6 @@ export default function Settings() {
             <p className="text-sm text-amber-600 mt-1">You have read-only access. Only Admins can modify settings.</p>
           )}
         </div>
-
-        {/* Language Settings */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2"><Languages className="h-5 w-5 text-primary" /><CardTitle className="font-display">{t('settings.language')}</CardTitle></div>
-            <CardDescription>Choose your preferred language / உங்கள் விருப்பமான மொழியைத் தேர்ந்தெடுக்கவும்</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3">
-              <Button
-                variant={language === 'en' ? 'default' : 'outline'}
-                onClick={() => setLanguage('en')}
-                className="min-w-[100px]"
-              >
-                English
-              </Button>
-              <Button
-                variant={language === 'ta' ? 'default' : 'outline'}
-                onClick={() => setLanguage('ta')}
-                className="min-w-[100px]"
-              >
-                தமிழ்
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Shop Details */}
         <Card>

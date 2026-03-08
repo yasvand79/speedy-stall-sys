@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { useCreatePayment } from '@/hooks/usePayments';
 import { useUpdateOrderStatus } from '@/hooks/useOrders';
 import { useShopSettings } from '@/hooks/useShopSettings';
+import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 import { Database } from '@/integrations/supabase/types';
-import { Banknote, Smartphone, CreditCard, CheckCircle, ArrowLeft, Loader2, Printer, Split } from 'lucide-react';
+import { Banknote, Smartphone, CreditCard, CheckCircle, ArrowLeft, Loader2, Printer, Split, Wifi, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 type PaymentMethod = Database['public']['Enums']['payment_method'];
@@ -51,6 +52,7 @@ export function PaymentDialog({
   const createPayment = useCreatePayment();
   const updateOrderStatus = useUpdateOrderStatus();
   const { settings } = useShopSettings();
+  const { printBill, qzStatus, isPrinting: isThermalPrinting } = useThermalPrinter();
 
   const remaining = total - paidAmount;
   const paymentAmount = parseFloat(amount) || 0;
@@ -166,36 +168,73 @@ export function PaymentDialog({
       .replace(/'/g, '&#039;');
   };
 
-  const handlePrintBill = () => {
-    const paidInfo = splitCashDone
-      ? `₹${split.cashAmount} (Cash) + ₹${split.upiAmount} (UPI)`
-      : `₹${paymentAmount.toFixed(2)} (${method.toUpperCase()})`;
-    const safeShopName = escapeHtml(shopName);
-    const safeOrderNumber = escapeHtml(orderNumber);
-    const billContent = `
-      <html><head><title>Bill - ${safeOrderNumber}</title>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 300px; margin: 0 auto; }
-        h2 { text-align: center; margin-bottom: 5px; }
-        .line { border-bottom: 1px dashed #000; margin: 10px 0; }
-        .row { display: flex; justify-content: space-between; margin: 5px 0; }
-        .total { font-weight: bold; font-size: 16px; }
-        .footer { text-align: center; margin-top: 20px; font-size: 11px; }
-      </style></head><body>
-        <h2>${safeShopName}</h2>
-        <div class="line"></div>
-        <div class="row"><span>Order #</span><span>${safeOrderNumber}</span></div>
-        <div class="row"><span>Date</span><span>${new Date().toLocaleString()}</span></div>
-        <div class="line"></div>
-        <div class="row total"><span>Total</span><span>₹${total.toFixed(2)}</span></div>
-        <div class="row"><span>Paid</span><span>${escapeHtml(paidInfo)}</span></div>
-        <div class="line"></div>
-        <p class="footer">Thank you!</p>
-      </body></html>
-    `;
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(billContent); w.document.close(); w.print(); }
+  const handlePrintBill = async () => {
+    // Build order data for thermal printer
+    const thermalOrder = {
+      orderNumber,
+      type: 'dine-in', // We don't have full order data here, but it's sufficient
+      tableNumber: null as number | null,
+      customerName: null as string | null,
+      staffName: null as string | null,
+      items: [] as { name: string; quantity: number; price: number }[],
+      subtotal: total,
+      gst: 0,
+      discount: 0,
+      total,
+      paymentMethod: splitCashDone ? 'Cash + UPI' : method,
+      paidAmount: splitCashDone ? split.cashAmount + split.upiAmount : paymentAmount,
+    };
+
+    // Try thermal print first
+    const success = await printBill(thermalOrder);
+
+    // Fallback to browser print if QZ Tray not available
+    if (!success) {
+      const paidInfo = splitCashDone
+        ? `₹${split.cashAmount} (Cash) + ₹${split.upiAmount} (UPI)`
+        : `₹${paymentAmount.toFixed(2)} (${method.toUpperCase()})`;
+      const safeShopName = escapeHtml(shopName);
+      const safeOrderNumber = escapeHtml(orderNumber);
+      const billContent = `
+        <html><head><title>Bill - ${safeOrderNumber}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; max-width: 300px; margin: 0 auto; }
+          h2 { text-align: center; margin-bottom: 5px; }
+          .line { border-bottom: 1px dashed #000; margin: 10px 0; }
+          .row { display: flex; justify-content: space-between; margin: 5px 0; }
+          .total { font-weight: bold; font-size: 16px; }
+          .footer { text-align: center; margin-top: 20px; font-size: 11px; }
+        </style></head><body>
+          <h2>${safeShopName}</h2>
+          <div class="line"></div>
+          <div class="row"><span>Order #</span><span>${safeOrderNumber}</span></div>
+          <div class="row"><span>Date</span><span>${new Date().toLocaleString()}</span></div>
+          <div class="line"></div>
+          <div class="row total"><span>Total</span><span>₹${total.toFixed(2)}</span></div>
+          <div class="row"><span>Paid</span><span>${escapeHtml(paidInfo)}</span></div>
+          <div class="line"></div>
+          <p class="footer">Thank you!</p>
+        </body></html>
+      `;
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:80mm;height:0;border:none;visibility:hidden';
+      iframe.srcdoc = billContent;
+      iframe.onload = () => {
+        setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); }, 300);
+        const cleanup = () => { if (document.body.contains(iframe)) document.body.removeChild(iframe); };
+        iframe.contentWindow?.addEventListener('afterprint', cleanup);
+        setTimeout(cleanup, 15000);
+      };
+      document.body.appendChild(iframe);
+    }
   };
+
+  // Auto-print on payment success
+  useEffect(() => {
+    if (step === 'success' && qzStatus === 'connected') {
+      handlePrintBill();
+    }
+  }, [step]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -462,11 +501,26 @@ export function PaymentDialog({
                   : `₹${paymentAmount.toFixed(0)} received via ${method.toUpperCase()}`
                 }
               </p>
+              {/* Thermal printer status */}
+              {qzStatus === 'connected' && (
+                <div className="flex items-center justify-center gap-1.5 mt-2">
+                  <Wifi className="h-3 w-3 text-emerald-500" />
+                  <span className="text-xs text-emerald-600">
+                    {isThermalPrinting ? 'Printing...' : 'Auto-printed via thermal printer'}
+                  </span>
+                </div>
+              )}
+              {qzStatus !== 'connected' && (
+                <div className="flex items-center justify-center gap-1.5 mt-2">
+                  <WifiOff className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">QZ Tray not connected</span>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handlePrintBill} className="flex-1">
+              <Button variant="outline" onClick={handlePrintBill} className="flex-1" disabled={isThermalPrinting}>
                 <Printer className="mr-2 h-4 w-4" />
-                Print Bill
+                {isThermalPrinting ? 'Printing...' : 'Print Bill'}
               </Button>
               <Button onClick={handleDone} className="flex-1">
                 Done

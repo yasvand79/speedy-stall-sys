@@ -12,10 +12,11 @@ import { useOrders, useUpdateOrderStatus, OrderWithItems } from '@/hooks/useOrde
 import { usePayments } from '@/hooks/usePayments';
 import { useBranches } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 import {
   Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle,
   Building2, User, UtensilsCrossed, Printer, Package,
-  ArrowRight, Hash, CreditCard, Loader2, CheckCircle, Eye
+  ArrowRight, Hash, CreditCard, Loader2, CheckCircle, Eye, Wifi, WifiOff
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -50,6 +51,7 @@ export default function Orders() {
   const updateStatus = useUpdateOrderStatus();
   const { data: allPayments } = usePayments();
   const { role } = useAuth();
+  const { printBill, qzStatus, isPrinting: isThermalPrinting } = useThermalPrinter();
 
   const isAdmin = role === 'admin' || role === 'branch_admin';
   const isBilling = role === 'billing';
@@ -84,19 +86,40 @@ export default function Orders() {
     }
   };
 
-  const handlePrintFromPreview = () => {
+  const handlePrintFromPreview = async () => {
     if (!previewHtml) return;
     setPreviewOpen(false);
 
-    // Print using hidden iframe with the configured printer
+    // Try thermal print via QZ Tray first
+    if (qzStatus === 'connected' && previewOrderId) {
+      const order = orders?.find(o => o.id === previewOrderId);
+      if (order) {
+        const thermalOrder = {
+          orderNumber: order.order_number,
+          type: order.type,
+          tableNumber: order.table_number,
+          customerName: order.customer_name,
+          staffName: order.staff_name,
+          items: order.order_items.map((item: any) => ({
+            name: item.menu_items?.name || 'Unknown',
+            quantity: item.quantity,
+            price: Number(item.price),
+          })),
+          subtotal: Number(order.subtotal),
+          gst: Number(order.gst),
+          discount: Number(order.discount),
+          total: Number(order.total),
+          paymentMethod: order.payment_status === 'completed' ? 'Paid' : 'Pending',
+        };
+
+        const success = await printBill(thermalOrder);
+        if (success) return;
+      }
+    }
+
+    // Fallback: Print using hidden iframe with the configured printer
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.top = '-10000px';
-    iframe.style.left = '-10000px';
-    iframe.style.width = '80mm';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    iframe.style.visibility = 'hidden';
+    iframe.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:80mm;height:0;border:none;visibility:hidden';
     iframe.srcdoc = previewHtml;
 
     iframe.onload = () => {
@@ -472,9 +495,16 @@ export default function Orders() {
             ) : null}
           </div>
           <DialogFooter className="p-4 pt-2 gap-2 sm:gap-2">
+            <div className="flex items-center gap-1.5 mr-auto">
+              {qzStatus === 'connected' ? (
+                <><Wifi className="h-3.5 w-3.5 text-emerald-500" /><span className="text-xs text-emerald-600">Thermal printer ready</span></>
+              ) : (
+                <><WifiOff className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">Browser print</span></>
+              )}
+            </div>
             <Button variant="outline" onClick={() => setPreviewOpen(false)}>Cancel</Button>
-            <Button onClick={handlePrintFromPreview} disabled={!previewHtml || previewLoading}>
-              <Printer className="mr-2 h-4 w-4" />Print
+            <Button onClick={handlePrintFromPreview} disabled={!previewHtml || previewLoading || isThermalPrinting}>
+              <Printer className="mr-2 h-4 w-4" />{isThermalPrinting ? 'Printing...' : 'Print'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   useDailySales, useTopSellingItems, useWeeklyRevenue,
   useOrdersAnalytics, usePaymentAnalytics, useCategorySales,
-  useStaffSales, useInventoryStatus, useDateRange,
+  useStaffSales, useDateRange,
 } from '@/hooks/useReports';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -15,8 +15,8 @@ import {
 } from 'recharts';
 import {
   Download, TrendingUp, IndianRupee, ShoppingCart, Clock, Loader2,
-  CreditCard, Users, Package, XCircle, Receipt, Utensils,
-  ArrowUpRight, ArrowDownRight, Banknote, Smartphone,
+  CreditCard, Users, XCircle,
+  Banknote, Smartphone,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -35,7 +35,7 @@ export default function Reports() {
   const { data: payments } = usePaymentAnalytics(start, end);
   const { data: categorySales } = useCategorySales(start, end);
   const { data: staffSales } = useStaffSales(start, end);
-  const { data: inventory } = useInventoryStatus();
+  
 
   const isLoading = dailyLoading || weeklyLoading || ordersLoading;
 
@@ -105,7 +105,7 @@ export default function Reports() {
     return peak.orders > 0 ? peak.hour : 'N/A';
   }, [hourlyData]);
 
-  const lowStockItems = inventory?.filter(i => Number(i.quantity) <= Number(i.min_quantity)) || [];
+  
 
   const orderTypeData = metrics ? [
     { name: 'Dine-in', value: metrics.dineInOrders },
@@ -492,52 +492,6 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        {/* ─── Inventory Status ─── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-display text-base flex items-center gap-2">
-              <Package className="h-4 w-4" /> Inventory Status
-              {lowStockItems.length > 0 && (
-                <Badge variant="destructive" className="text-xs">{lowStockItems.length} low stock</Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {inventory && inventory.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead className="text-right">Stock</TableHead>
-                      <TableHead className="text-right">Min Qty</TableHead>
-                      <TableHead className="text-right">Cost/Unit</TableHead>
-                      <TableHead className="text-right">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inventory.map(item => {
-                      const isLow = Number(item.quantity) <= Number(item.min_quantity);
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
-                          <TableCell className="text-right">{item.min_quantity}</TableCell>
-                          <TableCell className="text-right">₹{Number(item.cost_per_unit).toLocaleString()}</TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant={isLow ? 'destructive' : 'secondary'} className="text-xs">
-                              {isLow ? 'Low Stock' : 'OK'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : <p className="text-center py-6 text-muted-foreground">No inventory data</p>}
-          </CardContent>
-        </Card>
       </div>
     </MainLayout>
   );

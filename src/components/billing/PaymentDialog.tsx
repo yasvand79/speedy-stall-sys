@@ -122,6 +122,7 @@ export function PaymentDialog({
       await updateOrderStatus.mutateAsync({ orderId, status: 'completed' });
     }
 
+    notifyCustomerDisplay();
     setStep('success');
   };
 

@@ -85,8 +85,22 @@ export default function Auth() {
     }
 
     setIsSubmitting(true);
+
+    // Check if email is pre-authorized before signing up
+    const { data: invitation } = await supabase
+      .from('staff_invitations')
+      .select('id')
+      .eq('email', signupEmail.toLowerCase().trim())
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (!invitation) {
+      toast.error('Your email is not authorized. Ask your admin to add your email first.');
+      setIsSubmitting(false);
+      return;
+    }
     
-    const { error, autoApproved } = await signUp(signupEmail, signupPassword, signupName);
+    const { error } = await signUp(signupEmail, signupPassword, signupName);
     
     if (error) {
       if (error.message.includes('already registered')) {
@@ -95,11 +109,7 @@ export default function Auth() {
         toast.error(error.message);
       }
     } else {
-      if (autoApproved) {
-        toast.success('Registration successful! You can now log in.', { duration: 5000 });
-      } else {
-        toast.success('Registration submitted! Waiting for admin approval.', { duration: 5000 });
-      }
+      toast.success('Account created! Please check your email to verify, then login.', { duration: 5000 });
       setSignupEmail('');
       setSignupPassword('');
       setSignupName('');

@@ -22,6 +22,144 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700 border-red-200' },
 };
 
+const ORDER_STEPS = ['placed', 'preparing', 'ready', 'completed'] as const;
+const STEP_ICONS: Record<string, React.ElementType> = {
+  placed: ShoppingCart, preparing: ChefHat, ready: CheckCircle2, completed: CheckCircle2,
+};
+
+function OrderProgressBar({ status }: { status: string }) {
+  const currentIdx = ORDER_STEPS.indexOf(status as any);
+  if (status === 'cancelled') {
+    return (
+      <div className="flex items-center gap-1 mt-2">
+        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10">
+          <XCircle className="h-3 w-3 text-destructive" />
+          <span className="text-[10px] font-medium text-destructive">Cancelled</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1 mt-2">
+      {ORDER_STEPS.map((step, i) => {
+        const Icon = STEP_ICONS[step];
+        const isActive = i <= currentIdx;
+        const isCurrent = i === currentIdx;
+        return (
+          <div key={step} className="flex items-center gap-1">
+            <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium transition-all ${
+              isCurrent ? 'bg-primary text-primary-foreground scale-105' :
+              isActive ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+            }`}>
+              <Icon className="h-2.5 w-2.5" />
+              <span className="hidden sm:inline">{STATUS_CONFIG[step]?.label}</span>
+            </div>
+            {i < ORDER_STEPS.length - 1 && (
+              <ArrowRight className={`h-2.5 w-2.5 ${i < currentIdx ? 'text-primary' : 'text-muted-foreground/30'}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+type FilterTab = 'all' | 'active' | 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+
+function LiveOrderTabs({ orders, recentOrders }: { orders: any[]; recentOrders: any[] }) {
+  const [tab, setTab] = useState<FilterTab>('all');
+
+  const filteredOrders = tab === 'all' ? recentOrders :
+    tab === 'active' ? orders.filter(o => ['placed', 'preparing', 'ready'].includes(o.status)).slice(0, 15) :
+    orders.filter(o => o.status === tab).slice(0, 15);
+
+  const counts = {
+    all: recentOrders.length,
+    active: orders.filter(o => ['placed', 'preparing', 'ready'].includes(o.status)).length,
+    placed: orders.filter(o => o.status === 'placed').length,
+    preparing: orders.filter(o => o.status === 'preparing').length,
+    ready: orders.filter(o => o.status === 'ready').length,
+    completed: orders.filter(o => o.status === 'completed').length,
+    cancelled: orders.filter(o => o.status === 'cancelled').length,
+  };
+
+  const tabs: { key: FilterTab; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'active', label: 'Active' },
+    { key: 'placed', label: 'New' },
+    { key: 'preparing', label: 'Cooking' },
+    { key: 'ready', label: 'Ready' },
+    { key: 'completed', label: 'Done' },
+    { key: 'cancelled', label: 'Cancelled' },
+  ];
+
+  return (
+    <>
+      <div className="flex gap-1 flex-wrap mt-2">
+        {tabs.map(t => (
+          <Button
+            key={t.key}
+            variant={tab === t.key ? 'default' : 'ghost'}
+            size="sm"
+            className="h-6 text-[10px] px-2 gap-1"
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+            {counts[t.key] > 0 && (
+              <span className={`min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                tab === t.key ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
+              }`}>
+                {counts[t.key]}
+              </span>
+            )}
+          </Button>
+        ))}
+      </div>
+      <CardContent className="px-0 pb-0 pt-2">
+        {filteredOrders.length === 0 ? (
+          <p className="text-center py-8 text-muted-foreground text-sm">No orders in this category</p>
+        ) : (
+          <div className="space-y-2 max-h-[500px] overflow-y-auto">
+            {filteredOrders.map((order) => (
+              <div key={order.id} className="flex items-start justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-display font-semibold text-sm">{order.order_number}</span>
+                    <Badge variant="outline" className={`text-[10px] ${STATUS_CONFIG[order.status]?.color}`}>
+                      {STATUS_CONFIG[order.status]?.label || order.status}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px]">{order.type}</Badge>
+                    {order.payment_status === 'completed' ? (
+                      <Badge className="text-[9px] bg-success/15 text-success border-success/30 border">
+                        <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Paid
+                      </Badge>
+                    ) : order.payment_status === 'partial' ? (
+                      <Badge className="text-[9px] bg-warning/15 text-warning border-warning/30 border">Partial</Badge>
+                    ) : (
+                      <Badge className="text-[9px] bg-destructive/15 text-destructive border-destructive/30 border">Unpaid</Badge>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {order.type === 'dine-in' ? `Table ${order.table_number}` : order.customer_name || 'Takeaway'} • {order.order_items?.length || 0} items
+                    {order.staff_name && <span> • by {order.staff_name}</span>}
+                  </p>
+                  <OrderProgressBar status={order.status} />
+                </div>
+                <div className="text-right shrink-0 ml-3">
+                  <p className="font-display font-bold text-sm">₹{Number(order.total).toFixed(0)}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {formatDistanceToNow(new Date(order.created_at!), { addSuffix: true })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </>
+  );
+}
+
 export default function Dashboard() {
   const { data: orders, isLoading: ordersLoading } = useOrders(undefined);
   const { data: allPayments } = usePayments();

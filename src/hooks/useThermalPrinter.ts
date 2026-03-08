@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
 import { useShopSettings } from './useShopSettings';
+import { useBluetoothPrinter, getSavedPaperWidth } from './useBluetoothPrinter';
 
 type QZStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -32,7 +34,10 @@ declare global {
 // ESC/POS command constants
 const ESC = 0x1B;
 const GS = 0x1D;
-const LINE_WIDTH = 48; // 80mm = 48 chars at default font
+
+function getLineWidth(paperWidth: '58mm' | '80mm' = '80mm'): number {
+  return paperWidth === '58mm' ? 32 : 48;
+}
 
 function textEncoder(text: string): number[] {
   return Array.from(new TextEncoder().encode(text));
@@ -46,17 +51,12 @@ function padLeft(str: string, len: number): string {
   return str.length >= len ? str.substring(0, len) : ' '.repeat(len - str.length) + str;
 }
 
-function centerText(text: string, width: number = LINE_WIDTH): string {
-  if (text.length >= width) return text.substring(0, width);
-  const pad = Math.floor((width - text.length) / 2);
-  return ' '.repeat(pad) + text;
-}
-
-function dashedLine(width: number = LINE_WIDTH): string {
+function dashedLine(width: number): string {
   return '-'.repeat(width);
 }
 
-export function buildEscPosData(order: OrderForPrint, shopSettings: any): number[] {
+export function buildEscPosData(order: OrderForPrint, shopSettings: any, paperWidth: '58mm' | '80mm' = '80mm'): number[] {
+  const LINE_WIDTH = getLineWidth(paperWidth);
   const data: number[] = [];
   const shopName = shopSettings?.shop_name || 'Restaurant';
   const address = shopSettings?.address || '';
@@ -71,46 +71,36 @@ export function buildEscPosData(order: OrderForPrint, shopSettings: any): number
   const showUpi = shopSettings?.bill_show_upi !== false;
 
   // Initialize printer
-  data.push(ESC, 0x40); // ESC @ - Initialize
+  data.push(ESC, 0x40);
 
   // Center align
-  data.push(ESC, 0x61, 0x01); // ESC a 1 - Center
+  data.push(ESC, 0x61, 0x01);
 
   // Double height/width for shop name
-  data.push(ESC, 0x21, 0x30); // Double width + double height
+  data.push(ESC, 0x21, 0x30);
   data.push(...textEncoder(shopName + '\n'));
-  
+
   // Reset to normal size
   data.push(ESC, 0x21, 0x00);
 
-  // Address & phone
-  if (address) {
-    data.push(...textEncoder(address + '\n'));
-  }
-  if (phone) {
-    data.push(...textEncoder('Tel: ' + phone + '\n'));
-  }
+  if (address) data.push(...textEncoder(address + '\n'));
+  if (phone) data.push(...textEncoder('Tel: ' + phone + '\n'));
 
-  // Header text
   const headerText = shopSettings?.bill_header_text;
-  if (headerText) {
-    data.push(...textEncoder(headerText + '\n'));
-  }
+  if (headerText) data.push(...textEncoder(headerText + '\n'));
 
-  // Left align for content
-  data.push(ESC, 0x61, 0x00); // ESC a 0 - Left
-
-  // Separator
-  data.push(...textEncoder(dashedLine() + '\n'));
+  // Left align
+  data.push(ESC, 0x61, 0x00);
+  data.push(...textEncoder(dashedLine(LINE_WIDTH) + '\n'));
 
   // Center: CASH RECEIPT
   data.push(ESC, 0x61, 0x01);
-  data.push(ESC, 0x45, 0x01); // Bold on
+  data.push(ESC, 0x45, 0x01);
   data.push(...textEncoder('CASH RECEIPT\n'));
-  data.push(ESC, 0x45, 0x00); // Bold off
-  data.push(ESC, 0x61, 0x00); // Left
+  data.push(ESC, 0x45, 0x00);
+  data.push(ESC, 0x61, 0x00);
 
-  data.push(...textEncoder(dashedLine() + '\n'));
+  data.push(...textEncoder(dashedLine(LINE_WIDTH) + '\n'));
 
   // Order info
   const orderDate = new Date();
@@ -130,66 +120,85 @@ export function buildEscPosData(order: OrderForPrint, shopSettings: any): number
     data.push(...textEncoder(padRight('Staff', 16) + padLeft(order.staffName, LINE_WIDTH - 16) + '\n'));
   }
 
-  // Double line separator
   data.push(...textEncoder('='.repeat(LINE_WIDTH) + '\n'));
 
-  // Column header: ITEM  QTY  RATE  AMT
-  // Layout: Item(24) Qty(5) Rate(9) Amt(10) = 48
-  data.push(ESC, 0x45, 0x01); // Bold on
-  data.push(...textEncoder(
-    padRight('ITEM', 24) + padLeft('QTY', 5) + padLeft('RATE', 9) + padLeft('AMT', 10) + '\n'
-  ));
-  data.push(ESC, 0x45, 0x00); // Bold off
-  data.push(...textEncoder(dashedLine() + '\n'));
+  // Column header — adapt to paper width
+  if (paperWidth === '58mm') {
+    // 32 chars: Item(16) Qty(4) Amt(12)
+    data.push(ESC, 0x45, 0x01);
+    data.push(...textEncoder(padRight('ITEM', 16) + padLeft('QTY', 4) + padLeft('AMT', 12) + '\n'));
+    data.push(ESC, 0x45, 0x00);
+    data.push(...textEncoder(dashedLine(LINE_WIDTH) + '\n'));
 
-  // Items
-  for (const item of order.items) {
-    const itemTotal = item.quantity * item.price;
-    const name = item.name.length > 24 ? item.name.substring(0, 23) + '.' : item.name;
+    for (const item of order.items) {
+      const itemTotal = item.quantity * item.price;
+      const name = item.name.length > 16 ? item.name.substring(0, 15) + '.' : item.name;
+      data.push(...textEncoder(
+        padRight(name, 16) +
+        padLeft(String(item.quantity), 4) +
+        padLeft('₹' + itemTotal.toFixed(0), 12) +
+        '\n'
+      ));
+    }
+  } else {
+    // 48 chars: Item(24) Qty(5) Rate(9) Amt(10)
+    data.push(ESC, 0x45, 0x01);
     data.push(...textEncoder(
-      padRight(name, 24) +
-      padLeft(String(item.quantity), 5) +
-      padLeft('₹' + item.price.toFixed(0), 9) +
-      padLeft('₹' + itemTotal.toFixed(0), 10) +
-      '\n'
+      padRight('ITEM', 24) + padLeft('QTY', 5) + padLeft('RATE', 9) + padLeft('AMT', 10) + '\n'
     ));
+    data.push(ESC, 0x45, 0x00);
+    data.push(...textEncoder(dashedLine(LINE_WIDTH) + '\n'));
+
+    for (const item of order.items) {
+      const itemTotal = item.quantity * item.price;
+      const name = item.name.length > 24 ? item.name.substring(0, 23) + '.' : item.name;
+      data.push(...textEncoder(
+        padRight(name, 24) +
+        padLeft(String(item.quantity), 5) +
+        padLeft('₹' + item.price.toFixed(0), 9) +
+        padLeft('₹' + itemTotal.toFixed(0), 10) +
+        '\n'
+      ));
+    }
   }
 
-  data.push(...textEncoder(dashedLine() + '\n'));
+  data.push(...textEncoder(dashedLine(LINE_WIDTH) + '\n'));
 
-  // Subtotal
-  data.push(...textEncoder(padRight('Sub Total', 32) + padLeft('₹' + order.subtotal.toFixed(2), 16) + '\n'));
+  // Totals
+  const totalLabelWidth = paperWidth === '58mm' ? 20 : 32;
+  const totalValueWidth = LINE_WIDTH - totalLabelWidth;
 
-  // GST
+  data.push(...textEncoder(padRight('Sub Total', totalLabelWidth) + padLeft('₹' + order.subtotal.toFixed(2), totalValueWidth) + '\n'));
+
   if (order.gst > 0) {
     const gstRate = shopSettings?.gst_rate || 5;
-    data.push(...textEncoder(padRight(`GST (${gstRate}%)`, 32) + padLeft('₹' + order.gst.toFixed(2), 16) + '\n'));
+    data.push(...textEncoder(padRight(`GST (${gstRate}%)`, totalLabelWidth) + padLeft('₹' + order.gst.toFixed(2), totalValueWidth) + '\n'));
   }
 
-  // Discount
   if (order.discount > 0) {
-    data.push(...textEncoder(padRight('Discount', 32) + padLeft('-₹' + order.discount.toFixed(2), 16) + '\n'));
+    data.push(...textEncoder(padRight('Discount', totalLabelWidth) + padLeft('-₹' + order.discount.toFixed(2), totalValueWidth) + '\n'));
   }
 
   // Total - Bold + larger
   data.push(...textEncoder('='.repeat(LINE_WIDTH) + '\n'));
-  data.push(ESC, 0x45, 0x01); // Bold
-  data.push(ESC, 0x21, 0x10); // Double height
-  data.push(...textEncoder(padRight('TOTAL', 24) + padLeft('₹' + order.total.toFixed(2), 24) + '\n'));
-  data.push(ESC, 0x21, 0x00); // Normal size
-  data.push(ESC, 0x45, 0x00); // Bold off
+  data.push(ESC, 0x45, 0x01);
+  data.push(ESC, 0x21, 0x10);
+  const totalHalf = Math.floor(LINE_WIDTH / 2);
+  data.push(...textEncoder(padRight('TOTAL', totalHalf) + padLeft('₹' + order.total.toFixed(2), totalHalf) + '\n'));
+  data.push(ESC, 0x21, 0x00);
+  data.push(ESC, 0x45, 0x00);
   data.push(...textEncoder('='.repeat(LINE_WIDTH) + '\n'));
 
   // Payment status
-  data.push(ESC, 0x61, 0x01); // Center
+  data.push(ESC, 0x61, 0x01);
   if (order.paymentMethod) {
     data.push(ESC, 0x45, 0x01);
     data.push(...textEncoder('PAID - ' + order.paymentMethod.toUpperCase() + '\n'));
     data.push(ESC, 0x45, 0x00);
   }
-  data.push(ESC, 0x61, 0x00); // Left
+  data.push(ESC, 0x61, 0x00);
 
-  data.push(...textEncoder(dashedLine() + '\n'));
+  data.push(...textEncoder(dashedLine(LINE_WIDTH) + '\n'));
 
   // GSTIN & FSSAI
   if (showGstin && gstNumber) {
@@ -199,38 +208,34 @@ export function buildEscPosData(order: OrderForPrint, shopSettings: any): number
     data.push(...textEncoder(padRight('FSSAI', 12) + padLeft(fssaiLicense, LINE_WIDTH - 12) + '\n'));
   }
   if ((showGstin && gstNumber) || (showFssai && fssaiLicense)) {
-    data.push(...textEncoder(dashedLine() + '\n'));
+    data.push(...textEncoder(dashedLine(LINE_WIDTH) + '\n'));
   }
 
   // Footer
-  data.push(ESC, 0x61, 0x01); // Center
+  data.push(ESC, 0x61, 0x01);
   data.push(ESC, 0x45, 0x01);
   data.push(...textEncoder(footerText + '\n'));
   data.push(ESC, 0x45, 0x00);
-  data.push(...textEncoder('*'.repeat(32) + '\n'));
+  data.push(...textEncoder('*'.repeat(Math.min(32, LINE_WIDTH)) + '\n'));
 
-  if (billTerms) {
-    data.push(...textEncoder(billTerms + '\n'));
-  }
-
-  if (showUpi && upiId) {
-    data.push(...textEncoder('UPI: ' + upiId + '\n'));
-  }
+  if (billTerms) data.push(...textEncoder(billTerms + '\n'));
+  if (showUpi && upiId) data.push(...textEncoder('UPI: ' + upiId + '\n'));
 
   data.push(...textEncoder('Computer generated receipt\n'));
 
   // Feed and cut
-  data.push(ESC, 0x64, 0x04); // Feed 4 lines
-  data.push(GS, 0x56, 0x00);  // Full cut
+  data.push(ESC, 0x64, 0x04);
+  data.push(GS, 0x56, 0x00);
 
   return data;
 }
+
+// ─── QZ Tray loader (desktop only) ───
 
 async function loadQZScript(): Promise<void> {
   if (window.qz) return;
 
   return new Promise((resolve, reject) => {
-    // Check if already loading
     const existing = document.querySelector('script[src*="qz-tray"]');
     if (existing) {
       existing.addEventListener('load', () => resolve());
@@ -247,15 +252,22 @@ async function loadQZScript(): Promise<void> {
   });
 }
 
+// ─── Main hook ───
+
 export function useThermalPrinter() {
+  const isNative = Capacitor.isNativePlatform();
+  const { settings } = useShopSettings();
+
+  // Bluetooth printer (mobile)
+  const bluetooth = useBluetoothPrinter();
+
+  // QZ Tray state (desktop)
   const [qzStatus, setQzStatus] = useState<QZStatus>('disconnected');
   const [printerName, setPrinterName] = useState<string | null>(null);
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
   const [isPrinting, setIsPrinting] = useState(false);
   const connectingRef = useRef(false);
-  const { settings } = useShopSettings();
 
-  // Get saved printer name from shop settings
   const savedPrinterName = (() => {
     try {
       const receiptConfig = settings?.receipt_printer;
@@ -267,8 +279,10 @@ export function useThermalPrinter() {
     }
   })();
 
+  // ─── QZ Tray methods (desktop) ───
+
   const connectQZ = useCallback(async () => {
-    if (connectingRef.current) return;
+    if (isNative || connectingRef.current) return;
     connectingRef.current = true;
 
     try {
@@ -276,18 +290,14 @@ export function useThermalPrinter() {
       await loadQZScript();
 
       const qz = window.qz;
-      if (!qz) {
-        throw new Error('QZ Tray library not available');
-      }
+      if (!qz) throw new Error('QZ Tray library not available');
 
-      // Skip if already connected
       if (qz.websocket.isActive()) {
         setQzStatus('connected');
         connectingRef.current = false;
         return;
       }
 
-      // Configure security (unsigned for local dev — in production, sign certificates)
       qz.security.setCertificatePromise(() =>
         Promise.resolve(
           '-----BEGIN CERTIFICATE-----\n' +
@@ -313,15 +323,13 @@ export function useThermalPrinter() {
       await qz.websocket.connect();
       setQzStatus('connected');
 
-      // Listen for disconnection
       qz.websocket.setClosedCallbacks(() => {
         setQzStatus('disconnected');
       });
-
     } catch (e: any) {
       console.error('QZ Tray connection error:', e);
       setQzStatus('error');
-      
+
       if (e.message?.includes('Unable to connect') || e.message?.includes('ECONNREFUSED')) {
         toast.error('QZ Tray is not running. Please start QZ Tray application.', {
           action: {
@@ -335,7 +343,7 @@ export function useThermalPrinter() {
     } finally {
       connectingRef.current = false;
     }
-  }, []);
+  }, [isNative]);
 
   const disconnectQZ = useCallback(async () => {
     try {
@@ -350,6 +358,12 @@ export function useThermalPrinter() {
   }, []);
 
   const detectPrinters = useCallback(async (): Promise<string[]> => {
+    // On mobile, delegate to Bluetooth
+    if (isNative) {
+      const devices = await bluetooth.scanForPrinters();
+      return devices.map(d => d.name);
+    }
+
     const qz = window.qz;
     if (!qz || !qz.websocket.isActive()) {
       await connectQZ();
@@ -365,14 +379,11 @@ export function useThermalPrinter() {
       const printerList = Array.isArray(printers) ? printers : [printers];
       setAvailablePrinters(printerList);
 
-      // Auto-select saved printer if found
       if (savedPrinterName) {
         const match = printerList.find((p: string) =>
           p.toLowerCase().includes(savedPrinterName.toLowerCase())
         );
-        if (match) {
-          setPrinterName(match);
-        }
+        if (match) setPrinterName(match);
       }
 
       return printerList;
@@ -381,17 +392,27 @@ export function useThermalPrinter() {
       toast.error('Failed to detect printers: ' + (e.message || 'Unknown error'));
       return [];
     }
-  }, [connectQZ, savedPrinterName]);
+  }, [isNative, bluetooth, connectQZ, savedPrinterName]);
 
   const selectPrinter = useCallback((name: string) => {
     setPrinterName(name);
   }, []);
 
+  // ─── Unified print method ───
+
   const printBill = useCallback(async (order: OrderForPrint, targetPrinter?: string): Promise<boolean> => {
+    const paperWidth = getSavedPaperWidth();
+    const escPosData = buildEscPosData(order, settings, paperWidth);
+
+    // Native mobile → Bluetooth
+    if (isNative) {
+      return bluetooth.sendRawData(escPosData);
+    }
+
+    // Desktop → QZ Tray
     setIsPrinting(true);
 
     try {
-      // Ensure connected
       if (!window.qz?.websocket.isActive()) {
         await connectQZ();
       }
@@ -399,20 +420,17 @@ export function useThermalPrinter() {
       if (!window.qz?.websocket.isActive()) {
         toast.error('Cannot connect to QZ Tray. Falling back to browser print.');
         setIsPrinting(false);
-        return false; // Signal caller to use fallback
+        return false;
       }
 
-      // Determine printer
       const printer = targetPrinter || printerName;
       if (!printer) {
-        // Try to auto-detect
         const detected = await detectPrinters();
         if (detected.length === 0) {
           toast.error('No printer found. Please check printer connection.');
           setIsPrinting(false);
           return false;
         }
-        // Use first detected
         setPrinterName(detected[0]);
       }
 
@@ -423,31 +441,23 @@ export function useThermalPrinter() {
         return false;
       }
 
-      // Build ESC/POS data
-      const escPosData = buildEscPosData(order, settings);
-
-      // Convert to base64 for QZ Tray
       const uint8 = new Uint8Array(escPosData);
       const base64 = btoa(String.fromCharCode(...uint8));
 
-      // Create print config
       const config = window.qz.configs.create(finalPrinter);
-      const printData = [
-        { type: 'raw', format: 'base64', data: base64 }
-      ];
+      const printData = [{ type: 'raw', format: 'base64', data: base64 }];
 
       await window.qz.print(config, printData);
       toast.success('Bill printed successfully!');
       setIsPrinting(false);
       return true;
-
     } catch (e: any) {
       console.error('Print error:', e);
       toast.error('Print failed: ' + (e.message || 'Unknown error'));
       setIsPrinting(false);
       return false;
     }
-  }, [connectQZ, detectPrinters, printerName, availablePrinters, settings]);
+  }, [isNative, bluetooth, connectQZ, detectPrinters, printerName, availablePrinters, settings]);
 
   const printTestPage = useCallback(async (targetPrinter?: string): Promise<boolean> => {
     const testOrder: OrderForPrint = {
@@ -470,26 +480,31 @@ export function useThermalPrinter() {
     return printBill(testOrder, targetPrinter);
   }, [printBill]);
 
-  // Auto-connect on mount (silently)
+  // Auto-connect on mount (desktop only, silently)
   useEffect(() => {
+    if (isNative) return;
     const timer = setTimeout(() => {
-      connectQZ().catch(() => {
-        // Silent fail on auto-connect
-      });
+      connectQZ().catch(() => {});
     }, 2000);
     return () => clearTimeout(timer);
-  }, [connectQZ]);
+  }, [connectQZ, isNative]);
 
   return {
-    qzStatus,
-    printerName,
-    availablePrinters,
-    isPrinting,
+    // Unified status
+    qzStatus: isNative
+      ? (bluetooth.status === 'connected' ? 'connected' : bluetooth.status === 'scanning' || bluetooth.status === 'connecting' ? 'connecting' : bluetooth.status === 'error' ? 'error' : 'disconnected') as QZStatus
+      : qzStatus,
+    printerName: isNative ? (bluetooth.connectedDevice?.name || null) : printerName,
+    availablePrinters: isNative ? bluetooth.discoveredDevices.map(d => d.name) : availablePrinters,
+    isPrinting: isNative ? bluetooth.status === 'printing' : isPrinting,
+    isNative,
     connectQZ,
     disconnectQZ,
     detectPrinters,
     selectPrinter,
     printBill,
     printTestPage,
+    // Bluetooth-specific exports
+    bluetooth,
   };
 }

@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Printer, Wifi, Bluetooth, Cable, Radio, Loader2, CheckCircle, AlertCircle, Search, ScanLine, X, WifiOff, Zap } from 'lucide-react';
+import { Printer, Wifi, Bluetooth, Cable, Radio, Loader2, CheckCircle, AlertCircle, Search, ScanLine, X, WifiOff, Zap, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { useThermalPrinter } from '@/hooks/useThermalPrinter';
+import { getSavedPaperWidth, savePaperWidth } from '@/hooks/useBluetoothPrinter';
 
 type ConnectionType = 'bluetooth' | 'wifi' | 'usb' | 'network';
 
@@ -390,11 +391,15 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
     printerName: qzPrinterName,
     availablePrinters: qzPrinters,
     isPrinting: qzPrinting,
+    isNative,
     connectQZ,
     detectPrinters: detectQZPrinters,
     selectPrinter: selectQZPrinter,
     printTestPage,
+    bluetooth,
   } = useThermalPrinter();
+
+  const [btPaperWidth, setBtPaperWidth] = useState<'58mm' | '80mm'>(getSavedPaperWidth);
 
   const [qzDetecting, setQzDetecting] = useState(false);
 
@@ -508,19 +513,19 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
       </CardHeader>
       <CardContent className="space-y-6">
 
-        {/* QZ Tray Status Section */}
-        <div className="rounded-lg border-2 border-dashed border-border p-4 space-y-3">
+        {/* QZ Tray Status Section — Desktop only */}
+        {!isNative && <div className="rounded-lg border-2 border-dashed border-border p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                qzStatus === 'connected' ? 'bg-emerald-100 dark:bg-emerald-900/30' :
-                qzStatus === 'connecting' ? 'bg-amber-100 dark:bg-amber-900/30' :
+                qzStatus === 'connected' ? 'bg-primary/10' :
+                qzStatus === 'connecting' ? 'bg-accent' :
                 'bg-muted'
               }`}>
                 {qzStatus === 'connected' ? (
-                  <Zap className="h-5 w-5 text-emerald-600" />
+                  <Zap className="h-5 w-5 text-primary" />
                 ) : qzStatus === 'connecting' ? (
-                  <Loader2 className="h-5 w-5 text-amber-600 animate-spin" />
+                  <Loader2 className="h-5 w-5 text-accent-foreground animate-spin" />
                 ) : (
                   <WifiOff className="h-5 w-5 text-muted-foreground" />
                 )}
@@ -604,7 +609,7 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
               )}
 
               {qzPrinterName && (
-                <p className="text-xs text-emerald-600 flex items-center gap-1">
+                <p className="text-xs text-primary flex items-center gap-1">
                   <CheckCircle className="h-3 w-3" />
                   Active printer: {qzPrinterName}
                 </p>
@@ -621,7 +626,124 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
               {' '}for silent thermal printing without browser dialogs.
             </p>
           )}
-        </div>
+        </div>}
+
+        {/* Bluetooth Printer Section (Mobile) */}
+        {isNative && (
+          <div className="rounded-lg border-2 border-dashed border-border p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                  bluetooth.status === 'connected' ? 'bg-primary/10' :
+                  bluetooth.status === 'scanning' || bluetooth.status === 'connecting' ? 'bg-accent' :
+                  'bg-muted'
+                }`}>
+                  {bluetooth.status === 'connected' ? (
+                    <Bluetooth className="h-5 w-5 text-primary" />
+                  ) : bluetooth.status === 'scanning' || bluetooth.status === 'connecting' ? (
+                    <Loader2 className="h-5 w-5 text-accent-foreground animate-spin" />
+                  ) : (
+                    <Bluetooth className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Bluetooth Thermal Printer</p>
+                  <p className="text-xs text-muted-foreground">
+                    {bluetooth.status === 'connected' && bluetooth.connectedDevice
+                      ? `Connected to ${bluetooth.connectedDevice.name}`
+                      : bluetooth.status === 'scanning' ? 'Scanning for nearby printers...'
+                      : bluetooth.status === 'connecting' ? 'Connecting...'
+                      : 'No printer connected'}
+                  </p>
+                </div>
+              </div>
+              <Badge variant={bluetooth.status === 'connected' ? 'default' : 'secondary'} className="text-xs">
+                {bluetooth.status === 'connected' ? '● Connected' :
+                 bluetooth.status === 'scanning' ? '○ Scanning' :
+                 bluetooth.status === 'connecting' ? '○ Connecting' :
+                 '○ Disconnected'}
+              </Badge>
+            </div>
+
+            {/* Scan & Paper Width */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => bluetooth.scanForPrinters()}
+                disabled={bluetooth.status === 'scanning'}
+                className="flex-1"
+              >
+                {bluetooth.status === 'scanning' ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scanning...</>
+                ) : (
+                  <><ScanLine className="mr-2 h-4 w-4" /> Scan Bluetooth Printers</>
+                )}
+              </Button>
+              <Select
+                value={btPaperWidth}
+                onValueChange={(v: '58mm' | '80mm') => {
+                  setBtPaperWidth(v);
+                  savePaperWidth(v);
+                }}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="58mm">58mm</SelectItem>
+                  <SelectItem value="80mm">80mm</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Discovered Bluetooth Devices */}
+            {bluetooth.discoveredDevices.length > 0 && (
+              <div className="rounded-lg border border-border bg-card p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-medium">Found {bluetooth.discoveredDevices.length} device{bluetooth.discoveredDevices.length > 1 ? 's' : ''}</p>
+                </div>
+                <div className="space-y-1.5">
+                  {bluetooth.discoveredDevices.map((device, i) => (
+                    <button
+                      key={i}
+                      onClick={() => bluetooth.connectPrinter(device)}
+                      disabled={bluetooth.status === 'connecting'}
+                      className={`w-full flex items-center gap-3 p-3 rounded-md border transition-all text-left ${
+                        bluetooth.connectedDevice?.address === device.address
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary hover:bg-primary/5'
+                      }`}
+                    >
+                      <Bluetooth className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{device.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{device.address}</p>
+                      </div>
+                      {bluetooth.connectedDevice?.address === device.address ? (
+                        <Badge className="text-xs shrink-0">Connected</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs shrink-0">Tap to connect</Badge>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Connected Device Actions */}
+            {bluetooth.connectedDevice && bluetooth.status === 'connected' && (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => printTestPage()} className="flex-1">
+                  <Printer className="mr-2 h-4 w-4" /> Test Print
+                </Button>
+                <Button variant="outline" onClick={() => bluetooth.disconnectPrinter()}>
+                  <X className="mr-2 h-4 w-4" /> Disconnect
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         <Separator />
 

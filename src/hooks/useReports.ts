@@ -64,7 +64,7 @@ export function useTopSellingItems(days: number = 7) {
 
   return useQuery({
     queryKey: ['reports', 'top-selling', days],
-    queryFn: async () => {
+    refetchInterval: 5000,
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('id')

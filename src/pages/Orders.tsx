@@ -337,7 +337,7 @@ export default function Orders() {
                           {/* Status progression */}
                           {order.status !== 'completed' && order.status !== 'cancelled' && (
                             <>
-                              {(isDeveloper || isAdmin) && order.status === 'placed' && (
+                              {isAdmin && order.status === 'placed' && (
                                 <Button 
                                   size="sm" 
                                   variant="outline"

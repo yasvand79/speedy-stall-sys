@@ -246,7 +246,88 @@ export default function Reports() {
     return Object.values(dayMap).slice(-14);
   }, [orders]);
 
-  if (isLoading) {
+  // ─── Order Status Funnel ───
+  const orderFunnel = useMemo(() => {
+    if (!orders) return [];
+    const statusCounts: Record<string, number> = { placed: 0, preparing: 0, ready: 0, completed: 0, cancelled: 0 };
+    orders.forEach(o => { if (statusCounts[o.status] !== undefined) statusCounts[o.status]++; });
+    const total = orders.length || 1;
+    return [
+      { stage: 'Placed', count: statusCounts.placed, pct: (statusCounts.placed / total) * 100, color: 'hsl(217,91%,60%)', icon: Bell },
+      { stage: 'Preparing', count: statusCounts.preparing, pct: (statusCounts.preparing / total) * 100, color: 'hsl(45,93%,47%)', icon: ChefHat },
+      { stage: 'Ready', count: statusCounts.ready, pct: (statusCounts.ready / total) * 100, color: 'hsl(142,72%,42%)', icon: CheckCircle },
+      { stage: 'Completed', count: statusCounts.completed, pct: (statusCounts.completed / total) * 100, color: 'hsl(24,95%,53%)', icon: CheckCircle },
+      { stage: 'Cancelled', count: statusCounts.cancelled, pct: (statusCounts.cancelled / total) * 100, color: 'hsl(0,84%,60%)', icon: Ban },
+    ];
+  }, [orders]);
+
+  // ─── Period Comparison ───
+  const periodComparison = useMemo(() => {
+    if (!orders || !prevOrders) return null;
+    const curr = orders.filter(o => o.status === 'completed');
+    const prev = prevOrders.filter(o => o.status === 'completed');
+    const currRevenue = curr.reduce((s, o) => s + Number(o.total), 0);
+    const prevRevenue = prev.reduce((s, o) => s + Number(o.total), 0);
+    const currOrders = curr.length;
+    const prevOrdersCount = prev.length;
+    const currAvg = currOrders > 0 ? currRevenue / currOrders : 0;
+    const prevAvg = prevOrdersCount > 0 ? prevRevenue / prevOrdersCount : 0;
+
+    const pctChange = (curr: number, prev: number) => prev > 0 ? ((curr - prev) / prev) * 100 : curr > 0 ? 100 : 0;
+
+    return {
+      current: { revenue: currRevenue, orders: currOrders, avg: currAvg },
+      previous: { revenue: prevRevenue, orders: prevOrdersCount, avg: prevAvg },
+      changes: {
+        revenue: pctChange(currRevenue, prevRevenue),
+        orders: pctChange(currOrders, prevOrdersCount),
+        avg: pctChange(currAvg, prevAvg),
+      },
+    };
+  }, [orders, prevOrders]);
+
+  // ─── Busiest Days of Week ───
+  const weekdayAnalytics = useMemo(() => {
+    if (!orders) return [];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayData: Record<number, { orders: number; revenue: number }> = {};
+    for (let i = 0; i < 7; i++) dayData[i] = { orders: 0, revenue: 0 };
+    orders.filter(o => o.status === 'completed').forEach(o => {
+      const day = new Date(o.created_at || '').getDay();
+      dayData[day].orders++;
+      dayData[day].revenue += Number(o.total);
+    });
+    const result = Object.entries(dayData).map(([day, d]) => ({
+      day: days[Number(day)],
+      dayNum: Number(day),
+      ...d,
+      avgOrder: d.orders > 0 ? d.revenue / d.orders : 0,
+    }));
+    return result;
+  }, [orders]);
+
+  const busiestDay = useMemo(() => {
+    if (!weekdayAnalytics.length) return 'N/A';
+    return weekdayAnalytics.reduce((max, d) => d.orders > max.orders ? d : max, weekdayAnalytics[0]).day;
+  }, [weekdayAnalytics]);
+
+  // ─── Table-wise Analytics ───
+  const tableAnalytics = useMemo(() => {
+    if (!orders) return [];
+    const completed = orders.filter(o => o.status === 'completed' && o.type === 'dine-in' && o.table_number);
+    const tableMap: Record<number, { orders: number; revenue: number }> = {};
+    completed.forEach(o => {
+      const t = o.table_number!;
+      if (!tableMap[t]) tableMap[t] = { orders: 0, revenue: 0 };
+      tableMap[t].orders++;
+      tableMap[t].revenue += Number(o.total);
+    });
+    return Object.entries(tableMap)
+      .map(([table, d]) => ({ table: Number(table), ...d, avg: d.orders > 0 ? d.revenue / d.orders : 0 }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [orders]);
+
+
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[400px]">

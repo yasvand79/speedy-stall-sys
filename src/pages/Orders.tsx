@@ -78,26 +78,45 @@ export default function Orders() {
       if (error) throw error;
       if (data?.html) {
         setPrintStatus('printing');
-        const iframe = printIframeRef.current;
-        if (iframe) {
-          const doc = iframe.contentDocument || iframe.contentWindow?.document;
-          if (doc) {
-            doc.open();
-            doc.write(data.html);
-            doc.close();
 
-            // Listen for after print event
+        // Create a temporary hidden iframe for printing
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.top = '-10000px';
+        iframe.style.left = '-10000px';
+        iframe.style.width = '80mm';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (doc) {
+          doc.open();
+          doc.write(data.html);
+          doc.close();
+
+          // Wait for content to render, then print
+          setTimeout(() => {
             const onAfterPrint = () => {
               iframe.contentWindow?.removeEventListener('afterprint', onAfterPrint);
+              document.body.removeChild(iframe);
               setPrintStatus('success');
               setTimeout(() => setPrintStatus('idle'), 2000);
             };
             iframe.contentWindow?.addEventListener('afterprint', onAfterPrint);
-
+            
+            // Fallback: if afterprint doesn't fire (some browsers), auto-succeed after 5s
             setTimeout(() => {
-              iframe.contentWindow?.print();
-            }, 300);
-          }
+              if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+                setPrintStatus('success');
+                setTimeout(() => setPrintStatus('idle'), 2000);
+              }
+            }, 10000);
+
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          }, 500);
         }
       }
     } catch {

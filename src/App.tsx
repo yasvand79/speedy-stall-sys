@@ -18,6 +18,7 @@ import StaffPerformance from "./pages/StaffPerformance";
 import InviteCodes from "./pages/InviteCodes";
 import Profile from "./pages/Profile";
 import PrinterSetup from "./pages/PrinterSetup";
+import Install from "./pages/Install";
 
 import PublicMenu from "./pages/PublicMenu";
 import Auth from "./pages/Auth";
@@ -35,6 +36,7 @@ const App = () => (
           <ThermalPrinterProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/install" element={<Install />} />
               <Route path="/menu/:branchCode" element={<PublicMenu />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />

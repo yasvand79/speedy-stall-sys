@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Printer, Wifi, Bluetooth, Cable, Radio, Loader2, CheckCircle, AlertCircle, Search } from 'lucide-react';
+import { Printer, Wifi, Bluetooth, Cable, Radio, Loader2, CheckCircle, AlertCircle, Search, ScanLine, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ConnectionType = 'bluetooth' | 'wifi' | 'usb' | 'network';
@@ -15,11 +15,18 @@ type ConnectionType = 'bluetooth' | 'wifi' | 'usb' | 'network';
 interface PrinterConfig {
   name: string;
   connectionType: ConnectionType;
-  address: string; // IP for wifi/network, MAC for bluetooth, port for USB
+  address: string;
   port: string;
   paperWidth: '58mm' | '80mm';
   autoCut: boolean;
   enabled: boolean;
+}
+
+interface DiscoveredPrinter {
+  name: string;
+  address: string;
+  type: ConnectionType;
+  rssi?: number;
 }
 
 interface PrinterConfigurationProps {
@@ -56,6 +63,134 @@ function parsePrinterConfig(stored: string | null): PrinterConfig {
   }
 }
 
+async function scanBluetooth(): Promise<DiscoveredPrinter[]> {
+  if (!navigator.bluetooth) {
+    throw new Error('Bluetooth is not available on this device');
+  }
+  
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [
+        { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Common thermal printer service
+      ],
+      optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'],
+      acceptAllDevices: false,
+    }).catch(() => {
+      // If specific filter fails, try acceptAllDevices
+      return navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+    });
+    
+    if (device) {
+      return [{
+        name: device.name || 'Unknown Bluetooth Device',
+        address: device.id,
+        type: 'bluetooth',
+      }];
+    }
+  } catch (e: any) {
+    if (e.name === 'NotFoundError') {
+      return []; // User cancelled
+    }
+    throw e;
+  }
+  return [];
+}
+
+async function scanNetwork(): Promise<DiscoveredPrinter[]> {
+  // Common printer ports and well-known printer IPs
+  const commonPorts = [9100, 515, 631];
+  const discovered: DiscoveredPrinter[] = [];
+  
+  // Try common printer discovery - check local subnet
+  // This uses a heuristic approach since full mDNS isn't available in browser
+  const baseIP = '192.168.1.';
+  const commonPrinterIPs = [100, 101, 102, 150, 200, 250];
+  
+  const checkPromises = commonPrinterIPs.map(async (lastOctet) => {
+    const ip = `${baseIP}${lastOctet}`;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1500);
+      
+      await fetch(`http://${ip}:${commonPorts[0]}`, {
+        mode: 'no-cors',
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      
+      discovered.push({
+        name: `Network Printer (${ip})`,
+        address: ip,
+        type: 'network',
+      });
+    } catch {
+      // Not found or timeout - skip
+    }
+  });
+  
+  await Promise.allSettled(checkPromises);
+  return discovered;
+}
+
+function DiscoveredPrintersList({
+  printers,
+  onSelect,
+  scanning,
+}: {
+  printers: DiscoveredPrinter[];
+  onSelect: (p: DiscoveredPrinter) => void;
+  scanning: boolean;
+}) {
+  if (scanning) {
+    return (
+      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <ScanLine className="h-6 w-6 text-primary animate-pulse" />
+            <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary animate-ping" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Scanning for printers...</p>
+            <p className="text-xs text-muted-foreground">Looking for nearby devices</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (printers.length === 0) return null;
+  
+  return (
+    <div className="rounded-lg border border-border bg-card p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <CheckCircle className="h-4 w-4 text-green-500" />
+        <p className="text-sm font-medium">Found {printers.length} printer{printers.length > 1 ? 's' : ''}</p>
+      </div>
+      <div className="space-y-1.5">
+        {printers.map((printer, i) => {
+          const Icon = printer.type === 'bluetooth' ? Bluetooth : printer.type === 'wifi' ? Wifi : Radio;
+          return (
+            <button
+              key={i}
+              onClick={() => onSelect(printer)}
+              className="w-full flex items-center gap-3 p-3 rounded-md border border-border hover:border-primary hover:bg-primary/5 transition-all text-left"
+            >
+              <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{printer.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{printer.address}</p>
+              </div>
+              <Badge variant="secondary" className="text-xs shrink-0">
+                {printer.type === 'bluetooth' ? 'BT' : printer.type === 'wifi' ? 'WiFi' : 'LAN'}
+              </Badge>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function PrinterSetup({ 
   label, 
   description, 
@@ -64,6 +199,8 @@ function PrinterSetup({
   canEdit,
   scanning,
   onScan,
+  discoveredPrinters,
+  onSelectDiscovered,
 }: { 
   label: string; 
   description: string; 
@@ -71,11 +208,10 @@ function PrinterSetup({
   onChange: (c: PrinterConfig) => void; 
   canEdit: boolean;
   scanning: boolean;
-  onScan: () => void;
+  onScan: (type?: ConnectionType) => void;
+  discoveredPrinters: DiscoveredPrinter[];
+  onSelectDiscovered: (p: DiscoveredPrinter) => void;
 }) {
-  const connIcon = CONNECTION_OPTIONS.find(c => c.value === config.connectionType)?.icon || Wifi;
-  const ConnIcon = connIcon;
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -92,6 +228,29 @@ function PrinterSetup({
 
       {config.enabled && (
         <div className="space-y-4 pl-1">
+          {/* Auto-Detect Button */}
+          {canEdit && (
+            <Button
+              variant="outline"
+              onClick={() => onScan()}
+              disabled={scanning}
+              className="w-full border-dashed border-2 h-12"
+            >
+              {scanning ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scanning for printers...</>
+              ) : (
+                <><ScanLine className="mr-2 h-5 w-5" /> Auto-Detect Printers (Bluetooth, Wi-Fi, LAN)</>
+              )}
+            </Button>
+          )}
+
+          {/* Discovered Printers */}
+          <DiscoveredPrintersList
+            printers={discoveredPrinters}
+            onSelect={onSelectDiscovered}
+            scanning={scanning}
+          />
+
           {/* Printer Name */}
           <div className="space-y-2">
             <Label>Printer Name / Model</Label>
@@ -148,7 +307,7 @@ function PrinterSetup({
                   disabled={!canEdit}
                 />
                 {(config.connectionType === 'bluetooth' || config.connectionType === 'wifi') && canEdit && (
-                  <Button variant="outline" size="icon" onClick={onScan} disabled={scanning}>
+                  <Button variant="outline" size="icon" onClick={() => onScan(config.connectionType)} disabled={scanning}>
                     {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   </Button>
                 )}
@@ -222,19 +381,80 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
   const [receipt, setReceipt] = useState<PrinterConfig>(parsePrinterConfig(receiptPrinter));
   const [kitchen, setKitchen] = useState<PrinterConfig>(parsePrinterConfig(kitchenPrinter));
   const [scanning, setScanning] = useState(false);
+  const [discoveredPrinters, setDiscoveredPrinters] = useState<DiscoveredPrinter[]>([]);
+  const [activeTarget, setActiveTarget] = useState<'receipt' | 'kitchen'>('receipt');
 
   useEffect(() => {
     setReceipt(parsePrinterConfig(receiptPrinter));
     setKitchen(parsePrinterConfig(kitchenPrinter));
   }, [receiptPrinter, kitchenPrinter]);
 
-  const handleScan = async () => {
+  const handleScan = async (target: 'receipt' | 'kitchen', type?: ConnectionType) => {
     setScanning(true);
-    // Simulate scanning — real implementation would use Web Bluetooth API or network discovery
-    setTimeout(() => {
+    setActiveTarget(target);
+    setDiscoveredPrinters([]);
+    
+    const allDiscovered: DiscoveredPrinter[] = [];
+    
+    try {
+      // Scan Bluetooth if requested or auto-detect
+      if (!type || type === 'bluetooth') {
+        try {
+          const btPrinters = await scanBluetooth();
+          allDiscovered.push(...btPrinters);
+        } catch (e: any) {
+          if (type === 'bluetooth') {
+            toast.error(e.message || 'Bluetooth scanning failed. Make sure Bluetooth is enabled.');
+          }
+          // Silent fail for auto-detect
+        }
+      }
+      
+      // Scan Network if requested or auto-detect
+      if (!type || type === 'wifi' || type === 'network') {
+        try {
+          const netPrinters = await scanNetwork();
+          allDiscovered.push(...netPrinters);
+        } catch {
+          if (type === 'wifi' || type === 'network') {
+            toast.error('Network scanning failed. Check your network connection.');
+          }
+        }
+      }
+      
+      setDiscoveredPrinters(allDiscovered);
+      
+      if (allDiscovered.length === 0) {
+        toast.info('No printers found. Make sure your printer is powered on and connected to the same network or Bluetooth is enabled.');
+      } else {
+        toast.success(`Found ${allDiscovered.length} printer${allDiscovered.length > 1 ? 's' : ''}! Tap to connect.`);
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Scanning failed');
+    } finally {
       setScanning(false);
-      toast.info('Scanning complete. Enter your printer details manually or check your device\'s connection settings.');
-    }, 2000);
+    }
+  };
+
+  const handleSelectDiscovered = (printer: DiscoveredPrinter, target: 'receipt' | 'kitchen') => {
+    const updatedConfig: PrinterConfig = {
+      name: printer.name,
+      connectionType: printer.type,
+      address: printer.address,
+      port: printer.type === 'wifi' || printer.type === 'network' ? '9100' : '',
+      paperWidth: '80mm',
+      autoCut: true,
+      enabled: true,
+    };
+    
+    if (target === 'receipt') {
+      setReceipt(updatedConfig);
+    } else {
+      setKitchen(updatedConfig);
+    }
+    
+    setDiscoveredPrinters([]);
+    toast.success(`${printer.name} selected as ${target} printer`);
   };
 
   const handleSave = () => {
@@ -251,7 +471,7 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
           <Printer className="h-5 w-5 text-primary" />
           <CardTitle className="font-display">Printer Configuration</CardTitle>
         </div>
-        <CardDescription>Setup receipt and kitchen printers via Bluetooth, Wi-Fi, USB, or LAN</CardDescription>
+        <CardDescription>Setup receipt and kitchen printers — auto-detect via Bluetooth, Wi-Fi, USB, or LAN</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <PrinterSetup
@@ -260,8 +480,10 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
           config={receipt}
           onChange={setReceipt}
           canEdit={canEdit}
-          scanning={scanning}
-          onScan={handleScan}
+          scanning={scanning && activeTarget === 'receipt'}
+          onScan={(type) => handleScan('receipt', type)}
+          discoveredPrinters={activeTarget === 'receipt' ? discoveredPrinters : []}
+          onSelectDiscovered={(p) => handleSelectDiscovered(p, 'receipt')}
         />
 
         <Separator />
@@ -272,8 +494,10 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
           config={kitchen}
           onChange={setKitchen}
           canEdit={canEdit}
-          scanning={scanning}
-          onScan={handleScan}
+          scanning={scanning && activeTarget === 'kitchen'}
+          onScan={(type) => handleScan('kitchen', type)}
+          discoveredPrinters={activeTarget === 'kitchen' ? discoveredPrinters : []}
+          onSelectDiscovered={(p) => handleSelectDiscovered(p, 'kitchen')}
         />
 
         {canEdit && (

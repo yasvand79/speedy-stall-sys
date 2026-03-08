@@ -300,6 +300,15 @@ export function PaymentDialog({
                   </>
                 )}
               </Button>
+
+              <Button
+                variant="outline"
+                onClick={openCustomerDisplay}
+                className="w-full"
+              >
+                <Monitor className="mr-2 h-4 w-4" />
+                Show to Customer
+              </Button>
             </div>
           </div>
         )}

@@ -394,13 +394,12 @@ export function useThermalPrinter() {
       setAvailablePrinters(printerList);
 
       if (printerList.length === 0) {
-        toast.warning('No printers found', {
-          description: 'Make sure your thermal printer is connected and powered on.',
+        setPrinterError({
+          title: '🖨️ No Printers Found',
+          message: 'No thermal printers were detected. Please make sure your printer is connected, powered on, and the correct drivers are installed.',
         });
       } else {
-        toast.success(`Found ${printerList.length} printer(s)`, {
-          description: printerList.slice(0, 3).join(', ') + (printerList.length > 3 ? '...' : ''),
-        });
+        toast.success(`Found ${printerList.length} printer(s)`);
       }
 
       if (savedPrinterName) {

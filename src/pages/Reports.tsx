@@ -26,7 +26,7 @@ import { useShopSettings } from '@/hooks/useShopSettings';
 const COLORS = ['hsl(24,95%,53%)', 'hsl(142,72%,42%)', 'hsl(217,91%,60%)', 'hsl(280,65%,60%)', 'hsl(45,93%,47%)'];
 const HEATMAP_COLORS = ['hsl(var(--muted))', 'hsl(24,95%,90%)', 'hsl(24,95%,75%)', 'hsl(24,95%,60%)', 'hsl(24,95%,45%)'];
 
-type DateRange = 'today' | '7d' | '30d';
+type DateRange = 'today' | '7d' | '30d' | '6m' | 'all';
 
 function useCustomerAnalytics(start: Date, end: Date) {
   return useQuery({
@@ -76,7 +76,7 @@ export default function Reports() {
   const { start, end } = useDateRange(range);
 
   const { data: dailySales, isLoading: dailyLoading } = useDailySales();
-  const { data: topItems } = useTopSellingItems(range === 'today' ? 1 : range === '7d' ? 7 : 30);
+  const { data: topItems } = useTopSellingItems(range === 'today' ? 1 : range === '7d' ? 7 : range === '30d' ? 30 : range === '6m' ? 180 : 3650);
   const { data: weeklyRevenue, isLoading: weeklyLoading } = useWeeklyRevenue();
   const { data: orders, isLoading: ordersLoading } = useOrdersAnalytics(start, end);
   const { data: payments } = usePaymentAnalytics(start, end);
@@ -220,7 +220,7 @@ export default function Reports() {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex rounded-lg border bg-muted/50 p-1">
-              {(['today', '7d', '30d'] as const).map(r => (
+              {(['today', '7d', '30d', '6m', 'all'] as const).map(r => (
                 <Button
                   key={r}
                   variant={range === r ? 'default' : 'ghost'}
@@ -228,7 +228,7 @@ export default function Reports() {
                   onClick={() => setRange(r)}
                   className="text-xs"
                 >
-                  {r === 'today' ? 'Today' : r === '7d' ? '7 Days' : '30 Days'}
+                  {r === 'today' ? 'Today' : r === '7d' ? '7 Days' : r === '30d' ? '30 Days' : r === '6m' ? '6 Months' : 'All'}
                 </Button>
               ))}
             </div>

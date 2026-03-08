@@ -12,10 +12,11 @@ import { useOrders, useUpdateOrderStatus, OrderWithItems } from '@/hooks/useOrde
 import { usePayments } from '@/hooks/usePayments';
 import { useBranches } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 import {
   Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle,
   Building2, User, UtensilsCrossed, Printer, Package,
-  ArrowRight, Hash, CreditCard, Loader2, CheckCircle, Eye
+  ArrowRight, Hash, CreditCard, Loader2, CheckCircle, Eye, Wifi, WifiOff
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';

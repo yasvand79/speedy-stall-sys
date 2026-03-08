@@ -13,11 +13,11 @@ serve(async (req) => {
   try {
     const { metrics } = await req.json();
 
-    const prompt = `You are a hospitality business consultant. Analyze this restaurant/hotel data and provide exactly 6 actionable insights to improve the business. Be specific with numbers.
+    const prompt = `You are a friendly hotel/restaurant business advisor who explains things in simple, easy-to-understand language. Analyze this data and give a COMPLETE business health report.
 
 DATA:
-- Revenue: ₹${metrics.totalRevenue} (${metrics.completedOrders} orders)
-- Avg Order Value: ₹${metrics.avgOrderValue}
+- Revenue: ₹${metrics.totalRevenue} from ${metrics.completedOrders} orders
+- Average Order Value: ₹${metrics.avgOrderValue}
 - Cancellation Rate: ${metrics.cancelRate}%
 - Dine-in: ${metrics.dineInOrders} orders (₹${metrics.dineInRevenue})
 - Takeaway: ${metrics.takeawayOrders} orders (₹${metrics.takeawayRevenue})
@@ -25,17 +25,77 @@ DATA:
 - Discounts Given: ₹${metrics.totalDiscount}
 - Peak Hour: ${metrics.peakHour}
 - Busiest Day: ${metrics.busiestDay}
-- Top Selling Category: ${metrics.topCategory || 'N/A'}
+- Top Category: ${metrics.topCategory || 'N/A'}
+- Top Item: ${metrics.topItem || 'N/A'}
 - Repeat Customer Rate: ${metrics.repeatRate}%
 - Total Customers: ${metrics.totalCustomers}
-- Staff Count Active: ${metrics.staffCount}
-- Top Item: ${metrics.topItem || 'N/A'}
+- Staff Count: ${metrics.staffCount}
 - Tables Active: ${metrics.activeTables}
 
-Return ONLY a JSON array of objects with this exact format (no markdown, no explanation):
-[{"category":"revenue","title":"short title","insight":"2-3 sentence actionable insight","impact":"high|medium|low","metric":"relevant number or %"}]
+Return ONLY a valid JSON object (no markdown, no explanation) with this EXACT format:
+{
+  "summary": "2-3 sentence overall business health summary in simple language",
+  "healthScore": <number 1-100>,
+  "sections": [
+    {
+      "id": "sales",
+      "title": "Sales Performance",
+      "score": <number 1-100>,
+      "status": "excellent|good|average|needs_work",
+      "summary": "2 sentence simple explanation of sales health",
+      "insights": [
+        {"point": "short finding in simple words", "type": "positive|negative|neutral"},
+        {"point": "short finding in simple words", "type": "positive|negative|neutral"},
+        {"point": "short finding in simple words", "type": "positive|negative|neutral"}
+      ],
+      "tips": ["actionable tip 1 in simple language", "actionable tip 2"]
+    },
+    {
+      "id": "customers",
+      "title": "Customer Analysis",
+      "score": <number 1-100>,
+      "status": "excellent|good|average|needs_work",
+      "summary": "2 sentence simple explanation",
+      "insights": [
+        {"point": "finding", "type": "positive|negative|neutral"},
+        {"point": "finding", "type": "positive|negative|neutral"},
+        {"point": "finding", "type": "positive|negative|neutral"}
+      ],
+      "tips": ["tip 1", "tip 2"]
+    },
+    {
+      "id": "staff",
+      "title": "Staff & Operations",
+      "score": <number 1-100>,
+      "status": "excellent|good|average|needs_work",
+      "summary": "2 sentence simple explanation",
+      "insights": [
+        {"point": "finding", "type": "positive|negative|neutral"},
+        {"point": "finding", "type": "positive|negative|neutral"}
+      ],
+      "tips": ["tip 1", "tip 2"]
+    },
+    {
+      "id": "growth",
+      "title": "Growth Tips",
+      "score": <number 1-100>,
+      "status": "excellent|good|average|needs_work",
+      "summary": "2 sentence simple explanation of growth potential",
+      "insights": [
+        {"point": "finding", "type": "positive|negative|neutral"},
+        {"point": "finding", "type": "positive|negative|neutral"}
+      ],
+      "tips": ["specific actionable growth tip 1", "specific actionable growth tip 2", "specific actionable growth tip 3"]
+    }
+  ]
+}
 
-Categories: revenue, operations, menu, customers, staff, marketing`;
+IMPORTANT RULES:
+- Use simple Tamil-hotel-owner-friendly language (English but simple)
+- Be specific with numbers from the data
+- Each tip should be something they can do THIS WEEK
+- Score based on realistic restaurant benchmarks
+- If data is zero/low, acknowledge it's early days and give starter tips`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -47,27 +107,41 @@ Categories: revenue, operations, menu, customers, staff, marketing`;
         model: "google/gemini-2.5-flash",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
-        max_tokens: 1500,
+        max_tokens: 2500,
       }),
     });
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "[]";
-    
-    // Parse JSON from response (handle markdown code blocks)
-    let insights;
-    try {
-      const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      insights = JSON.parse(cleaned);
-    } catch {
-      insights = [];
+    if (!response.ok) {
+      const status = response.status;
+      if (status === 429) {
+        return new Response(JSON.stringify({ error: "Too many requests. Please try again in a minute." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`AI gateway error: ${status}`);
     }
 
-    return new Response(JSON.stringify({ insights }), {
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "{}";
+    
+    let analysis;
+    try {
+      const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      analysis = JSON.parse(cleaned);
+    } catch {
+      analysis = null;
+    }
+
+    return new Response(JSON.stringify({ analysis }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message, insights: [] }), {
+    return new Response(JSON.stringify({ error: error.message, analysis: null }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

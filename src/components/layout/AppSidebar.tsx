@@ -131,6 +131,14 @@ export function AppSidebar() {
           )}
           <SidebarMenu>
             <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Profile">
+                <NavLink to="/profile" onClick={handleNavClick}>
+                  <UserCircle className="h-4 w-4" />
+                  <span>Profile</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
               <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>

@@ -43,6 +43,7 @@ const App = () => (
             <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Reports /></ProtectedRoute>} />
             <Route path="/invite-codes" element={<ProtectedRoute allowedRoles={['admin']}><InviteCodes /></ProtectedRoute>} />
             
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -747,8 +747,7 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
 
         <Separator />
 
-        {/* QZ Tray — only show on desktop */}
-        {!isNative && (
+        <PrinterSetup
           label="Receipt Printer"
           description="Thermal printer for customer receipts"
           config={receipt}

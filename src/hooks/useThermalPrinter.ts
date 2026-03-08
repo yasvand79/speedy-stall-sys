@@ -381,13 +381,9 @@ export function useThermalPrinter() {
     }
 
     if (!window.qz?.websocket.isActive()) {
-      toast.error('Cannot connect to QZ Tray', {
-        description: 'QZ Tray must be installed and running to detect printers.',
-        action: {
-          label: 'Get QZ Tray',
-          onClick: () => window.open('https://qz.io/download/', '_blank'),
-        },
-        duration: 8000,
+      setPrinterError({
+        title: '🖨️ Cannot Connect to Printer',
+        message: 'QZ Tray must be installed and running to detect printers. Please install QZ Tray from qz.io/download and restart your browser.',
       });
       return [];
     }

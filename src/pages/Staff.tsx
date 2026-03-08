@@ -78,10 +78,14 @@ export default function Staff() {
   const canManageStaff = isAdmin;
   const canInviteStaff = isAdmin || isBranchAdmin;
 
-  const filteredStaff = staff.filter(member =>
-    member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.userId.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStaff = staff.filter(member => {
+    const matchesSearch = member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.userId.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesBranch = filterBranch === 'all' || 
+      (filterBranch === 'none' ? !member.branchId : member.branchId === filterBranch);
+    const matchesRole = filterRole === 'all' || member.role === filterRole;
+    return matchesSearch && matchesBranch && matchesRole;
+  });
 
   const activeStaff = staff.filter(s => s.isActive).length;
 

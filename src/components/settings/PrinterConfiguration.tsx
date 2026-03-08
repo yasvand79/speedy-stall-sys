@@ -64,32 +64,32 @@ function parsePrinterConfig(stored: string | null): PrinterConfig {
 }
 
 async function scanBluetooth(): Promise<DiscoveredPrinter[]> {
-  if (!navigator.bluetooth) {
+  const nav = navigator as any;
+  if (!nav.bluetooth) {
     throw new Error('Bluetooth is not available on this device');
   }
   
   try {
-    const device = await navigator.bluetooth.requestDevice({
+    const device = await nav.bluetooth.requestDevice({
       filters: [
-        { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Common thermal printer service
+        { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
       ],
       optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'],
       acceptAllDevices: false,
     }).catch(() => {
-      // If specific filter fails, try acceptAllDevices
-      return navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+      return nav.bluetooth.requestDevice({ acceptAllDevices: true });
     });
     
     if (device) {
       return [{
         name: device.name || 'Unknown Bluetooth Device',
         address: device.id,
-        type: 'bluetooth',
+        type: 'bluetooth' as ConnectionType,
       }];
     }
   } catch (e: any) {
     if (e.name === 'NotFoundError') {
-      return []; // User cancelled
+      return [];
     }
     throw e;
   }

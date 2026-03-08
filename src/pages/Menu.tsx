@@ -485,7 +485,7 @@ export default function Menu() {
 
           {categories.map((cat) => (
             <TabsContent key={cat.value} value={cat.value}>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
                 {filterItems(cat.value).map((item) => {
                   const displayPrice = getBranchPrice(item.id, Number(item.price));
                   const hasBranchPrice = isBranchAdmin && branchPrices?.some(p => p.menu_item_id === item.id);

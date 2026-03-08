@@ -155,7 +155,7 @@ export default function InviteCodes() {
                   Cancel
                 </Button>
                 <Button onClick={handleCreate} disabled={isCreating}>
-                  {isCreating ? 'Inviting...' : 'Send Invitation'}
+                  {isCreating ? 'Saving...' : 'Save'}
                 </Button>
               </DialogFooter>
             </DialogContent>

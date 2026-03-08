@@ -626,7 +626,7 @@ export function PrinterConfiguration({ receiptPrinter, kitchenPrinter, onSave, c
               {' '}for silent thermal printing without browser dialogs.
             </p>
           )}
-        </div>
+        </div>}
 
         {/* Bluetooth Printer Section (Mobile) */}
         {isNative && (

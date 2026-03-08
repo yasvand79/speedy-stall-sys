@@ -50,7 +50,7 @@ const roleConfig: Record<string, { label: string; icon: React.ElementType; color
 };
 
 export default function Staff() {
-  const { profile, role, isDeveloper, isCentralAdmin, isBranchAdmin } = useAuth();
+  const { profile, role, isAdmin, isBranchAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [staffToRemove, setStaffToRemove] = useState<StaffMember | null>(null);

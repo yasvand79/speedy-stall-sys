@@ -35,7 +35,7 @@ import { Button } from '@/components/ui/button';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['admin', 'branch_admin', 'billing'] },
   { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['branch_admin', 'billing'] },
-  { name: 'Billing', href: '/billing', icon: Receipt, roles: ['admin', 'branch_admin', 'billing'] },
+  { name: 'Billing', href: '/billing', icon: Receipt, roles: ['branch_admin', 'billing'] },
   { name: 'Menu', href: '/menu', icon: UtensilsCrossed, roles: ['admin', 'branch_admin'] },
   { name: 'Branches', href: '/branches', icon: Building2, roles: ['admin'] },
   { name: 'Staff', href: '/staff', icon: Users, roles: ['admin', 'branch_admin'] },

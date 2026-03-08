@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Printer, WifiOff, Loader2, AlertCircle, RefreshCw, Settings, Search, Unplug } from 'lucide-react';
-import { useThermalPrinter } from '@/hooks/useThermalPrinter';
+import { useThermalPrinter } from '@/contexts/ThermalPrinterContext';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {

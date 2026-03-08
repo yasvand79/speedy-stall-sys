@@ -9,7 +9,7 @@ import { IndianRupee, Receipt, CreditCard, Smartphone, Banknote, Printer, Loader
 import { formatDistanceToNow } from 'date-fns';
 import { PaymentDialog } from '@/components/billing/PaymentDialog';
 import { useState } from 'react';
-import { useThermalPrinter } from '@/hooks/useThermalPrinter';
+import { useThermalPrinter } from '@/contexts/ThermalPrinterContext';
 
 export default function Billing() {
   const { data: orders, isLoading: ordersLoading } = useOrders();

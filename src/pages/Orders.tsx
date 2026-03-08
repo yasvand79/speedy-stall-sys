@@ -12,7 +12,7 @@ import { useOrders, useUpdateOrderStatus, OrderWithItems } from '@/hooks/useOrde
 import { usePayments } from '@/hooks/usePayments';
 import { useBranches } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
-import { useThermalPrinter } from '@/hooks/useThermalPrinter';
+import { useThermalPrinter } from '@/contexts/ThermalPrinterContext';
 import {
   Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle,
   Building2, User, UtensilsCrossed, Printer, Package,

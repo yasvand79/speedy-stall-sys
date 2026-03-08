@@ -23,6 +23,10 @@ export function MainLayout({ children }: MainLayoutProps) {
           <main className="flex-1 p-4 md:p-6 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-6">
             {children}
           </main>
+          {/* Mobile floating printer indicator */}
+          <div className="fixed top-3 right-3 z-40 md:hidden">
+            <PrinterStatusIndicator />
+          </div>
         </div>
       </div>
       <BottomNav />

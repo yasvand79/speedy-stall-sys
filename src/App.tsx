@@ -36,6 +36,7 @@ const App = () => (
           <ThermalPrinterProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/install" element={<Install />} />
               <Route path="/menu/:branchCode" element={<PublicMenu />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />

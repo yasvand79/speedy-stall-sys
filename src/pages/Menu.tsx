@@ -560,7 +560,7 @@ export default function Menu() {
                           </div>
                         )}
 
-                        {/* Branch admin controls - availability toggle + price editing */}
+                        {/* Branch admin controls - availability toggle only */}
                         {canEditBranchPrices && (
                           <div className="flex items-center justify-between pt-2 border-t">
                             <div className="flex items-center gap-2">
@@ -570,14 +570,6 @@ export default function Menu() {
                               />
                               <span className="text-sm">{item.is_available ? 'Available' : 'Unavailable'}</span>
                             </div>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleEditBranchPrice(item)}
-                            >
-                              <DollarSign className="h-3 w-3 mr-1" />
-                              Set Price
-                            </Button>
                           </div>
                         )}
                       </CardContent>

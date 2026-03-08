@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Printer, WifiOff, Loader2, AlertCircle, RefreshCw, Settings, Search, Unplug } from 'lucide-react';
+import { Printer, WifiOff, Loader2, AlertCircle, RefreshCw, Settings, Search, Unplug, BookOpen } from 'lucide-react';
 import { useThermalPrinter } from '@/contexts/ThermalPrinterContext';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -179,6 +179,16 @@ export function PrinterStatusIndicator() {
           )}
 
           <Separator className="my-1" />
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 h-8 text-xs text-muted-foreground"
+            onClick={() => navigate('/printer-setup')}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Setup guide
+          </Button>
 
           <Button
             variant="ghost"

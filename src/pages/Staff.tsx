@@ -297,7 +297,17 @@ export default function Staff() {
                     {member.phone && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Phone className="h-4 w-4" />
-                        <span>{member.phone}</span>
+                        <button
+                          type="button"
+                          className="hover:text-foreground hover:underline cursor-pointer transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(member.phone!);
+                            toast.success('Phone number copied!');
+                          }}
+                          title="Click to copy"
+                        >
+                          {member.phone}
+                        </button>
                       </div>
                     )}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">

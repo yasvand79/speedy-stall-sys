@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -31,12 +31,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { useStaff, StaffMember } from '@/hooks/useStaff';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranches } from '@/hooks/useBranches';
 import { useStaffInvitations } from '@/hooks/useStaffInvitations';
-import { Search, Mail, Phone, Shield, UserCog, Receipt, Loader2, Building2, UserPlus, UserMinus } from 'lucide-react';
+import { Search, Mail, Phone, Shield, UserCog, Receipt, Loader2, Building2, UserPlus, UserMinus, XCircle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
@@ -49,6 +51,12 @@ const roleConfig: Record<string, { label: string; icon: React.ElementType; color
   billing: { label: 'Billing', icon: Receipt, color: 'bg-info text-info-foreground' },
 };
 
+const roleLabels: Record<string, string> = {
+  admin: 'Admin',
+  branch_admin: 'Branch Admin',
+  billing: 'Billing',
+};
+
 export default function Staff() {
   const { profile, role, isAdmin, isBranchAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,14 +67,12 @@ export default function Staff() {
   const [newStaffRole, setNewStaffRole] = useState<AppRole>('billing');
   const [newStaffBranch, setNewStaffBranch] = useState<string>('');
 
-  // Branch admins only see their branch's staff
   const branchFilterId = isBranchAdmin ? profile?.branch_id : undefined;
   
   const { staff, isLoading, updateRole, updateStatus, updateBranch, removeStaff, isUpdating } = useStaff({ branchId: branchFilterId });
   const { branches } = useBranches();
-  const { createInvitation, isCreating } = useStaffInvitations();
+  const { invitations, isLoading: invitationsLoading, createInvitation, revokeInvitation, isCreating } = useStaffInvitations();
 
-  // Admins can fully manage staff, branch admins can invite billing staff
   const canManageStaff = isAdmin;
   const canInviteStaff = isAdmin || isBranchAdmin;
 
@@ -107,7 +113,6 @@ export default function Staff() {
       toast.error('Please enter an email address');
       return;
     }
-    // Branch admins can only add billing staff to their own branch
     const roleToAssign = (isBranchAdmin && !isAdmin) ? 'billing' as AppRole : newStaffRole;
     const branchToAssign = (isBranchAdmin && !isAdmin)
       ? profile?.branch_id || undefined
@@ -236,10 +241,12 @@ export default function Staff() {
                   )}
                 </div>
                 
-                <DialogFooter>
-                  <Button variant="outline" onClick={resetAddDialog}>Cancel</Button>
-                  <Button onClick={handleInviteStaff} disabled={isCreating}>
+                <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <Button className="w-full sm:w-auto" onClick={handleInviteStaff} disabled={isCreating}>
                     {isCreating ? 'Inviting...' : 'Send Invitation'}
+                  </Button>
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={resetAddDialog}>
+                    Cancel
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -247,186 +254,287 @@ export default function Staff() {
           )}
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search staff by name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        {/* Tabs: Active Staff + Invitations */}
+        <Tabs defaultValue="active" className="w-full">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="active" className="flex-1 sm:flex-initial">Active Staff</TabsTrigger>
+            {canInviteStaff && (
+              <TabsTrigger value="invitations" className="flex-1 sm:flex-initial">Invitations</TabsTrigger>
+            )}
+          </TabsList>
 
-        {/* Staff Grid */}
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredStaff.map((member) => {
-            const roleInfo = roleConfig[member.role];
-            const RoleIcon = roleInfo.icon;
-            const initials = member.fullName
-              .split(' ')
-              .map(n => n[0])
-              .join('')
-              .toUpperCase()
-              .substring(0, 2);
+          {/* Active Staff Tab */}
+          <TabsContent value="active" className="space-y-4 mt-4">
+            {/* Search */}
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search staff by name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-            return (
-              <Card key={member.id} className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <Avatar className="h-14 w-14">
-                      <AvatarFallback className="bg-primary/10 text-primary font-display font-semibold">
-                        {initials || '??'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-display font-semibold text-foreground truncate">
-                          {member.fullName}
-                        </h3>
-                        {!member.isActive && (
-                          <Badge variant="secondary" className="text-xs">Inactive</Badge>
+            {/* Staff Grid */}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredStaff.map((member) => {
+                const roleInfo = roleConfig[member.role];
+                const RoleIcon = roleInfo.icon;
+                const initials = member.fullName
+                  .split(' ')
+                  .map(n => n[0])
+                  .join('')
+                  .toUpperCase()
+                  .substring(0, 2);
+
+                return (
+                  <Card key={member.id} className="overflow-hidden">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <Avatar className="h-14 w-14">
+                          <AvatarFallback className="bg-primary/10 text-primary font-display font-semibold">
+                            {initials || '??'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-display font-semibold text-foreground truncate">
+                              {member.fullName}
+                            </h3>
+                            {!member.isActive && (
+                              <Badge variant="secondary" className="text-xs">Inactive</Badge>
+                            )}
+                          </div>
+                          <Badge className={`mt-1 ${roleInfo.color}`}>
+                            <RoleIcon className="mr-1 h-3 w-3" />
+                            {roleInfo.label}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="h-4 w-4 shrink-0" />
+                          <button
+                            type="button"
+                            className="truncate hover:text-foreground hover:underline cursor-pointer transition-colors text-xs"
+                            onClick={() => {
+                              navigator.clipboard.writeText(member.email);
+                              toast.success('Email copied!');
+                            }}
+                            title="Click to copy"
+                          >
+                            {member.email}
+                          </button>
+                        </div>
+                        {member.phone && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Phone className="h-4 w-4 shrink-0" />
+                            <button
+                              type="button"
+                              className="hover:text-foreground hover:underline cursor-pointer transition-colors"
+                              onClick={() => {
+                                navigator.clipboard.writeText(member.phone!);
+                                toast.success('Phone number copied!');
+                              }}
+                              title="Click to copy"
+                            >
+                              {member.phone}
+                            </button>
+                          </div>
                         )}
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Building2 className="h-4 w-4 shrink-0" />
+                          <span>{getBranchName(member.branchId)}</span>
+                        </div>
                       </div>
-                      <Badge className={`mt-1 ${roleInfo.color}`}>
-                        <RoleIcon className="mr-1 h-3 w-3" />
-                        {roleInfo.label}
-                      </Badge>
-                    </div>
-                  </div>
 
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="h-4 w-4" />
-                      <button
-                        type="button"
-                        className="truncate hover:text-foreground hover:underline cursor-pointer transition-colors text-xs"
-                        onClick={() => {
-                          navigator.clipboard.writeText(member.email);
-                          toast.success('Email copied!');
-                        }}
-                        title="Click to copy"
-                      >
-                        {member.email}
-                      </button>
-                    </div>
-                    {member.phone && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="h-4 w-4" />
-                        <button
-                          type="button"
-                          className="hover:text-foreground hover:underline cursor-pointer transition-colors"
-                          onClick={() => {
-                            navigator.clipboard.writeText(member.phone!);
-                            toast.success('Phone number copied!');
-                          }}
-                          title="Click to copy"
-                        >
-                          {member.phone}
-                        </button>
+                      {/* Management Controls */}
+                      <div className="mt-4 pt-4 border-t border-border space-y-3">
+                        {canManageStaff ? (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Role</span>
+                              <Select
+                                value={member.role}
+                                onValueChange={(value: AppRole) => handleRoleChange(member, value)}
+                                disabled={isUpdating}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="billing">Billing</SelectItem>
+                                  <SelectItem value="branch_admin">Branch Admin</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Branch</span>
+                              <Select
+                                value={member.branchId || 'none'}
+                                onValueChange={(value) => handleBranchChange(member, value)}
+                                disabled={isUpdating}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">No Branch</SelectItem>
+                                  {branches.map(branch => (
+                                    <SelectItem key={branch.id} value={branch.id}>
+                                      {branch.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Role</span>
+                              <span className="text-sm font-medium">{roleConfig[member.role].label}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Branch</span>
+                              <span className="text-sm font-medium">{getBranchName(member.branchId)}</span>
+                            </div>
+                          </>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            Joined {format(new Date(member.createdAt), 'MMM yyyy')}
+                          </p>
+                          {canManageStaff && (
+                            <div className="flex gap-2">
+                              <Button
+                                variant={member.isActive ? "outline" : "default"}
+                                size="sm"
+                                onClick={() => handleStatusToggle(member)}
+                                disabled={isUpdating}
+                              >
+                                {member.isActive ? 'Deactivate' : 'Activate'}
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => setStaffToRemove(member)}
+                                disabled={isUpdating}
+                              >
+                                <UserMinus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Building2 className="h-4 w-4" />
-                      <span>{getBranchName(member.branchId)}</span>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
 
-                  {/* Management Controls */}
-                  <div className="mt-4 pt-4 border-t border-border space-y-3">
-                    {canManageStaff ? (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Role</span>
-                          <Select
-                            value={member.role}
-                            onValueChange={(value: AppRole) => handleRoleChange(member, value)}
-                            disabled={isUpdating}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="billing">Billing</SelectItem>
-                              <SelectItem value="branch_admin">Branch Admin</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Branch</span>
-                          <Select
-                            value={member.branchId || 'none'}
-                            onValueChange={(value) => handleBranchChange(member, value)}
-                            disabled={isUpdating}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">No Branch</SelectItem>
-                              {branches.map(branch => (
-                                <SelectItem key={branch.id} value={branch.id}>
-                                  {branch.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Role</span>
-                          <span className="text-sm font-medium">{roleConfig[member.role].label}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Branch</span>
-                          <span className="text-sm font-medium">{getBranchName(member.branchId)}</span>
-                        </div>
-                      </>
-                    )}
+            {filteredStaff.length === 0 && !isLoading && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">
+                  {searchQuery ? 'No staff members found matching your search' : 'No staff members found'}
+                </p>
+              </div>
+            )}
+          </TabsContent>
 
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">
-                        Joined {format(new Date(member.createdAt), 'MMM yyyy')}
-                      </p>
-                      {canManageStaff && (
-                        <div className="flex gap-2">
-                          <Button
-                            variant={member.isActive ? "outline" : "default"}
-                            size="sm"
-                            onClick={() => handleStatusToggle(member)}
-                            disabled={isUpdating}
-                          >
-                            {member.isActive ? 'Deactivate' : 'Activate'}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setStaffToRemove(member)}
-                            disabled={isUpdating}
-                          >
-                            <UserMinus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+          {/* Invitations Tab */}
+          {canInviteStaff && (
+            <TabsContent value="invitations" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5" />
+                    Pending & Used Invitations
+                  </CardTitle>
+                  <CardDescription>
+                    Staff emails added here can sign up and login directly without admin approval.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {invitationsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
-                  </div>
+                  ) : invitations.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No invitations yet. Click "Add Staff" to invite someone.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead className="hidden sm:table-cell">Branch</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="hidden sm:table-cell">Created</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {invitations.map((inv) => (
+                            <TableRow key={inv.id}>
+                              <TableCell className="font-medium text-xs sm:text-sm max-w-[120px] truncate">{inv.email}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{roleLabels[inv.role_assigned] || inv.role_assigned}</Badge>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                {inv.branch ? (
+                                  <span className="flex items-center gap-1 text-sm">
+                                    <Building2 className="h-3 w-3" />
+                                    {inv.branch.name}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {inv.status === 'pending' ? (
+                                  <Badge variant="secondary">Pending</Badge>
+                                ) : (
+                                  <Badge variant="default">
+                                    <CheckCircle className="mr-1 h-3 w-3" />
+                                    Used
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                                {format(new Date(inv.created_at), 'MMM d, yyyy')}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {inv.status === 'pending' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => revokeInvitation(inv.id)}
+                                    title="Revoke invitation"
+                                  >
+                                    <XCircle className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
-
-        {filteredStaff.length === 0 && !isLoading && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              {searchQuery ? 'No staff members found matching your search' : 'No staff members found'}
-            </p>
-          </div>
-        )}
+            </TabsContent>
+          )}
+        </Tabs>
 
         {/* Remove Staff Confirmation */}
         <AlertDialog open={!!staffToRemove} onOpenChange={() => setStaffToRemove(null)}>

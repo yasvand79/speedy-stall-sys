@@ -152,7 +152,7 @@ export default function Staff() {
               )}
             </p>
           </div>
-          {canManageStaff && (
+          {canInviteStaff && (
             <Dialog open={showAddDialog} onOpenChange={(open) => {
               if (!open) resetAddDialog();
               else setShowAddDialog(true);

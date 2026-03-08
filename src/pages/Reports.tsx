@@ -11,18 +11,65 @@ import {
 } from '@/hooks/useReports';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, Legend,
+  BarChart, Bar, PieChart, Pie, Cell, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts';
 import {
   Download, TrendingUp, IndianRupee, ShoppingCart, Clock, Loader2,
   CreditCard, Users, XCircle,
-  Banknote, Smartphone,
+  Banknote, Smartphone, Receipt, UserCheck, UserPlus, Repeat, Star, Award,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { useShopSettings } from '@/hooks/useShopSettings';
 
 const COLORS = ['hsl(24,95%,53%)', 'hsl(142,72%,42%)', 'hsl(217,91%,60%)', 'hsl(280,65%,60%)', 'hsl(45,93%,47%)'];
+const HEATMAP_COLORS = ['hsl(var(--muted))', 'hsl(24,95%,90%)', 'hsl(24,95%,75%)', 'hsl(24,95%,60%)', 'hsl(24,95%,45%)'];
 
 type DateRange = 'today' | '7d' | '30d';
+
+function useCustomerAnalytics(start: Date, end: Date) {
+  return useQuery({
+    queryKey: ['reports', 'customer-analytics', start.toISOString(), end.toISOString()],
+    refetchInterval: 5000,
+    queryFn: async () => {
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('id, total, customer_name, customer_phone, created_at, status')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .eq('status', 'completed');
+
+      if (!orders || orders.length === 0) return {
+        totalCustomers: 0, newCustomers: 0, returningCustomers: 0,
+        avgSpendPerCustomer: 0, topCustomers: [] as { name: string; orders: number; revenue: number }[],
+        repeatRate: 0,
+      };
+
+      // Group by phone or name
+      const customerMap: Record<string, { name: string; orders: number; revenue: number }> = {};
+      orders.forEach(o => {
+        const key = o.customer_phone || o.customer_name || 'Walk-in';
+        if (!customerMap[key]) customerMap[key] = { name: o.customer_name || 'Walk-in', orders: 0, revenue: 0 };
+        customerMap[key].orders++;
+        customerMap[key].revenue += Number(o.total);
+      });
+
+      const customers = Object.values(customerMap);
+      const returning = customers.filter(c => c.orders > 1);
+      const totalRevenue = customers.reduce((s, c) => s + c.revenue, 0);
+
+      return {
+        totalCustomers: customers.length,
+        newCustomers: customers.filter(c => c.orders === 1).length,
+        returningCustomers: returning.length,
+        avgSpendPerCustomer: customers.length > 0 ? totalRevenue / customers.length : 0,
+        topCustomers: customers.sort((a, b) => b.revenue - a.revenue).slice(0, 10),
+        repeatRate: customers.length > 0 ? (returning.length / customers.length) * 100 : 0,
+      };
+    },
+  });
+}
 
 export default function Reports() {
   const [range, setRange] = useState<DateRange>('7d');
@@ -35,7 +82,8 @@ export default function Reports() {
   const { data: payments } = usePaymentAnalytics(start, end);
   const { data: categorySales } = useCategorySales(start, end);
   const { data: staffSales } = useStaffSales(start, end);
-  
+  const { data: customerData } = useCustomerAnalytics(start, end);
+  const { settings: shopSettings } = useShopSettings();
 
   const isLoading = dailyLoading || weeklyLoading || ordersLoading;
 
@@ -79,33 +127,72 @@ export default function Reports() {
     return Object.entries(methods).map(([method, data]) => ({ method, ...data }));
   }, [payments]);
 
-  // Hourly distribution
-  const hourlyData = useMemo(() => {
-    if (!orders) return [];
+  // Hourly heatmap data
+  const hourlyHeatmap = useMemo(() => {
+    if (!orders) return { data: [], maxOrders: 0 };
     const hours: Record<number, { orders: number; revenue: number }> = {};
-    for (let i = 6; i <= 23; i++) hours[i] = { orders: 0, revenue: 0 };
+    for (let i = 0; i <= 23; i++) hours[i] = { orders: 0, revenue: 0 };
 
     orders.filter(o => o.status === 'completed').forEach(order => {
       const hour = new Date(order.created_at || '').getHours();
-      if (hours[hour]) {
-        hours[hour].orders++;
-        hours[hour].revenue += Number(order.total);
-      }
+      hours[hour].orders++;
+      hours[hour].revenue += Number(order.total);
     });
 
-    return Object.entries(hours).map(([hour, data]) => ({
-      hour: `${hour}:00`,
-      ...data,
+    const data = Object.entries(hours).map(([hour, d]) => ({
+      hour: Number(hour),
+      label: `${Number(hour) % 12 || 12}${Number(hour) < 12 ? 'am' : 'pm'}`,
+      ...d,
     }));
+
+    const maxOrders = Math.max(...data.map(d => d.orders), 1);
+    return { data, maxOrders };
   }, [orders]);
 
   const peakHour = useMemo(() => {
-    if (!hourlyData.length) return 'N/A';
-    const peak = hourlyData.reduce((max, curr) => curr.orders > max.orders ? curr : max, hourlyData[0]);
-    return peak.orders > 0 ? peak.hour : 'N/A';
-  }, [hourlyData]);
+    const { data } = hourlyHeatmap;
+    if (!data.length) return 'N/A';
+    const peak = data.reduce((max, curr) => curr.orders > max.orders ? curr : max, data[0]);
+    return peak.orders > 0 ? peak.label : 'N/A';
+  }, [hourlyHeatmap]);
 
-  
+  // GST breakdown
+  const gstBreakdown = useMemo(() => {
+    if (!orders) return null;
+    const completed = orders.filter(o => o.status === 'completed');
+    const gstRate = shopSettings?.gst_rate || 5;
+    const totalGST = completed.reduce((s, o) => s + Number(o.gst), 0);
+    const cgst = totalGST / 2;
+    const sgst = totalGST / 2;
+    const taxableAmount = completed.reduce((s, o) => s + Number(o.subtotal), 0);
+    const totalWithTax = taxableAmount + totalGST;
+    const effectiveRate = taxableAmount > 0 ? (totalGST / taxableAmount) * 100 : 0;
+
+    // By order type
+    const dineInGST = completed.filter(o => o.type === 'dine-in').reduce((s, o) => s + Number(o.gst), 0);
+    const takeawayGST = completed.filter(o => o.type === 'takeaway').reduce((s, o) => s + Number(o.gst), 0);
+
+    return {
+      gstRate, totalGST, cgst, sgst, taxableAmount, totalWithTax, effectiveRate,
+      dineInGST, takeawayGST,
+      invoiceCount: completed.length,
+    };
+  }, [orders, shopSettings]);
+
+  // Staff radar data
+  const staffRadar = useMemo(() => {
+    if (!staffSales || staffSales.length === 0) return [];
+    const maxOrders = Math.max(...staffSales.map(s => s.orders));
+    const maxRevenue = Math.max(...staffSales.map(s => s.revenue));
+    const maxAvg = Math.max(...staffSales.map(s => s.avgOrderValue));
+
+    return staffSales.slice(0, 5).map(s => ({
+      name: s.name,
+      orders: maxOrders > 0 ? (s.orders / maxOrders) * 100 : 0,
+      revenue: maxRevenue > 0 ? (s.revenue / maxRevenue) * 100 : 0,
+      avgValue: maxAvg > 0 ? (s.avgOrderValue / maxAvg) * 100 : 0,
+    }));
+  }, [staffSales]);
 
   const orderTypeData = metrics ? [
     { name: 'Dine-in', value: metrics.dineInOrders },
@@ -170,8 +257,8 @@ export default function Reports() {
           <Card>
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
-                  <ShoppingCart className="h-5 w-5 text-green-600" />
+                <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                  <ShoppingCart className="h-5 w-5 text-success" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Total Orders</p>
@@ -184,8 +271,8 @@ export default function Reports() {
           <Card>
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-5 w-5 text-info" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Avg Order Value</p>
@@ -197,8 +284,8 @@ export default function Reports() {
           <Card>
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
-                  <XCircle className="h-5 w-5 text-red-500" />
+                <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                  <XCircle className="h-5 w-5 text-destructive" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Cancellations</p>
@@ -221,13 +308,13 @@ export default function Reports() {
           <Card className="bg-muted/30">
             <CardContent className="pt-4 pb-3">
               <p className="text-xs text-muted-foreground">GST Collected</p>
-              <p className="font-display font-semibold text-green-600">₹{(metrics?.totalGST || 0).toLocaleString()}</p>
+              <p className="font-display font-semibold text-success">₹{(metrics?.totalGST || 0).toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card className="bg-muted/30">
             <CardContent className="pt-4 pb-3">
               <p className="text-xs text-muted-foreground">Discounts Given</p>
-              <p className="font-display font-semibold text-red-500">-₹{(metrics?.totalDiscount || 0).toLocaleString()}</p>
+              <p className="font-display font-semibold text-destructive">-₹{(metrics?.totalDiscount || 0).toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card className="bg-muted/30">
@@ -245,9 +332,12 @@ export default function Reports() {
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="hourly">Hourly</TabsTrigger>
+            <TabsTrigger value="hourly">Hourly Heatmap</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="gst">GST & Tax</TabsTrigger>
+            <TabsTrigger value="customers">Customers</TabsTrigger>
+            <TabsTrigger value="staff">Staff</TabsTrigger>
           </TabsList>
 
           {/* Revenue Chart */}
@@ -292,7 +382,7 @@ export default function Reports() {
                         <XAxis dataKey="date" className="text-xs fill-muted-foreground" />
                         <YAxis className="text-xs fill-muted-foreground" />
                         <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-                        <Bar dataKey="orders" fill="hsl(217,91%,60%)" radius={[4, 4, 0, 0]} name="Orders" />
+                        <Bar dataKey="orders" fill="hsl(var(--info))" radius={[4, 4, 0, 0]} name="Orders" />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : <div className="flex items-center justify-center h-full text-muted-foreground">No data</div>}
@@ -301,20 +391,54 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          {/* Hourly Distribution */}
+          {/* Hourly Heatmap */}
           <TabsContent value="hourly">
             <Card>
-              <CardHeader><CardTitle className="font-display text-base">Hourly Order Distribution</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="font-display text-base">Hourly Sales Heatmap</CardTitle>
+                <p className="text-xs text-muted-foreground">Darker = more orders. Peak: {peakHour}</p>
+              </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
+                <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-12 gap-2 mb-6">
+                  {hourlyHeatmap.data.map(h => {
+                    const intensity = hourlyHeatmap.maxOrders > 0 ? h.orders / hourlyHeatmap.maxOrders : 0;
+                    const colorIndex = Math.min(Math.floor(intensity * (HEATMAP_COLORS.length - 1)), HEATMAP_COLORS.length - 1);
+                    return (
+                      <div
+                        key={h.hour}
+                        className="flex flex-col items-center gap-1 p-2 rounded-lg border border-border transition-all hover:scale-105"
+                        style={{ backgroundColor: HEATMAP_COLORS[colorIndex] }}
+                        title={`${h.label}: ${h.orders} orders, ₹${h.revenue.toLocaleString()}`}
+                      >
+                        <span className="text-[10px] font-medium text-foreground">{h.label}</span>
+                        <span className="text-sm font-bold font-display text-foreground">{h.orders}</span>
+                        <span className="text-[9px] text-muted-foreground">₹{h.revenue >= 1000 ? `${(h.revenue / 1000).toFixed(1)}k` : h.revenue}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Heatmap legend */}
+                <div className="flex items-center gap-2 justify-center">
+                  <span className="text-xs text-muted-foreground">Less</span>
+                  {HEATMAP_COLORS.map((color, i) => (
+                    <div key={i} className="h-4 w-8 rounded" style={{ backgroundColor: color }} />
+                  ))}
+                  <span className="text-xs text-muted-foreground">More</span>
+                </div>
+
+                {/* Hourly bar chart below */}
+                <div className="h-[250px] mt-6">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={hourlyData}>
+                    <BarChart data={hourlyHeatmap.data.filter(h => h.hour >= 6 && h.hour <= 23)}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="hour" className="text-xs fill-muted-foreground" />
+                      <XAxis dataKey="label" className="text-xs fill-muted-foreground" />
                       <YAxis className="text-xs fill-muted-foreground" />
-                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
-                        formatter={(value: number, name: string) => [name === 'revenue' ? `₹${value.toLocaleString()}` : value, name === 'revenue' ? 'Revenue' : 'Orders']} />
-                      <Bar dataKey="orders" fill="hsl(142,72%,42%)" radius={[4, 4, 0, 0]} name="Orders" />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+                        formatter={(value: number, name: string) => [name === 'revenue' ? `₹${value.toLocaleString()}` : value, name === 'revenue' ? 'Revenue' : 'Orders']}
+                      />
+                      <Bar dataKey="orders" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Orders" />
+                      <Bar dataKey="revenue" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} name="Revenue" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -349,9 +473,9 @@ export default function Reports() {
                     {paymentBreakdown.map(p => (
                       <div key={p.method} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                         <div className="flex items-center gap-3">
-                          {p.method === 'cash' ? <Banknote className="h-5 w-5 text-green-600" /> :
-                           p.method === 'upi' ? <Smartphone className="h-5 w-5 text-blue-600" /> :
-                           <CreditCard className="h-5 w-5 text-purple-600" />}
+                          {p.method === 'cash' ? <Banknote className="h-5 w-5 text-success" /> :
+                           p.method === 'upi' ? <Smartphone className="h-5 w-5 text-info" /> :
+                           <CreditCard className="h-5 w-5 text-primary" />}
                           <div>
                             <p className="font-medium capitalize">{p.method}</p>
                             <p className="text-xs text-muted-foreground">{p.count} transactions</p>
@@ -408,6 +532,327 @@ export default function Reports() {
               </Card>
             </div>
           </TabsContent>
+
+          {/* GST & Tax Breakdown */}
+          <TabsContent value="gst">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-base flex items-center gap-2">
+                    <Receipt className="h-4 w-4" /> GST Tax Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg bg-muted/30 space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">GST Rate</span>
+                        <span className="font-display font-semibold">{gstBreakdown?.gstRate || 0}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Effective Tax Rate</span>
+                        <span className="font-display font-semibold">{(gstBreakdown?.effectiveRate || 0).toFixed(2)}%</span>
+                      </div>
+                      <div className="border-t border-border my-2" />
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Taxable Amount</span>
+                        <span className="font-display font-semibold">₹{(gstBreakdown?.taxableAmount || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">CGST ({(gstBreakdown?.gstRate || 0) / 2}%)</span>
+                        <span className="font-display font-semibold text-success">₹{(gstBreakdown?.cgst || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">SGST ({(gstBreakdown?.gstRate || 0) / 2}%)</span>
+                        <span className="font-display font-semibold text-success">₹{(gstBreakdown?.sgst || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="border-t border-border my-2" />
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium">Total GST</span>
+                        <span className="font-display font-bold text-success">₹{(gstBreakdown?.totalGST || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium">Total (incl. tax)</span>
+                        <span className="font-display font-bold">₹{(gstBreakdown?.totalWithTax || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-base">GST by Order Type</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-4 rounded-lg bg-info/5 border border-info/20 text-center">
+                        <p className="text-xs text-muted-foreground mb-1">Dine-in GST</p>
+                        <p className="font-display text-xl font-bold text-info">₹{(gstBreakdown?.dineInGST || 0).toLocaleString()}</p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 text-center">
+                        <p className="text-xs text-muted-foreground mb-1">Takeaway GST</p>
+                        <p className="font-display text-xl font-bold text-primary">₹{(gstBreakdown?.takeawayGST || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted/30 space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Invoices Generated</span>
+                        <span className="font-display font-semibold">{gstBreakdown?.invoiceCount || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Discounts Given</span>
+                        <span className="font-display font-semibold text-destructive">-₹{(metrics?.totalDiscount || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Net Revenue (post-discount)</span>
+                        <span className="font-display font-bold">₹{((metrics?.totalRevenue || 0)).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    {/* Visual breakdown */}
+                    <div className="h-[180px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Taxable', value: gstBreakdown?.taxableAmount || 0 },
+                              { name: 'CGST', value: gstBreakdown?.cgst || 0 },
+                              { name: 'SGST', value: gstBreakdown?.sgst || 0 },
+                            ].filter(d => d.value > 0)}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={70}
+                            innerRadius={45}
+                            paddingAngle={3}
+                          >
+                            <Cell fill="hsl(var(--primary))" />
+                            <Cell fill="hsl(var(--success))" />
+                            <Cell fill="hsl(var(--info))" />
+                          </Pie>
+                          <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Customer Analytics */}
+          <TabsContent value="customers">
+            <div className="space-y-4">
+              {/* Customer KPIs */}
+              <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                <Card>
+                  <CardContent className="pt-5 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total Customers</p>
+                        <p className="font-display text-lg font-bold">{customerData?.totalCustomers || 0}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-5 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                        <UserPlus className="h-5 w-5 text-success" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">New Customers</p>
+                        <p className="font-display text-lg font-bold">{customerData?.newCustomers || 0}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-5 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
+                        <Repeat className="h-5 w-5 text-info" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Repeat Rate</p>
+                        <p className="font-display text-lg font-bold">{(customerData?.repeatRate || 0).toFixed(1)}%</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-5 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+                        <IndianRupee className="h-5 w-5 text-warning" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Avg Spend/Customer</p>
+                        <p className="font-display text-lg font-bold">₹{Math.round(customerData?.avgSpendPerCustomer || 0)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Top Customers */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-base flex items-center gap-2">
+                    <Star className="h-4 w-4 text-warning" /> Top Customers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {customerData?.topCustomers && customerData.topCustomers.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>#</TableHead>
+                            <TableHead>Customer</TableHead>
+                            <TableHead className="text-right">Orders</TableHead>
+                            <TableHead className="text-right">Revenue</TableHead>
+                            <TableHead className="text-right">Avg Order</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {customerData.topCustomers.map((c, i) => (
+                            <TableRow key={i}>
+                              <TableCell>
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 font-display font-bold text-primary text-xs">
+                                  {i + 1}
+                                </span>
+                              </TableCell>
+                              <TableCell className="font-medium">{c.name}</TableCell>
+                              <TableCell className="text-right">{c.orders}</TableCell>
+                              <TableCell className="text-right font-display">₹{c.revenue.toLocaleString()}</TableCell>
+                              <TableCell className="text-right">₹{c.orders > 0 ? Math.round(c.revenue / c.orders) : 0}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <p className="text-center py-6 text-muted-foreground">No customer data available</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Staff Performance Comparison */}
+          <TabsContent value="staff">
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Radar Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-base flex items-center gap-2">
+                    <Award className="h-4 w-4 text-primary" /> Staff Comparison
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[320px]">
+                    {staffRadar.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart data={[
+                          { metric: 'Orders', ...Object.fromEntries(staffRadar.map(s => [s.name, s.orders])) },
+                          { metric: 'Revenue', ...Object.fromEntries(staffRadar.map(s => [s.name, s.revenue])) },
+                          { metric: 'Avg Value', ...Object.fromEntries(staffRadar.map(s => [s.name, s.avgValue])) },
+                        ]}>
+                          <PolarGrid className="stroke-border" />
+                          <PolarAngleAxis dataKey="metric" className="text-xs fill-muted-foreground" />
+                          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
+                          {staffRadar.map((s, i) => (
+                            <Radar key={s.name} name={s.name} dataKey={s.name} stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.15} strokeWidth={2} />
+                          ))}
+                          <Legend />
+                          <Tooltip />
+                        </RadarChart>
+                      </ResponsiveContainer>
+                    ) : <div className="flex items-center justify-center h-full text-muted-foreground">No staff data</div>}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Staff Bar Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-base">Revenue by Staff</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[320px]">
+                    {staffSales && staffSales.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={staffSales.slice(0, 8)} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                          <XAxis type="number" className="text-xs fill-muted-foreground" tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
+                          <YAxis type="category" dataKey="name" className="text-xs fill-muted-foreground" width={80} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+                            formatter={(value: number) => `₹${value.toLocaleString()}`}
+                          />
+                          <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Revenue" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : <div className="flex items-center justify-center h-full text-muted-foreground">No data</div>}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Detailed Table */}
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Users className="h-4 w-4" /> Staff Detailed Performance</CardTitle></CardHeader>
+                  <CardContent>
+                    {staffSales && staffSales.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>#</TableHead>
+                              <TableHead>Staff</TableHead>
+                              <TableHead className="text-right">Orders</TableHead>
+                              <TableHead className="text-right">Revenue</TableHead>
+                              <TableHead className="text-right">Avg Order</TableHead>
+                              <TableHead className="text-right">Share</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {staffSales.map((s, i) => {
+                              const totalRev = staffSales.reduce((sum, st) => sum + st.revenue, 0);
+                              const share = totalRev > 0 ? (s.revenue / totalRev) * 100 : 0;
+                              return (
+                                <TableRow key={s.id}>
+                                  <TableCell>
+                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 font-display font-bold text-primary text-xs">
+                                      {i + 1}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="font-medium">{s.name}</TableCell>
+                                  <TableCell className="text-right">{s.orders}</TableCell>
+                                  <TableCell className="text-right font-display">₹{s.revenue.toLocaleString()}</TableCell>
+                                  <TableCell className="text-right">₹{Math.round(s.avgOrderValue)}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Badge variant="secondary" className="text-xs">{share.toFixed(1)}%</Badge>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : <p className="text-center py-6 text-muted-foreground">No staff sales data</p>}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
 
         {/* ─── Order Type Split ─── */}
@@ -416,12 +861,12 @@ export default function Reports() {
             <CardHeader><CardTitle className="font-display text-base">Order Type Split</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+                <div className="p-4 rounded-lg bg-info/5 border border-info/20">
                   <p className="text-sm text-muted-foreground">Dine-in</p>
                   <p className="font-display text-xl font-bold">{metrics?.dineInOrders || 0}</p>
                   <p className="text-xs text-muted-foreground mt-1">₹{(metrics?.dineInRevenue || 0).toLocaleString()}</p>
                 </div>
-                <div className="p-4 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900">
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
                   <p className="text-sm text-muted-foreground">Takeaway</p>
                   <p className="font-display text-xl font-bold">{metrics?.takeawayOrders || 0}</p>
                   <p className="text-xs text-muted-foreground mt-1">₹{(metrics?.takeawayRevenue || 0).toLocaleString()}</p>
@@ -460,38 +905,6 @@ export default function Reports() {
             </CardContent>
           </Card>
         </div>
-
-        {/* ─── Staff Performance ─── */}
-        <Card>
-          <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Users className="h-4 w-4" /> Staff Sales Performance</CardTitle></CardHeader>
-          <CardContent>
-            {staffSales && staffSales.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Staff</TableHead>
-                      <TableHead className="text-right">Orders</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">Avg Order</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {staffSales.map(s => (
-                      <TableRow key={s.id}>
-                        <TableCell className="font-medium">{s.name}</TableCell>
-                        <TableCell className="text-right">{s.orders}</TableCell>
-                        <TableCell className="text-right font-display">₹{s.revenue.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">₹{Math.round(s.avgOrderValue)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : <p className="text-center py-6 text-muted-foreground">No staff sales data</p>}
-          </CardContent>
-        </Card>
-
       </div>
     </MainLayout>
   );

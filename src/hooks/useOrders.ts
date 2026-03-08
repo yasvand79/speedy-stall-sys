@@ -58,7 +58,6 @@ export function useCreateOrder() {
   return useMutation({
     mutationFn: async (orderData: {
       type: OrderType;
-      table_number?: number;
       customer_name?: string;
       customer_phone?: string;
       notes?: string;
@@ -119,7 +118,6 @@ export function useCreateOrder() {
         .insert({
           order_number: '',
           type: orderData.type,
-          table_number: orderData.table_number,
           customer_name: orderData.customer_name,
           customer_phone: orderData.customer_phone,
           notes: orderData.notes,

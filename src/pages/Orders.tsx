@@ -69,7 +69,6 @@ export default function Orders() {
     const thermalOrder = {
       orderNumber: order.order_number,
       type: order.type,
-      tableNumber: order.table_number,
       customerName: order.customer_name,
       staffName: order.staff_name,
       items: order.order_items.map((item: any) => ({

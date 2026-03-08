@@ -172,8 +172,7 @@ export function PaymentDialog({
     // Build order data for thermal printer
     const thermalOrder = {
       orderNumber,
-      type: 'dine-in', // We don't have full order data here, but it's sufficient
-      tableNumber: null as number | null,
+      type: 'dine-in',
       customerName: null as string | null,
       staffName: null as string | null,
       items: [] as { name: string; quantity: number; price: number }[],

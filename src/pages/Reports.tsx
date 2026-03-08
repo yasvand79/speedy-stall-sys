@@ -662,21 +662,7 @@ export default function Reports() {
       .sort((a, b) => b.revenue - a.revenue);
   }, [rawOrders, branches]);
 
-  // ─── Table-wise Analytics ───
-  const tableAnalytics = useMemo(() => {
-    if (!orders) return [];
-    const completed = orders.filter(o => o.status === 'completed' && o.type === 'dine-in' && o.table_number);
-    const tableMap: Record<number, { orders: number; revenue: number }> = {};
-    completed.forEach(o => {
-      const t = o.table_number!;
-      if (!tableMap[t]) tableMap[t] = { orders: 0, revenue: 0 };
-      tableMap[t].orders++;
-      tableMap[t].revenue += Number(o.total);
-    });
-    return Object.entries(tableMap)
-      .map(([table, d]) => ({ table: Number(table), ...d, avg: d.orders > 0 ? d.revenue / d.orders : 0 }))
-      .sort((a, b) => b.revenue - a.revenue);
-  }, [orders]);
+  // Table analytics removed (table numbers no longer used)
 
   if (isLoading) {
     return (
@@ -1468,7 +1454,7 @@ export default function Reports() {
           staffCount={staffSales?.length || 0}
           topCategory={categorySales?.[0]?.category || ''}
           topItem={topItems?.[0]?.name || ''}
-          activeTables={tableAnalytics.length}
+          activeTables={0}
         />
 
         </div> {/* close reportRef */}

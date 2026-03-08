@@ -35,7 +35,6 @@ export interface Order {
   type: OrderType;
   status: OrderStatus;
   items: OrderItem[];
-  tableNumber?: number;
   customerName?: string;
   customerPhone?: string;
   subtotal: number;

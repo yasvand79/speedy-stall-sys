@@ -105,7 +105,6 @@ export const mockOrders: Order[] = [
     orderNumber: 'ORD-001',
     type: 'dine-in',
     status: 'preparing',
-    tableNumber: 5,
     items: [
       { menuItemId: '1', menuItem: mockMenuItems[0], quantity: 2, price: 640 },
       { menuItemId: '5', menuItem: mockMenuItems[4], quantity: 2, price: 80 },
@@ -146,7 +145,6 @@ export const mockOrders: Order[] = [
     orderNumber: 'ORD-003',
     type: 'dine-in',
     status: 'placed',
-    tableNumber: 3,
     items: [
       { menuItemId: '7', menuItem: mockMenuItems[6], quantity: 2, price: 500 },
     ],

@@ -36,7 +36,7 @@ import { useStaff, StaffMember } from '@/hooks/useStaff';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranches } from '@/hooks/useBranches';
 import { useStaffInvitations } from '@/hooks/useStaffInvitations';
-import { Search, Mail, Phone, Shield, UserCog, Receipt, Loader2, Building2, UserPlus, UserMinus, Copy } from 'lucide-react';
+import { Search, Mail, Phone, Shield, UserCog, Receipt, Loader2, Building2, UserPlus, UserMinus } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';

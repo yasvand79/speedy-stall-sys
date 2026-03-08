@@ -38,7 +38,7 @@ export function useDailySales(date?: Date) {
 
   return useQuery({
     queryKey: ['reports', 'daily-sales', startOfDay.toISOString()],
-    queryFn: async () => {
+    refetchInterval: 5000,
       const { data: orders, error } = await supabase
         .from('orders')
         .select('total, status, created_at')

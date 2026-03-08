@@ -226,7 +226,7 @@ export default function Branches() {
                   </div>
                 )}
                 
-                {isDeveloper && (
+                {isAdmin && (
                   <div className="flex gap-2 pt-3 border-t">
                     <Button 
                       variant="outline" 

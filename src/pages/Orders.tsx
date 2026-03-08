@@ -386,7 +386,7 @@ export default function Orders() {
                           )}
 
                           {/* Cancel button */}
-                          {(isDeveloper || isAdmin) && order.status === 'placed' && (
+                          {isAdmin && order.status === 'placed' && (
                             <Button 
                               size="sm" 
                               variant="destructive"

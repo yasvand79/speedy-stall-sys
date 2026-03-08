@@ -53,7 +53,7 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
     }
   }, [profile, isAdmin]);
 
-  const canSelectBranch = isDeveloper || isCentralAdmin;
+  const canSelectBranch = isAdmin;
 
   const availableItems = menuItems?.filter(item => item.is_available) || [];
 

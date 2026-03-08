@@ -38,8 +38,8 @@ export default function Menu() {
     isBranchAdmin ? profile?.branch_id || undefined : undefined
   );
 
-  // Developers and Central Admins can add/edit/delete base menu items
-  const canManageBaseMenu = isDeveloper || isCentralAdmin;
+  // Admins can add/edit/delete base menu items
+  const canManageBaseMenu = isAdmin;
   
   // Branch admins can only edit prices for their branch
   const canEditBranchPrices = isBranchAdmin && profile?.branch_id;

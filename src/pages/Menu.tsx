@@ -284,12 +284,6 @@ export default function Menu() {
             <h1 className="font-display text-2xl font-bold text-foreground">Menu Management</h1>
             <p className="text-muted-foreground">
               {menuItems?.length || 0} items • {menuItems?.filter(i => i.is_available).length || 0} available
-              {isBranchAdmin && (
-                <span className="ml-2 text-primary flex items-center gap-1 inline-flex">
-                  <Building2 className="h-3 w-3" />
-                  Branch prices enabled
-                </span>
-              )}
             </p>
           </div>
           {canManageBaseMenu && (

@@ -12,7 +12,6 @@ import {
   Building2,
   TrendingUp,
   UserPlus,
-  UserCheck,
   CookingPot,
   Heart,
   RotateCcw,

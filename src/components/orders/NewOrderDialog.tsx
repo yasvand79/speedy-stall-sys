@@ -106,7 +106,7 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
 
     await createOrder.mutateAsync({
       type: orderType,
-      table_number: orderType === 'dine-in' ? parseInt(tableNumber) : undefined,
+      table_number: undefined,
       customer_name: customerName || undefined,
       customer_phone: customerPhone || undefined,
       notes: notes || undefined,

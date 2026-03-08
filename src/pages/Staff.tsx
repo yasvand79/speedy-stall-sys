@@ -60,6 +60,8 @@ const roleLabels: Record<string, string> = {
 export default function Staff() {
   const { profile, role, isAdmin, isBranchAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterBranch, setFilterBranch] = useState<string>('all');
+  const [filterRole, setFilterRole] = useState<string>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [staffToRemove, setStaffToRemove] = useState<StaffMember | null>(null);
   
@@ -76,10 +78,14 @@ export default function Staff() {
   const canManageStaff = isAdmin;
   const canInviteStaff = isAdmin || isBranchAdmin;
 
-  const filteredStaff = staff.filter(member =>
-    member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.userId.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStaff = staff.filter(member => {
+    const matchesSearch = member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.userId.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesBranch = filterBranch === 'all' || 
+      (filterBranch === 'none' ? !member.branchId : member.branchId === filterBranch);
+    const matchesRole = filterRole === 'all' || member.role === filterRole;
+    return matchesSearch && matchesBranch && matchesRole;
+  });
 
   const activeStaff = staff.filter(s => s.isActive).length;
 
@@ -265,15 +271,48 @@ export default function Staff() {
 
           {/* Active Staff Tab */}
           <TabsContent value="active" className="space-y-4 mt-4">
-            {/* Search */}
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search staff by name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            {/* Search & Filters */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search staff by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              {isAdmin && (
+                <>
+                  <Select value={filterBranch} onValueChange={setFilterBranch}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <Building2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <SelectValue placeholder="Branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Branches</SelectItem>
+                      <SelectItem value="none">No Branch</SelectItem>
+                      {branches.map(branch => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterRole} onValueChange={setFilterRole}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <SelectValue placeholder="Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="branch_admin">Branch Admin</SelectItem>
+                      <SelectItem value="billing">Billing</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
             </div>
 
             {/* Staff Grid */}

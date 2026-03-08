@@ -32,23 +32,24 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ThermalPrinterProvider>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/menu/:branchCode" element={<PublicMenu />} />
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-            <Route path="/menu" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Menu /></ProtectedRoute>} />
-            <Route path="/billing" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin', 'billing']}><Billing /></ProtectedRoute>} />
-            <Route path="/branches" element={<ProtectedRoute allowedRoles={['admin']}><Branches /></ProtectedRoute>} />
-            <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Staff /></ProtectedRoute>} />
-            <Route path="/staff-performance" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><StaffPerformance /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Reports /></ProtectedRoute>} />
-            <Route path="/invite-codes" element={<ProtectedRoute allowedRoles={['admin']}><InviteCodes /></ProtectedRoute>} />
-            
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/menu/:branchCode" element={<PublicMenu />} />
+              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+              <Route path="/menu" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Menu /></ProtectedRoute>} />
+              <Route path="/billing" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin', 'billing']}><Billing /></ProtectedRoute>} />
+              <Route path="/branches" element={<ProtectedRoute allowedRoles={['admin']}><Branches /></ProtectedRoute>} />
+              <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Staff /></ProtectedRoute>} />
+              <Route path="/staff-performance" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><StaffPerformance /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Reports /></ProtectedRoute>} />
+              <Route path="/invite-codes" element={<ProtectedRoute allowedRoles={['admin']}><InviteCodes /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </ThermalPrinterProvider>
+        </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>

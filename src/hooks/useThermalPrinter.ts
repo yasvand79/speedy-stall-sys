@@ -452,7 +452,10 @@ export function useThermalPrinter() {
       }
 
       if (!window.qz?.websocket.isActive()) {
-        toast.error('Cannot connect to QZ Tray. Falling back to browser print.');
+        setPrinterError({
+          title: '🖨️ Printer Not Connected',
+          message: 'Cannot connect to QZ Tray. Please make sure QZ Tray is running and try printing again.',
+        });
         setIsPrinting(false);
         return false;
       }

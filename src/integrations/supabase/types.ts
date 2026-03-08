@@ -766,6 +766,12 @@ export type Database = {
           address: string | null
           auto_backup: boolean
           auto_generate_invoice: boolean
+          bill_footer_text: string | null
+          bill_header_text: string | null
+          bill_show_fssai: boolean | null
+          bill_show_gstin: boolean | null
+          bill_show_upi: boolean | null
+          bill_terms: string | null
           created_at: string
           daily_summary_email: boolean
           fssai_license: string | null
@@ -786,6 +792,12 @@ export type Database = {
           address?: string | null
           auto_backup?: boolean
           auto_generate_invoice?: boolean
+          bill_footer_text?: string | null
+          bill_header_text?: string | null
+          bill_show_fssai?: boolean | null
+          bill_show_gstin?: boolean | null
+          bill_show_upi?: boolean | null
+          bill_terms?: string | null
           created_at?: string
           daily_summary_email?: boolean
           fssai_license?: string | null
@@ -806,6 +818,12 @@ export type Database = {
           address?: string | null
           auto_backup?: boolean
           auto_generate_invoice?: boolean
+          bill_footer_text?: string | null
+          bill_header_text?: string | null
+          bill_show_fssai?: boolean | null
+          bill_show_gstin?: boolean | null
+          bill_show_upi?: boolean | null
+          bill_terms?: string | null
           created_at?: string
           daily_summary_email?: boolean
           fssai_license?: string | null

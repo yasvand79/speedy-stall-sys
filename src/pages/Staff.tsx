@@ -166,75 +166,68 @@ export default function Staff() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add New Staff Member</DialogTitle>
+                  <DialogTitle>Invite Staff Member</DialogTitle>
                   <DialogDescription>
-                    Generate an invite code for a new staff member. They'll use this code to register and will be auto-approved.
+                    Enter the staff member's email and assign a role. They'll be auto-approved when they sign up.
                   </DialogDescription>
                 </DialogHeader>
                 
-                {!generatedCode ? (
-                  <div className="space-y-4 py-4">
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        type="email"
+                        placeholder="staff@example.com"
+                        value={newStaffEmail}
+                        onChange={(e) => setNewStaffEmail(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Role</Label>
+                    <Select value={newStaffRole} onValueChange={(v: AppRole) => setNewStaffRole(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="billing">Billing Staff</SelectItem>
+                        <SelectItem value="branch_admin">Branch Admin</SelectItem>
+                        <SelectItem value="central_admin">Central Admin</SelectItem>
+                        {isDeveloper && <SelectItem value="developer">Developer</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {(newStaffRole === 'billing' || newStaffRole === 'branch_admin') && (
                     <div className="space-y-2">
-                      <Label>Role</Label>
-                      <Select value={newStaffRole} onValueChange={(v: AppRole) => setNewStaffRole(v)}>
+                      <Label>Branch Assignment</Label>
+                      <Select value={newStaffBranch} onValueChange={setNewStaffBranch}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Select branch (optional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="billing">Billing Staff</SelectItem>
-                          <SelectItem value="branch_admin">Branch Admin</SelectItem>
-                          <SelectItem value="central_admin">Central Admin</SelectItem>
-                          {isDeveloper && <SelectItem value="developer">Developer</SelectItem>}
+                          <SelectItem value="none">No Branch</SelectItem>
+                          {branches.map(branch => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    
-                    {(newStaffRole === 'billing' || newStaffRole === 'branch_admin') && (
-                      <div className="space-y-2">
-                        <Label>Branch Assignment</Label>
-                        <Select value={newStaffBranch} onValueChange={setNewStaffBranch}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select branch (optional)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No Branch</SelectItem>
-                            {branches.map(branch => (
-                              <SelectItem key={branch.id} value={branch.id}>
-                                {branch.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="py-6 text-center space-y-4">
-                    <div className="p-4 bg-muted rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-2">Invite Code</p>
-                      <div className="flex items-center justify-center gap-2">
-                        <code className="text-2xl font-mono font-bold tracking-wider">{generatedCode}</code>
-                        <Button variant="ghost" size="icon" onClick={handleCopyCode}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Share this code with the new staff member. They'll be auto-approved upon registration.
-                    </p>
-                  </div>
-                )}
+                  )}
+                </div>
                 
                 <DialogFooter>
-                  {!generatedCode ? (
-                    <>
-                      <Button variant="outline" onClick={resetAddDialog}>Cancel</Button>
-                      <Button onClick={handleGenerateInviteCode} disabled={isCreating}>
-                        {isCreating ? 'Generating...' : 'Generate Invite Code'}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button onClick={resetAddDialog}>Done</Button>
+                  <Button variant="outline" onClick={resetAddDialog}>Cancel</Button>
+                  <Button onClick={handleInviteStaff} disabled={isCreating}>
+                    {isCreating ? 'Inviting...' : 'Send Invitation'}
+                  </Button>
+                </DialogFooter>
                   )}
                 </DialogFooter>
               </DialogContent>

@@ -17,6 +17,7 @@ import StaffPerformance from "./pages/StaffPerformance";
 import InviteCodes from "./pages/InviteCodes";
 import UserApprovals from "./pages/UserApprovals";
 import Auth from "./pages/Auth";
+import CustomerDisplay from "./pages/CustomerDisplay";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/invite-codes" element={<ProtectedRoute allowedRoles={['developer', 'central_admin']}><InviteCodes /></ProtectedRoute>} />
             <Route path="/user-approvals" element={<ProtectedRoute allowedRoles={['developer', 'central_admin', 'branch_admin']}><UserApprovals /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['developer']}><Settings /></ProtectedRoute>} />
+            <Route path="/customer-display" element={<CustomerDisplay />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

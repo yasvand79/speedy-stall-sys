@@ -208,7 +208,7 @@ export default function Auth() {
                 <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
                   <Info className="h-4 w-4 text-blue-600" />
                   <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm">
-                    If your admin has invited you by email, you'll be approved automatically. Otherwise, your registration will require admin approval.
+                    Only pre-authorized emails can sign up. Ask your admin to add your email in Staff Access.
                   </AlertDescription>
                 </Alert>
 

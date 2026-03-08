@@ -35,7 +35,7 @@ export default function Reports() {
   const { data: payments } = usePaymentAnalytics(start, end);
   const { data: categorySales } = useCategorySales(start, end);
   const { data: staffSales } = useStaffSales(start, end);
-  const { data: inventory } = useInventoryStatus();
+  
 
   const isLoading = dailyLoading || weeklyLoading || ordersLoading;
 

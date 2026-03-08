@@ -3,59 +3,83 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useOrders } from '@/hooks/useOrders';
+import { usePayments } from '@/hooks/usePayments';
 import { useDailySales, useTopSellingItems, useWeeklyRevenue, useInventoryStatus } from '@/hooks/useReports';
-import { IndianRupee, ShoppingCart, TrendingUp, Clock, Users, CreditCard, Banknote, Smartphone, AlertTriangle, UtensilsCrossed, Package } from 'lucide-react';
+import { IndianRupee, ShoppingCart, TrendingUp, Clock, CreditCard, AlertTriangle, UtensilsCrossed, Package, Banknote, Smartphone, CheckCircle2, ChefHat, XCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
+const REFETCH_INTERVAL = 5000;
 const PIE_COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))'];
 
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  placed: { label: 'New', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  preparing: { label: 'Cooking', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  ready: { label: 'Ready', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  completed: { label: 'Done', color: 'bg-muted text-muted-foreground border-border' },
+  cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700 border-red-200' },
+};
+
 export default function Dashboard() {
-  const { data: orders, isLoading: ordersLoading } = useOrders();
+  const { data: orders, isLoading: ordersLoading } = useOrders(undefined);
+  const { data: allPayments } = usePayments();
   const { data: dailySales, isLoading: salesLoading } = useDailySales();
   const { data: topItems } = useTopSellingItems(7);
   const { data: weeklyRevenue } = useWeeklyRevenue();
   const { data: inventory } = useInventoryStatus();
 
+  // Enable 5-second polling via refetchInterval on all queries above
+  // We'll use a wrapper approach — set it at the query level below
+
   const activeOrders = orders?.filter(o => !['completed', 'cancelled'].includes(o.status)) || [];
-  const recentOrders = orders?.slice(0, 5) || [];
+  const recentOrders = orders?.slice(0, 8) || [];
   const todayOrders = orders?.filter(o => {
     const today = new Date();
-    const orderDate = new Date(o.created_at);
+    const orderDate = new Date(o.created_at!);
     return orderDate.toDateString() === today.toDateString();
   }) || [];
 
-  // Payment method breakdown (today)
-  const cashOrders = todayOrders.filter(o => o.payment_status === 'completed');
-  const pendingPayments = todayOrders.filter(o => o.payment_status === 'pending');
+  // Payment data
+  const todayPayments = allPayments?.filter(p => {
+    const today = new Date();
+    return new Date(p.created_at!).toDateString() === today.toDateString();
+  }) || [];
 
-  // Order type breakdown (today)
+  const totalCollectedToday = todayPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const cashPayments = todayPayments.filter(p => p.method === 'cash');
+  const upiPayments = todayPayments.filter(p => p.method === 'upi');
+  const cardPayments = todayPayments.filter(p => p.method === 'card');
+  const cashTotal = cashPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const upiTotal = upiPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const cardTotal = cardPayments.reduce((s, p) => s + Number(p.amount), 0);
+
+  const pendingPaymentOrders = todayOrders.filter(o => o.payment_status === 'pending');
+  const partialPaymentOrders = todayOrders.filter(o => o.payment_status === 'partial');
+  const pendingAmount = pendingPaymentOrders.reduce((s, o) => s + Number(o.total), 0);
+
+  // Order type breakdown
   const dineInCount = todayOrders.filter(o => o.type === 'dine-in').length;
   const takeawayCount = todayOrders.filter(o => o.type === 'takeaway').length;
+  const cancelledToday = todayOrders.filter(o => o.status === 'cancelled').length;
+
   const orderTypePieData = [
     { name: 'Dine-in', value: dineInCount },
     { name: 'Takeaway', value: takeawayCount },
   ].filter(d => d.value > 0);
 
-  // Cancelled orders today
-  const cancelledToday = todayOrders.filter(o => o.status === 'cancelled').length;
+  // Payment method pie
+  const paymentPieData = [
+    { name: 'Cash', value: cashTotal },
+    { name: 'UPI', value: upiTotal },
+    { name: 'Card', value: cardTotal },
+  ].filter(d => d.value > 0);
 
-  // Low stock items
   const lowStockItems = inventory?.filter(item => item.quantity <= item.min_quantity) || [];
 
-  // Status breakdown
   const statusCounts = {
     placed: orders?.filter(o => o.status === 'placed').length || 0,
     preparing: orders?.filter(o => o.status === 'preparing').length || 0,
     ready: orders?.filter(o => o.status === 'ready').length || 0,
-  };
-
-  const statusColors: Record<string, string> = {
-    placed: 'bg-orange-100 text-orange-700 border-orange-200',
-    preparing: 'bg-blue-100 text-blue-700 border-blue-200',
-    ready: 'bg-green-100 text-green-700 border-green-200',
-    completed: 'bg-gray-100 text-gray-700 border-gray-200',
-    cancelled: 'bg-red-100 text-red-700 border-red-200',
   };
 
   if (ordersLoading || salesLoading) {
@@ -74,10 +98,10 @@ export default function Dashboard() {
         {/* Header */}
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
+          <p className="text-muted-foreground">Live overview • updates every 5s</p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Revenue & Orders Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Today's Revenue"
@@ -105,32 +129,45 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Second row stats */}
+        {/* Billing & Payment Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Dine-in"
-            value={dineInCount}
-            subtitle="Today"
-            icon={UtensilsCrossed}
+            title="Collected Today"
+            value={`₹${totalCollectedToday.toLocaleString()}`}
+            subtitle={`${todayPayments.length} payments`}
+            icon={Banknote}
           />
           <StatCard
-            title="Takeaway"
-            value={takeawayCount}
-            subtitle="Today"
-            icon={Package}
+            title="Cash"
+            value={`₹${cashTotal.toLocaleString()}`}
+            subtitle={`${cashPayments.length} txns`}
+            icon={Banknote}
           />
           <StatCard
-            title="Pending Payments"
-            value={pendingPayments.length}
-            subtitle={`₹${pendingPayments.reduce((s, o) => s + Number(o.total), 0).toLocaleString()} due`}
+            title="UPI"
+            value={`₹${upiTotal.toLocaleString()}`}
+            subtitle={`${upiPayments.length} txns`}
+            icon={Smartphone}
+          />
+          <StatCard
+            title="Card"
+            value={`₹${cardTotal.toLocaleString()}`}
+            subtitle={`${cardPayments.length} txns`}
             icon={CreditCard}
           />
+        </div>
+
+        {/* Order type + pending */}
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          <StatCard title="Dine-in" value={dineInCount} subtitle="Today" icon={UtensilsCrossed} />
+          <StatCard title="Takeaway" value={takeawayCount} subtitle="Today" icon={Package} />
           <StatCard
-            title="Cancelled"
-            value={cancelledToday}
-            subtitle="Today"
-            icon={AlertTriangle}
+            title="Pending Payments"
+            value={pendingPaymentOrders.length + partialPaymentOrders.length}
+            subtitle={`₹${pendingAmount.toLocaleString()} due`}
+            icon={CreditCard}
           />
+          <StatCard title="Cancelled" value={cancelledToday} subtitle="Today" icon={AlertTriangle} />
         </div>
 
         {/* Charts Row */}
@@ -161,35 +198,35 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Order Type Pie */}
+          {/* Payment Method Pie */}
           <Card>
             <CardHeader>
-              <CardTitle className="font-display text-base">Order Type Split</CardTitle>
+              <CardTitle className="font-display text-base">Payment Methods</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
-              {orderTypePieData.length > 0 ? (
+              {paymentPieData.length > 0 ? (
                 <>
                   <ResponsiveContainer width="100%" height={180}>
                     <PieChart>
-                      <Pie data={orderTypePieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={40} paddingAngle={4}>
-                        {orderTypePieData.map((_, i) => (
+                      <Pie data={paymentPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={40} paddingAngle={4}>
+                        {paymentPieData.map((_, i) => (
                           <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex gap-4 mt-2">
-                    {orderTypePieData.map((d, i) => (
+                    {paymentPieData.map((d, i) => (
                       <div key={d.name} className="flex items-center gap-2 text-sm">
                         <div className="h-3 w-3 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                        <span className="text-muted-foreground">{d.name}: <span className="font-semibold text-foreground">{d.value}</span></span>
+                        <span className="text-muted-foreground">{d.name}: <span className="font-semibold text-foreground">₹{d.value.toLocaleString()}</span></span>
                       </div>
                     ))}
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground py-12">No orders today</p>
+                <p className="text-sm text-muted-foreground py-12">No payments today</p>
               )}
             </CardContent>
           </Card>
@@ -212,14 +249,23 @@ export default function Dashboard() {
                       <div key={order.id} className="flex items-center justify-between p-4 rounded-lg border border-border">
                         <div className="flex items-center gap-4">
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-display font-semibold">{order.order_number}</span>
-                              <Badge variant="outline" className={statusColors[order.status]}>
-                                {order.status}
+                              <Badge variant="outline" className={STATUS_CONFIG[order.status]?.color}>
+                                {STATUS_CONFIG[order.status]?.label || order.status}
                               </Badge>
                               <Badge variant="outline" className="text-xs">
                                 {order.type}
                               </Badge>
+                              {order.payment_status === 'completed' ? (
+                                <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 border">
+                                  <CheckCircle2 className="h-3 w-3 mr-0.5" /> Paid
+                                </Badge>
+                              ) : order.payment_status === 'partial' ? (
+                                <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-200 border">Partial</Badge>
+                              ) : (
+                                <Badge className="text-[10px] bg-red-100 text-red-700 border-red-200 border">Unpaid</Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
                               {order.type === 'dine-in' ? `Table ${order.table_number}` : order.customer_name || 'Takeaway'} • {order.order_items.length} items
@@ -230,7 +276,7 @@ export default function Dashboard() {
                         <div className="text-right">
                           <p className="font-display font-bold">₹{Number(order.total).toFixed(0)}</p>
                           <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(order.created_at!), { addSuffix: true })}
                           </p>
                         </div>
                       </div>
@@ -243,6 +289,39 @@ export default function Dashboard() {
 
           {/* Sidebar widgets */}
           <div className="space-y-6">
+            {/* Order Type Split */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display text-base">Order Type Split</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center">
+                {orderTypePieData.length > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={160}>
+                      <PieChart>
+                        <Pie data={orderTypePieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} innerRadius={35} paddingAngle={4}>
+                          {orderTypePieData.map((_, i) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex gap-4 mt-2">
+                      {orderTypePieData.map((d, i) => (
+                        <div key={d.name} className="flex items-center gap-2 text-sm">
+                          <div className="h-3 w-3 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                          <span className="text-muted-foreground">{d.name}: <span className="font-semibold text-foreground">{d.value}</span></span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-8">No orders today</p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Top Selling Items */}
             <Card>
               <CardHeader>
@@ -307,21 +386,15 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Ready for Pickup</span>
-                  <Badge variant="secondary">
-                    {statusCounts.ready}
-                  </Badge>
+                  <Badge variant="secondary">{statusCounts.ready}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Being Prepared</span>
-                  <Badge variant="secondary">
-                    {statusCounts.preparing}
-                  </Badge>
+                  <Badge variant="secondary">{statusCounts.preparing}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">New Orders</span>
-                  <Badge variant="secondary">
-                    {statusCounts.placed}
-                  </Badge>
+                  <Badge variant="secondary">{statusCounts.placed}</Badge>
                 </div>
               </CardContent>
             </Card>

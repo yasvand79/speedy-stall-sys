@@ -427,29 +427,30 @@ serve(async (req) => {
 
     <hr class="sep" />
 
-    ${gstNumber ? `
+    ${billShowGstin && gstNumber ? `
     <div class="info-row">
       <span class="info-label">GSTIN</span>
       <span class="info-value">${gstNumber}</span>
     </div>` : ''}
-    ${fssaiLicense ? `
+    ${billShowFssai && fssaiLicense ? `
     <div class="info-row">
       <span class="info-label">FSSAI</span>
       <span class="info-value">${fssaiLicense}</span>
     </div>` : ''}
 
-    ${gstNumber || fssaiLicense ? '<hr class="sep" />' : ''}
+    ${(billShowGstin && gstNumber) || (billShowFssai && fssaiLicense) ? '<hr class="sep" />' : ''}
 
     <!-- Footer -->
-    <div class="footer-msg big">Thank You!</div>
-    <div class="footer-msg">Visit us again</div>
+    <div class="footer-msg big">${billFooterText.split(/[.!]/).shift() || 'Thank You!'}</div>
+    ${billFooterText.includes(' ') ? `<div class="footer-msg">${billFooterText}</div>` : ''}
 
     <div class="sep-stars">********************************</div>
 
+    ${billTerms ? `<div class="footer-small" style="font-size:9px; color:#555;">${billTerms}</div>` : ''}
     <div class="footer-small">This is a computer-generated receipt</div>
     <div class="footer-small">No signature required</div>
 
-    ${upiId ? `
+    ${billShowUpi && upiId ? `
     <hr class="sep" />
     <div class="footer-small" style="font-size:9px; color:#333;">
       UPI: ${upiId}

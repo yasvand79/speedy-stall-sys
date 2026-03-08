@@ -607,6 +607,43 @@ export default function Reports() {
     return weekdayAnalytics.reduce((max, d) => d.orders > max.orders ? d : max, weekdayAnalytics[0]).day;
   }, [weekdayAnalytics]);
 
+  // ─── Branch Comparison ───
+  const branchComparison = useMemo(() => {
+    if (!rawOrders || branches.length === 0) return [];
+    const branchMap: Record<string, { name: string; orders: number; completed: number; revenue: number; cancelled: number; avgOrder: number; dineIn: number; takeaway: number }> = {};
+    
+    // Initialize all branches
+    branches.forEach(b => {
+      branchMap[b.id] = { name: b.name, orders: 0, completed: 0, revenue: 0, cancelled: 0, avgOrder: 0, dineIn: 0, takeaway: 0 };
+    });
+    // Add "No Branch" bucket
+    branchMap['none'] = { name: 'Unassigned', orders: 0, completed: 0, revenue: 0, cancelled: 0, avgOrder: 0, dineIn: 0, takeaway: 0 };
+
+    rawOrders.forEach(o => {
+      const key = o.branch_id || 'none';
+      if (!branchMap[key]) return;
+      branchMap[key].orders++;
+      if (o.status === 'completed') {
+        branchMap[key].completed++;
+        branchMap[key].revenue += Number(o.total);
+      }
+      if (o.status === 'cancelled') branchMap[key].cancelled++;
+      if (o.type === 'dine-in') branchMap[key].dineIn++;
+      if (o.type === 'takeaway') branchMap[key].takeaway++;
+    });
+
+    return Object.entries(branchMap)
+      .filter(([_, d]) => d.orders > 0)
+      .map(([id, d]) => ({
+        id,
+        ...d,
+        avgOrder: d.completed > 0 ? d.revenue / d.completed : 0,
+        completionRate: d.orders > 0 ? (d.completed / d.orders) * 100 : 0,
+        cancelRate: d.orders > 0 ? (d.cancelled / d.orders) * 100 : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [rawOrders, branches]);
+
   // ─── Table-wise Analytics ───
   const tableAnalytics = useMemo(() => {
     if (!orders) return [];

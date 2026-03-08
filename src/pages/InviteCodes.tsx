@@ -84,21 +84,21 @@ export default function InviteCodes() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold">Staff Invitations</h1>
-            <p className="text-muted-foreground">Invite staff by email — they'll be auto-approved on signup</p>
+            <h1 className="font-display text-3xl font-bold">Staff Access</h1>
+            <p className="text-muted-foreground">Add staff emails — they can sign up and login directly</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                Invite Staff
+                Add Staff
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Invite Staff Member</DialogTitle>
+                <DialogTitle>Add Staff Member</DialogTitle>
                 <DialogDescription>
-                  Enter their email and assign a role. They'll be auto-approved when they sign up.
+                  Enter their email and assign a role. They can sign up and login directly — no approval needed.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -155,7 +155,7 @@ export default function InviteCodes() {
                   Cancel
                 </Button>
                 <Button onClick={handleCreate} disabled={isCreating}>
-                  {isCreating ? 'Inviting...' : 'Send Invitation'}
+                  {isCreating ? 'Saving...' : 'Save'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -166,10 +166,10 @@ export default function InviteCodes() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              Staff Invitations
+              Authorized Staff
             </CardTitle>
             <CardDescription>
-              Staff members invited by email. They'll be auto-approved when they sign up with the invited email.
+              Staff emails added here can sign up and login directly without admin approval.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -179,7 +179,7 @@ export default function InviteCodes() {
               </div>
             ) : invitations.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No invitations yet. Invite a staff member to get started.
+                No staff added yet. Add a staff email to get started.
               </div>
             ) : (
               <Table>

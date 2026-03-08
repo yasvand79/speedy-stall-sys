@@ -27,9 +27,11 @@ import {
   Lightbulb, Zap, Target, RefreshCw, TrendingDown as TrendDown,
   Megaphone, UtensilsCrossed, UserCheck, CalendarIcon, X, Building2,
 } from 'lucide-react';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useShopSettings } from '@/hooks/useShopSettings';
@@ -344,6 +346,53 @@ export default function Reports() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterOrderType, setFilterOrderType] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const exportToPDF = useCallback(async () => {
+    if (!reportRef.current) return;
+    setExporting(true);
+    try {
+      const element = reportRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 1280,
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const dateStr = format(new Date(), 'yyyy-MM-dd');
+      const filterStr = [
+        filterBranch !== 'all' ? 'branch' : '',
+        filterStaff !== 'all' ? 'staff' : '',
+        filterOrderType !== 'all' ? filterOrderType : '',
+      ].filter(Boolean).join('-');
+      pdf.save(`report-${range}${filterStr ? '-' + filterStr : ''}-${dateStr}.pdf`);
+    } catch (e) {
+      console.error('PDF export error:', e);
+    } finally {
+      setExporting(false);
+    }
+  }, [range, filterBranch, filterStaff, filterOrderType]);
 
   const { start, end } = useDateRange(range, customStart, customEnd);
   const { branches } = useBranches();
@@ -627,9 +676,9 @@ export default function Reports() {
                   </span>
                 )}
               </Button>
-              <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => window.print()}>
-                <Download className="mr-1 h-3.5 w-3.5" />
-                Export
+              <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={exportToPDF} disabled={exporting}>
+                {exporting ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-3.5 w-3.5" />}
+                {exporting ? 'Exporting...' : 'Export PDF'}
               </Button>
             </div>
           </div>
@@ -779,6 +828,8 @@ export default function Reports() {
           )}
         </div>
 
+        {/* ═══════ REPORT CONTENT (for PDF export) ═══════ */}
+        <div ref={reportRef} className="space-y-4">
         {/* ═══════ ROW 1: KPI CARDS ═══════ */}
         <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           <KpiCard title="Revenue" value={`₹${(metrics?.totalRevenue || 0).toLocaleString()}`} icon={IndianRupee} color="primary" subtitle={`${metrics?.completedOrders || 0} completed`} />
@@ -1301,6 +1352,7 @@ export default function Reports() {
             </div>
           </div>
         </div>
+        </div> {/* close reportRef */}
       </div>
     </MainLayout>
   );

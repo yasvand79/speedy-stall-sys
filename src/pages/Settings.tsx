@@ -34,6 +34,15 @@ export default function Settings() {
     gst_rate: 5,
   });
 
+  const [billTemplate, setBillTemplate] = useState({
+    bill_header_text: '',
+    bill_footer_text: 'Thank You! Visit us again',
+    bill_terms: '',
+    bill_show_gstin: true,
+    bill_show_fssai: true,
+    bill_show_upi: true,
+  });
+
   useEffect(() => {
     if (settings) {
       setShopDetails({

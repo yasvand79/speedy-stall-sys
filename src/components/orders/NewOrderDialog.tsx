@@ -83,8 +83,11 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
 
   const clearCart = () => setCart([]);
 
+  const gstRate = (settings?.gst_rate ?? 5) / 100;
+  const includeGstInPrice = settings?.include_gst_in_price ?? false;
+
   const subtotal = cart.reduce((sum, item) => sum + Number(item.menuItem.price) * item.quantity, 0);
-  const gst = subtotal * 0.05;
+  const gst = includeGstInPrice ? 0 : subtotal * gstRate;
   const total = subtotal + gst;
 
   const handleSubmit = async () => {

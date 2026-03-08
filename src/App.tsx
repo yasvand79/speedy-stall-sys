@@ -57,6 +57,7 @@ const App = () => (
           </ThermalPrinterProvider>
         </BrowserRouter>
       </TooltipProvider>
+      </LanguageProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

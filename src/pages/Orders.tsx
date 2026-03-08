@@ -44,11 +44,19 @@ export default function Orders() {
   const { data: orders, isLoading } = useOrders();
   const { branches } = useBranches();
   const updateStatus = useUpdateOrderStatus();
-  const { addPayment, isLoading: isPaymentLoading } = usePayments();
+  const { data: allPayments } = usePayments();
   const { role } = useAuth();
 
-  const handleStatusUpdate = (orderId: string, newStatus: string) => {
+  const isAdmin = role === 'admin' || role === 'branch_admin';
+  const isBilling = role === 'billing';
+
+  const handleStatusChange = (orderId: string, newStatus: string) => {
     updateStatus.mutate({ orderId, status: newStatus as any });
+  };
+
+  const handleProcessPayment = (order: OrderWithItems) => {
+    setSelectedOrder(order);
+    setPaymentOpen(true);
   };
 
   const handlePrintClick = (orderId: string) => {

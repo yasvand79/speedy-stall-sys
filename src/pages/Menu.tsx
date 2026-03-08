@@ -57,7 +57,6 @@ export default function Menu() {
     description: '',
     price: '',
     category: 'veg' as MenuCategory,
-    preparation_time: '15',
     ingredients: '',
     image_url: '',
   });

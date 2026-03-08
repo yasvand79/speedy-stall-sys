@@ -206,8 +206,8 @@ export default function Billing() {
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="font-display font-bold text-success">₹{Number(order.total).toFixed(0)}</p>
-                        <Button variant="ghost" size="icon" onClick={() => window.print()}>
-                          <Printer className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" onClick={() => handlePrintReceipt(order)} disabled={isThermalPrinting}>
+                          {isThermalPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>

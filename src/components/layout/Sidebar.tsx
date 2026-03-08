@@ -34,8 +34,7 @@ export function Sidebar() {
     { name: 'Branches', href: '/branches', icon: Building2, roles: ['developer', 'central_admin'] },
     { name: 'Staff', href: '/staff', icon: Users, roles: ['developer', 'central_admin', 'branch_admin'] },
     { name: 'Staff Performance', href: '/staff-performance', icon: TrendingUp, roles: ['developer', 'central_admin', 'branch_admin'] },
-    { name: 'Staff Invitations', href: '/invite-codes', icon: UserPlus, roles: ['developer', 'central_admin'] },
-    { name: 'User Approvals', href: '/user-approvals', icon: UserCheck, roles: ['developer', 'central_admin', 'branch_admin'] },
+    { name: 'Staff Access', href: '/invite-codes', icon: UserPlus, roles: ['developer', 'central_admin'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['developer', 'central_admin', 'branch_admin'] },
     { name: 'Settings', href: '/settings', icon: Settings, roles: ['developer'] },
   ];

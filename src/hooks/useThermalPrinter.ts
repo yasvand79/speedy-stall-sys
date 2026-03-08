@@ -332,14 +332,15 @@ export function useThermalPrinter() {
       setQzStatus('error');
 
       if (e.message?.includes('Unable to connect') || e.message?.includes('ECONNREFUSED')) {
-        toast.error('QZ Tray is not running. Please start QZ Tray application.', {
-          action: {
-            label: 'Download',
-            onClick: () => window.open('https://qz.io/download/', '_blank'),
-          },
+        setPrinterError({
+          title: '🖨️ Printer Software Not Running',
+          message: 'QZ Tray is not running on your computer. Please start QZ Tray application or download it from qz.io to enable thermal printing.',
         });
       } else if (e.message?.includes('not available')) {
-        toast.error('QZ Tray library could not be loaded. Check your internet connection.');
+        setPrinterError({
+          title: '🖨️ Printer Software Not Found',
+          message: 'QZ Tray library could not be loaded. Please check your internet connection and try again.',
+        });
       }
     } finally {
       connectingRef.current = false;

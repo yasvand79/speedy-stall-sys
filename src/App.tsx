@@ -31,7 +31,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
+          <ThermalPrinterProvider>
             <Route path="/auth" element={<Auth />} />
             <Route path="/menu/:branchCode" element={<PublicMenu />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

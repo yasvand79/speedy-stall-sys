@@ -222,28 +222,26 @@ export function NewOrderDialog({ trigger }: NewOrderDialogProps) {
               </div>
             )}
 
-            {orderType === 'takeaway' && (
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div>
-                  <Label htmlFor="name">Customer Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="Name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    placeholder="Phone number"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div>
+                <Label htmlFor="name">Customer Name</Label>
+                <Input
+                  id="name"
+                  placeholder="Name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
               </div>
-            )}
+              <div>
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  placeholder="Phone number"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                />
+              </div>
+            </div>
 
             <Label className="mb-2">Select Items</Label>
             <ScrollArea className="flex-1 border rounded-lg p-3">

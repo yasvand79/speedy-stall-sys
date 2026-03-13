@@ -26,11 +26,10 @@ import {
 } from '@/components/ui/sheet';
 
 const bottomNavItems = [
-  { name: 'Home', href: '/', icon: LayoutDashboard, roles: ['admin', 'branch_admin'] },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['branch_admin', 'billing'] },
   { name: 'Billing', href: '/billing', icon: Receipt, roles: ['branch_admin', 'billing'] },
+  { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['branch_admin', 'billing'] },
+  { name: 'Home', href: '/', icon: LayoutDashboard, roles: ['admin', 'branch_admin'] },
   { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin'] },
-
 ];
 
 const moreMenuItems = [

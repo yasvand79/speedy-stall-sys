@@ -12,7 +12,6 @@ serve(async (req) => {
   }
 
   try {
-    // Authenticate user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -25,8 +24,8 @@ serve(async (req) => {
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -43,7 +42,6 @@ serve(async (req) => {
     
     const auth = btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`);
     
-    // Fetch payment link status from Razorpay
     const response = await fetch(`https://api.razorpay.com/v1/payment_links/${paymentLinkId}`, {
       method: 'GET',
       headers: { 'Authorization': `Basic ${auth}` },
@@ -57,7 +55,6 @@ serve(async (req) => {
 
     const isPaid = data.status === 'paid';
     
-    // Use Razorpay's verified amount, not client-supplied amount
     if (isPaid && orderId) {
       const adminSupabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
       
@@ -68,7 +65,6 @@ serve(async (req) => {
         .single();
 
       if (!existingPayment) {
-        // Use amount_paid from Razorpay response (in paise), convert to rupees
         const verifiedAmount = data.amount_paid / 100;
 
         const { error: paymentError } = await adminSupabase.from('payments').insert({
@@ -82,7 +78,6 @@ serve(async (req) => {
           console.error('Error creating payment record:', paymentError);
         }
 
-        // Check if order is fully paid
         const { data: payments } = await adminSupabase
           .from('payments')
           .select('amount')

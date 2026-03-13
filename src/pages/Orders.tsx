@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import { NewOrderDialog } from '@/components/orders/NewOrderDialog';
 import { PaymentDialog } from '@/components/billing/PaymentDialog';
 import { useOrders, useUpdateOrderStatus, OrderWithItems } from '@/hooks/useOrders';
 import { usePayments } from '@/hooks/usePayments';
@@ -159,7 +158,7 @@ export default function Orders() {
               {counts.active} active • {counts.completed} completed today
             </p>
           </div>
-          {(isAdmin || isBilling) && <NewOrderDialog />}
+          
         </div>
 
         {/* Filters */}

@@ -64,6 +64,7 @@ export default function Billing() {
   const createPayment = useCreatePayment();
   const updateOrderStatus = useUpdateOrderStatus();
   const { printBill, qzStatus, isPrinting } = useThermalPrinter();
+  const { initiatePayment: initiateRazorpay, isLoading: razorpayLoading } = useRazorpay();
 
   const isBillingRole = role === 'billing';
   const canSelectBranch = isAdmin;

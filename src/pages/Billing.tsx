@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useShopSettings } from '@/hooks/useShopSettings';
 import { useDailySales } from '@/hooks/useReports';
 import { useThermalPrinter } from '@/contexts/ThermalPrinterContext';
+import { useRazorpay } from '@/hooks/useRazorpay';
 import { Database } from '@/integrations/supabase/types';
 import { QRCodeSVG } from 'qrcode.react';
 import {

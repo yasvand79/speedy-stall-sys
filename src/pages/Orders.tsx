@@ -158,7 +158,7 @@ export default function Orders() {
               {counts.active} active • {counts.completed} completed today
             </p>
           </div>
-          {(isAdmin || isBilling) && <NewOrderDialog />}
+          
         </div>
 
         {/* Filters */}

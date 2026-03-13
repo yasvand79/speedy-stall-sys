@@ -489,8 +489,36 @@ export default function Billing() {
               </CardContent>
             </Card>
 
+            {/* Razorpay Pay */}
+            <Button
+              className="w-full h-12 text-base font-bold bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => {
+                initiateRazorpay(
+                  {
+                    orderId: currentOrderId,
+                    orderNumber: currentOrderNumber,
+                    amount: total,
+                    customerName: customerName || undefined,
+                    customerPhone: customerPhone || undefined,
+                  },
+                  () => setStep('success'),
+                  (err) => toast.error(err)
+                );
+              }}
+              disabled={razorpayLoading || isPaying}
+            >
+              {razorpayLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening Razorpay...</> : <><IndianRupee className="mr-2 h-5 w-5" /> Pay ₹{total.toFixed(0)} with Razorpay</>}
+            </Button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
             {/* UPI QR */}
-            {upiId ? (
+            {upiId && (
               <Card>
                 <CardContent className="p-5 flex flex-col items-center space-y-4">
                   <div className="bg-white p-3 rounded-xl shadow-sm border">
@@ -504,20 +532,7 @@ export default function Billing() {
                   </Button>
                 </CardContent>
               </Card>
-            ) : (
-              <Card>
-                <CardContent className="p-5 text-center text-sm text-muted-foreground">
-                  Configure UPI ID in Settings to show QR code
-                </CardContent>
-              </Card>
             )}
-
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">or</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
 
             {/* Cash */}
             <Button

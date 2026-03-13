@@ -41,7 +41,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/install" element={<Install />} />
               <Route path="/menu/:branchCode" element={<PublicMenu />} />
-              <Route path="/" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Dashboard /></ProtectedRoute>} />
+              <Route path="/" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin', 'billing']}><Dashboard /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute allowedRoles={['branch_admin', 'billing']}><Orders /></ProtectedRoute>} />
               <Route path="/menu" element={<ProtectedRoute allowedRoles={['admin', 'branch_admin']}><Menu /></ProtectedRoute>} />
               <Route path="/billing" element={<ProtectedRoute allowedRoles={['branch_admin', 'billing']}><Billing /></ProtectedRoute>} />

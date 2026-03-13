@@ -34,7 +34,6 @@ serve(async (req) => {
   }
 
   try {
-    // Authenticate user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -47,8 +46,8 @@ serve(async (req) => {
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -63,14 +62,12 @@ serve(async (req) => {
 
     const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId } = await req.json();
 
-    // Verify signature
     const isValid = await verifySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature, RAZORPAY_KEY_SECRET);
 
     if (!isValid) {
       throw new Error('Payment verification failed - invalid signature');
     }
 
-    // Fetch actual payment amount from Razorpay API instead of trusting client
     const auth = btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`);
     const paymentResponse = await fetch(`https://api.razorpay.com/v1/payments/${razorpayPaymentId}`, {
       headers: { 'Authorization': `Basic ${auth}` },
@@ -81,14 +78,12 @@ serve(async (req) => {
       throw new Error('Failed to verify payment amount from Razorpay');
     }
 
-    // Verify the Razorpay order ID matches
     if (paymentData.order_id !== razorpayOrderId) {
       throw new Error('Payment order ID mismatch');
     }
 
-    const verifiedAmount = paymentData.amount / 100; // Convert paise to rupees
+    const verifiedAmount = paymentData.amount / 100;
 
-    // Create payment record using verified amount
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
     const { error: paymentError } = await supabase.from('payments').insert({
@@ -102,7 +97,6 @@ serve(async (req) => {
       throw new Error('Failed to record payment');
     }
 
-    // Check if order is fully paid
     const { data: payments } = await supabase
       .from('payments')
       .select('amount')

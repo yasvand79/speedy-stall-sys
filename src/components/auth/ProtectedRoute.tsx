@@ -25,7 +25,6 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (allowedRoles && role && !allowedRoles.includes(role)) {
-    // Redirect billing users to /billing, others to /
     const fallback = role === 'billing' ? '/billing' : '/';
     return <Navigate to={fallback} replace />;
   }

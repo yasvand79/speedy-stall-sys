@@ -5,22 +5,26 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-import { PaymentDialog } from '@/components/billing/PaymentDialog';
 import { useOrders, useUpdateOrderStatus, OrderWithItems } from '@/hooks/useOrders';
-import { usePayments } from '@/hooks/usePayments';
+import { usePayments, useCreatePayment } from '@/hooks/usePayments';
 import { useBranches } from '@/hooks/useBranches';
 import { useAuth } from '@/contexts/AuthContext';
+import { useShopSettings } from '@/hooks/useShopSettings';
 import { useThermalPrinter } from '@/contexts/ThermalPrinterContext';
+import { useRazorpay } from '@/hooks/useRazorpay';
+import { QRCodeSVG } from 'qrcode.react';
 import {
-  Search, Clock, ChefHat, CheckCircle2, Banknote, XCircle,
-  Building2, User, UtensilsCrossed, Printer, Package,
-  ArrowRight, Hash, CreditCard, Loader2, CheckCircle
+  Search, Clock, ChefHat, CheckCircle2, XCircle,
+  Building2, User, UtensilsCrossed, Package,
+  CreditCard, Loader2, Printer, Banknote,
+  CheckCircle, IndianRupee, ArrowLeft, Smartphone,
+  History,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
-type StatusTab = 'active' | 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+type StatusTab = 'all' | 'active' | 'completed' | 'cancelled';
 
 const STATUS_CONFIG = {
   placed: { label: 'New', color: 'bg-amber-500', bgLight: 'bg-amber-50 dark:bg-amber-950/30', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800', icon: Clock },
@@ -32,41 +36,40 @@ const STATUS_CONFIG = {
 
 export default function Orders() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
-  const [paymentOpen, setPaymentOpen] = useState(false);
   const [branchFilter, setBranchFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<StatusTab>('active');
+  const [activeTab, setActiveTab] = useState<StatusTab>('all');
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
 
   const { data: orders, isLoading } = useOrders();
   const { branches } = useBranches();
   const updateStatus = useUpdateOrderStatus();
   const { data: allPayments } = usePayments();
+  const createPayment = useCreatePayment();
   const { role } = useAuth();
+  const { settings } = useShopSettings();
   const { printBill, isPrinting: isThermalPrinting } = useThermalPrinter();
+  const { initiatePayment: initiateRazorpay, isLoading: razorpayLoading } = useRazorpay();
 
-  const isAdmin = role === 'admin' || role === 'branch_admin';
-  const isCentralAdmin = role === 'admin';
+  const isAdmin = role === 'admin' || role === 'branch_admin' || role === 'central_admin' || role === 'developer';
+  const isCentralAdmin = role === 'admin' || role === 'central_admin' || role === 'developer';
   const isBilling = role === 'billing';
+
+  const upiId = settings?.upi_id;
+  const shopName = settings?.shop_name || 'FoodShop';
 
   const handleStatusChange = (orderId: string, newStatus: string) => {
     updateStatus.mutate({ orderId, status: newStatus as any });
   };
 
-  const handleProcessPayment = (order: OrderWithItems) => {
-    setSelectedOrder(order);
-    setPaymentOpen(true);
-  };
-
   const handlePrintClick = async (orderId: string) => {
     const order = orders?.find(o => o.id === orderId);
     if (!order) return;
-
     setPrintingOrderId(orderId);
     const orderPayments = (allPayments || []).filter(p => p.order_id === orderId);
     const latestPayment = orderPayments[0];
-
-    const thermalOrder = {
+    await printBill({
       orderNumber: order.order_number,
       type: order.type,
       customerName: order.customer_name,
@@ -81,9 +84,7 @@ export default function Orders() {
       discount: Number(order.discount),
       total: Number(order.total),
       paymentMethod: latestPayment?.method || (order.payment_status === 'completed' ? 'Paid' : undefined),
-    };
-
-    await printBill(thermalOrder);
+    });
     setPrintingOrderId(null);
   };
 
@@ -91,13 +92,33 @@ export default function Orders() {
     return (allPayments?.filter(p => p.order_id === orderId) || []).reduce((sum, p) => sum + Number(p.amount), 0);
   };
 
+  const handlePayment = async (orderId: string, amount: number, method: 'cash' | 'upi') => {
+    setIsPaying(true);
+    try {
+      await createPayment.mutateAsync({ order_id: orderId, amount, method });
+      const order = orders?.find(o => o.id === orderId);
+      if (order) {
+        const currentPaid = getPaidAmount(orderId);
+        if (currentPaid + amount >= Number(order.total)) {
+          await updateStatus.mutateAsync({ orderId, status: 'completed' });
+        }
+      }
+      setPayingOrderId(null);
+      toast.success('Payment recorded!');
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
   const filteredOrders = useMemo(() => {
     let filtered = orders || [];
 
     if (activeTab === 'active') {
       filtered = filtered.filter(o => !['completed', 'cancelled'].includes(o.status));
-    } else {
-      filtered = filtered.filter(o => o.status === activeTab);
+    } else if (activeTab === 'completed') {
+      filtered = filtered.filter(o => o.status === 'completed');
+    } else if (activeTab === 'cancelled') {
+      filtered = filtered.filter(o => o.status === 'cancelled');
     }
 
     if (branchFilter !== 'all') {
@@ -119,10 +140,8 @@ export default function Orders() {
   const counts = useMemo(() => {
     const all = orders || [];
     return {
+      all: all.length,
       active: all.filter(o => !['completed', 'cancelled'].includes(o.status)).length,
-      placed: all.filter(o => o.status === 'placed').length,
-      preparing: all.filter(o => o.status === 'preparing').length,
-      ready: all.filter(o => o.status === 'ready').length,
       completed: all.filter(o => o.status === 'completed').length,
       cancelled: all.filter(o => o.status === 'cancelled').length,
     };
@@ -139,11 +158,9 @@ export default function Orders() {
   }
 
   const tabs: { key: StatusTab; label: string; count: number }[] = [
+    { key: 'all', label: 'All', count: counts.all },
     { key: 'active', label: 'Active', count: counts.active },
-    { key: 'placed', label: 'New', count: counts.placed },
-    { key: 'preparing', label: 'Cooking', count: counts.preparing },
-    { key: 'ready', label: 'Ready', count: counts.ready },
-    { key: 'completed', label: 'Done', count: counts.completed },
+    { key: 'completed', label: 'Completed', count: counts.completed },
     { key: 'cancelled', label: 'Cancelled', count: counts.cancelled },
   ];
 
@@ -153,17 +170,17 @@ export default function Orders() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">Orders</h1>
+            <h1 className="font-display text-2xl font-bold text-foreground flex items-center gap-2">
+              <History className="h-6 w-6" /> Order History
+            </h1>
             <p className="text-sm text-muted-foreground">
-              {counts.active} active • {counts.completed} completed today
+              {counts.active} active • {counts.completed} completed
             </p>
           </div>
-          
         </div>
 
         {/* Filters */}
         <div className="flex flex-col gap-3">
-          {/* Status Tabs - horizontal scroll on mobile */}
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
             {tabs.map(tab => (
               <button
@@ -189,7 +206,6 @@ export default function Orders() {
             ))}
           </div>
 
-          {/* Search + Branch filter */}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -217,7 +233,7 @@ export default function Orders() {
           </div>
         </div>
 
-        {/* Orders Grid */}
+        {/* Orders List */}
         {filteredOrders.length === 0 ? (
           <div className="text-center py-16">
             <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
@@ -229,21 +245,25 @@ export default function Orders() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-3">
             {filteredOrders.map((order) => {
               const config = STATUS_CONFIG[order.status];
               const StatusIcon = config.icon;
               const paidAmount = getPaidAmount(order.id);
               const remaining = Number(order.total) - paidAmount;
+              const isPayingThis = payingOrderId === order.id;
               const nextStatus = order.status === 'placed' ? 'preparing' : order.status === 'preparing' ? 'ready' : order.status === 'ready' ? 'completed' : null;
 
+              const upiUrl = upiId
+                ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${remaining.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Order ${order.order_number}`)}`
+                : '';
+
               return (
-                <Card key={order.id} className={cn('overflow-hidden transition-all hover:shadow-md', config.border, 'border')}>
-                  {/* Status stripe */}
+                <Card key={order.id} className={cn('overflow-hidden transition-all', config.border, 'border')}>
                   <div className={cn('h-1', config.color)} />
 
                   <CardContent className="p-4 space-y-3">
-                    {/* Top row: Order # + Status + Total */}
+                    {/* Top row */}
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -257,24 +277,25 @@ export default function Orders() {
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          {formatDistanceToNow(new Date(order.created_at!), { addSuffix: true })}
+                          {format(new Date(order.created_at!), 'dd MMM yyyy, hh:mm a')}
+                          <span className="text-muted-foreground/60">
+                            ({formatDistanceToNow(new Date(order.created_at!), { addSuffix: true })})
+                          </span>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-display text-xl font-bold text-foreground">₹{Number(order.total).toFixed(0)}</p>
-                        <div className="flex items-center gap-1 justify-end">
-                          {order.payment_status === 'completed' ? (
-                            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                              <CheckCircle2 className="h-3 w-3" /> Paid
-                            </span>
-                          ) : remaining > 0 ? (
-                            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                              ₹{remaining.toFixed(0)} due
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-medium text-muted-foreground">Pending</span>
-                          )}
-                        </div>
+                        {order.payment_status === 'completed' ? (
+                          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 justify-end">
+                            <CheckCircle2 className="h-3 w-3" /> Paid
+                          </span>
+                        ) : remaining > 0 ? (
+                          <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                            ₹{remaining.toFixed(0)} due
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium text-muted-foreground">Pending</span>
+                        )}
                       </div>
                     </div>
 
@@ -302,6 +323,17 @@ export default function Orders() {
                           <Building2 className="h-3 w-3" /> {(order as any).branches.name}
                         </Badge>
                       )}
+                      {/* Payment method badge */}
+                      {order.payment_status === 'completed' && allPayments && (
+                        (() => {
+                          const methods = [...new Set(allPayments.filter(p => p.order_id === order.id).map(p => p.method))];
+                          return methods.length > 0 ? (
+                            <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0.5 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                              <CreditCard className="h-3 w-3" /> {methods.join(' + ').toUpperCase()}
+                            </Badge>
+                          ) : null;
+                        })()
+                      )}
                     </div>
 
                     {/* Items list */}
@@ -319,57 +351,39 @@ export default function Orders() {
                       )}
                     </div>
 
-                    {/* Actions */}
+                    {/* Actions row */}
                     <div className="flex items-center gap-1.5 pt-1">
-                      {/* Next status button */}
+                      {/* Status actions for admins */}
                       {nextStatus && order.status !== 'cancelled' && (
                         <>
                           {order.status === 'placed' && isAdmin && (
-                            <Button
-                              size="sm"
-                              className="flex-1 h-8 text-xs gap-1"
-                              onClick={() => handleStatusChange(order.id, 'preparing')}
-                              disabled={updateStatus.isPending}
-                            >
-                              <ChefHat className="h-3.5 w-3.5" />
-                              Start Cooking
+                            <Button size="sm" className="flex-1 h-8 text-xs gap-1" onClick={() => handleStatusChange(order.id, 'preparing')} disabled={updateStatus.isPending}>
+                              <ChefHat className="h-3.5 w-3.5" /> Start Cooking
                             </Button>
                           )}
                           {order.status === 'preparing' && isAdmin && (
-                            <Button
-                              size="sm"
-                              className="flex-1 h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                              onClick={() => handleStatusChange(order.id, 'ready')}
-                              disabled={updateStatus.isPending}
-                            >
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              Mark Ready
+                            <Button size="sm" className="flex-1 h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleStatusChange(order.id, 'ready')} disabled={updateStatus.isPending}>
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Mark Ready
                             </Button>
                           )}
                           {order.status === 'ready' && (isAdmin || isBilling) && order.payment_status === 'completed' && (
-                            <Button
-                              size="sm"
-                              className="flex-1 h-8 text-xs gap-1"
-                              onClick={() => handleStatusChange(order.id, 'completed')}
-                              disabled={updateStatus.isPending}
-                            >
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              Complete
+                            <Button size="sm" className="flex-1 h-8 text-xs gap-1" onClick={() => handleStatusChange(order.id, 'completed')} disabled={updateStatus.isPending}>
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Complete
                             </Button>
                           )}
                         </>
                       )}
 
-                      {/* Pay button */}
+                      {/* Pay button - toggle inline payment */}
                       {(isAdmin || isBilling) && order.status !== 'cancelled' && order.payment_status !== 'completed' && (
                         <Button
                           size="sm"
-                          variant="default"
+                          variant={isPayingThis ? 'secondary' : 'default'}
                           className="h-8 text-xs gap-1"
-                          onClick={() => handleProcessPayment(order)}
+                          onClick={() => setPayingOrderId(isPayingThis ? null : order.id)}
                         >
                           <CreditCard className="h-3.5 w-3.5" />
-                          Pay
+                          {isPayingThis ? 'Cancel' : 'Pay'}
                         </Button>
                       )}
 
@@ -403,6 +417,92 @@ export default function Orders() {
                         </Button>
                       )}
                     </div>
+
+                    {/* ─── Inline Payment Panel (like Billing page) ─── */}
+                    {isPayingThis && (
+                      <div className="border-t border-border pt-4 mt-2 space-y-4">
+                        {/* Amount header */}
+                        <div className="bg-primary text-primary-foreground rounded-xl p-4 text-center">
+                          <p className="text-xs opacity-80">Order {order.order_number}</p>
+                          <p className="text-2xl font-bold font-display mt-1">₹{remaining.toFixed(0)}</p>
+                          <p className="text-[10px] opacity-70 mt-0.5">
+                            {paidAmount > 0 ? `₹${paidAmount.toFixed(0)} already paid` : 'Amount due'}
+                          </p>
+                        </div>
+
+                        {/* Razorpay */}
+                        <Button
+                          className="w-full h-11 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={() => {
+                            initiateRazorpay(
+                              {
+                                orderId: order.id,
+                                orderNumber: order.order_number,
+                                amount: remaining,
+                                customerName: order.customer_name || undefined,
+                                customerPhone: order.customer_phone || undefined,
+                              },
+                              () => {
+                                setPayingOrderId(null);
+                                toast.success('Payment successful!');
+                              },
+                              (err) => toast.error(err)
+                            );
+                          }}
+                          disabled={razorpayLoading || isPaying}
+                        >
+                          {razorpayLoading ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening Razorpay...</>
+                          ) : (
+                            <><IndianRupee className="mr-2 h-4 w-4" /> Pay ₹{remaining.toFixed(0)} with Razorpay</>
+                          )}
+                        </Button>
+
+                        {/* Divider */}
+                        <div className="flex items-center gap-3">
+                          <div className="h-px flex-1 bg-border" />
+                          <span className="text-xs text-muted-foreground">or</span>
+                          <div className="h-px flex-1 bg-border" />
+                        </div>
+
+                        {/* UPI QR */}
+                        {upiId && (
+                          <div className="flex flex-col items-center space-y-3 bg-muted/30 rounded-xl p-4">
+                            <div className="bg-white p-2.5 rounded-xl shadow-sm border">
+                              <QRCodeSVG value={upiUrl} size={150} level="H" includeMargin />
+                            </div>
+                            <p className="text-xs text-muted-foreground text-center">
+                              Scan with <span className="font-semibold text-foreground">GPay</span>, <span className="font-semibold text-foreground">PhonePe</span>, or <span className="font-semibold text-foreground">Paytm</span>
+                            </p>
+                            <Button
+                              onClick={() => handlePayment(order.id, remaining, 'upi')}
+                              className="w-full h-10 text-sm"
+                              disabled={isPaying}
+                            >
+                              {isPaying ? (
+                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                              ) : (
+                                <><CheckCircle className="mr-2 h-4 w-4" /> UPI Payment Received</>
+                              )}
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Cash */}
+                        <Button
+                          variant="outline"
+                          onClick={() => handlePayment(order.id, remaining, 'cash')}
+                          className="w-full h-11 text-sm border-2"
+                          disabled={isPaying}
+                        >
+                          {isPaying ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                          ) : (
+                            <><Banknote className="mr-2 h-4 w-4 text-success" /> Cash Received ₹{remaining.toFixed(0)}</>
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -410,19 +510,6 @@ export default function Orders() {
           </div>
         )}
       </div>
-
-      {/* Payment Dialog */}
-      {selectedOrder && (
-        <PaymentDialog
-          open={paymentOpen}
-          onOpenChange={setPaymentOpen}
-          orderId={selectedOrder.id}
-          orderNumber={selectedOrder.order_number}
-          total={Number(selectedOrder.total)}
-          paidAmount={getPaidAmount(selectedOrder.id)}
-        />
-      )}
-
     </MainLayout>
   );
 }

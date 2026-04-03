@@ -37,11 +37,20 @@ export function useCreatePayment() {
       method: PaymentMethod;
       transaction_id?: string;
     }) => {
-      const { data, error } = await supabase
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) throw authError;
+      if (!user) throw new Error('You must be signed in to record a payment');
+
+      const { error } = await supabase
         .from('payments')
-        .insert(payment)
-        .select()
-        .single();
+        .insert({
+          ...payment,
+          created_by: user.id,
+        });
 
       if (error) throw error;
 
@@ -61,7 +70,6 @@ export function useCreatePayment() {
         const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
         const orderTotal = Number(order.total);
 
-        // Update payment status based on total paid
         let paymentStatus: 'pending' | 'partial' | 'completed' = 'pending';
         if (totalPaid >= orderTotal) {
           paymentStatus = 'completed';
@@ -74,8 +82,6 @@ export function useCreatePayment() {
           .update({ payment_status: paymentStatus })
           .eq('id', payment.order_id);
       }
-
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
